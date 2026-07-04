@@ -40,9 +40,9 @@ type Banner = {
 
 const PLANOS_DISPONIVEIS: { slug: string; nome: string }[] = [
   { slug: "free", nome: "Free" },
-  { slug: "plus", nome: "Plus" },
-  { slug: "standard", nome: "Standard" },
-  { slug: "premium", nome: "Premium" },
+  { slug: "tx", nome: "TX" },
+  { slug: "ultra", nome: "Ultra" },
+  { slug: "premium", nome: "Brilhante" },
 ];
 
 

@@ -22,6 +22,8 @@ import type { QueryClient } from "@tanstack/react-query";
 export type PlanId =
   | "premium_monthly"
   | "premium_yearly"
+  | "tx"
+  | "ultra"
   // IDs legados (slugs no banco) — mantidos por compatibilidade
   | "plus"
   | "standard"

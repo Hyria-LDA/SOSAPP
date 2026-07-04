@@ -207,8 +207,10 @@ function Buscar() {
       switch (slug) {
         case "premium":
           return 0;
+        case "ultra":
         case "standard":
           return 1;
+        case "tx":
         case "plus":
           return 2;
         default:
@@ -844,4 +846,3 @@ function PadraoPicker({
     </Sheet>
   );
 }
-

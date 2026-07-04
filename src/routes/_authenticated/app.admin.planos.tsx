@@ -264,7 +264,7 @@ function PlanoForm({
               <input
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                placeholder="ex: plus"
+                placeholder="ex: tx"
                 className={inp}
               />
             </Field>
