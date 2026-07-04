@@ -1,0 +1,1 @@
+ALTER TABLE public.banners ALTER COLUMN titulo DROP NOT NULL;

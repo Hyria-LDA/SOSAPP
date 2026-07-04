@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>SOS Marceneiros</title>
+    <meta http-equiv="refresh" content="0; url=https://sosmarceneiros.com.br/" />
+    <style>
+      html,body{margin:0;background:#0f172a;color:#fff;font-family:-apple-system,system-ui,sans-serif;height:100%}
+      .wrap{display:flex;align-items:center;justify-content:center;height:100%;text-align:center;padding:24px}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <p>Carregando SOS Marceneiros…</p>
+    </div>
+    <script>
+      // Fallback caso o server.url não esteja disponível em build dev.
+      setTimeout(function(){ location.replace("https://sosmarceneiros.com.br/"); }, 50);
+    </script>
+  </body>
+</html>

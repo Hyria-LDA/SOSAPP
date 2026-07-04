@@ -1,0 +1,1 @@
+ALTER TABLE public.padroes ADD COLUMN IF NOT EXISTS imagem_url text;

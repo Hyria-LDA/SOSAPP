@@ -1,0 +1,2 @@
+ALTER TABLE public.banners ADD COLUMN IF NOT EXISTS intervalo_minutos integer NOT NULL DEFAULT 0;
+COMMENT ON COLUMN public.banners.intervalo_minutos IS 'Intervalo em minutos para reexibir o banner de abertura. 0 = apenas 1x por sessão.';

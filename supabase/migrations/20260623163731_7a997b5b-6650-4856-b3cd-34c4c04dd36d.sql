@@ -1,0 +1,1 @@
+ALTER TABLE public.banners ADD COLUMN IF NOT EXISTS delay_segundos integer NOT NULL DEFAULT 0;

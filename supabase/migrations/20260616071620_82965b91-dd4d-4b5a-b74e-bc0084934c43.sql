@@ -1,0 +1,1 @@
+ALTER TABLE public.materiais ADD COLUMN IF NOT EXISTS valor_vendido numeric;
