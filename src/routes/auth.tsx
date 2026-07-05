@@ -14,11 +14,6 @@ function getPublicOrigin() {
   return PUBLIC_SITE_URL;
 }
 
-function isMissingNativePlugin(err: unknown) {
-  const msg = String((err as any)?.message ?? err ?? "").toLowerCase();
-  return msg.includes("not implemented") || msg.includes("plugin is not implemented");
-}
-
 export const Route = createFileRoute("/auth")({
   ssr: false,
   component: AuthPage,
@@ -83,35 +78,6 @@ function AuthPage() {
     }
   };
 
-  const googleNative = async () => {
-    const webClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID;
-    if (!webClientId) {
-      throw new Error("Configure VITE_GOOGLE_WEB_CLIENT_ID no Vercel com o Client ID Web do Google.");
-    }
-
-    const { SocialLogin } = await import("@capgo/capacitor-social-login");
-    await SocialLogin.initialize({
-      google: {
-        webClientId,
-        mode: "online",
-      },
-    });
-
-    const login = await SocialLogin.login({
-      provider: "google",
-    });
-
-    const idToken = (login as any)?.result?.idToken;
-    if (!idToken) throw new Error("O Google não retornou idToken para autenticar no Supabase.");
-
-    const { error } = await supabase.auth.signInWithIdToken({
-      provider: "google",
-      token: idToken,
-    });
-    if (error) throw error;
-    navigate({ to: "/app", replace: true });
-  };
-
   const google = async () => {
     setLoading(true);
     try {
@@ -124,19 +90,6 @@ function AuthPage() {
       const isWebViewish =
         /(; wv\)|\bwv\b)/i.test(ua) || /DreamFlow|Flutter|Capacitor/i.test(ua);
       const isNativeWrapper = isCapacitor || isWebViewish;
-
-      if (isNativeWrapper) {
-        try {
-          await googleNative();
-          return;
-        } catch (nativeError) {
-          if (!isMissingNativePlugin(nativeError)) throw nativeError;
-          console.warn("[auth/google] SocialLogin indisponivel no APK instalado", nativeError);
-          throw new Error(
-            "Este APK ainda nao tem o login Google nativo. Instale a versao mais nova do app.",
-          );
-        }
-      }
 
       try {
         sessionStorage.setItem("lov:native", isNativeWrapper ? "1" : "0");
@@ -160,7 +113,15 @@ function AuthPage() {
 
       if (error) throw error;
 
-      if (isNativeWrapper) throw new Error("O app Android precisa usar o login Google nativo.");
+      if (isNativeWrapper) {
+        if (!data?.url) throw new Error("URL de login Google nao foi gerada.");
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.open({
+          url: data.url,
+          presentationStyle: "fullscreen",
+          windowName: "_blank",
+        });
+      }
     } catch (err: any) {
       console.error("[auth/google] excecao", err);
       const msg = String(err?.message ?? "");
@@ -173,11 +134,6 @@ function AuthPage() {
           "O login Google ainda nao esta configurado no Supabase. " +
             "Conclua a configuracao do provedor Google OAuth no Supabase. " +
             "Use e-mail e senha para entrar.",
-          { duration: 8000 },
-        );
-      } else if (isMissingNativePlugin(err)) {
-        toast.error(
-          "Este APK ainda nao tem o login Google nativo. Instale a versao mais nova do app.",
           { duration: 8000 },
         );
       } else {
