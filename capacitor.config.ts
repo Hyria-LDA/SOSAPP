@@ -38,6 +38,17 @@ android: {
     scheme: "sosmarceneiros",
     contentInset: "always",
   },
+  plugins: {
+    SocialLogin: {
+      providers: {
+        google: true,
+        facebook: false,
+        apple: false,
+        twitter: false,
+      },
+      logLevel: 1,
+    },
+  },
 };
 
 export default config;

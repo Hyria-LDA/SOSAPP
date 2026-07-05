@@ -69,6 +69,37 @@ function AuthPage() {
     }
   };
 
+  const googleNative = async () => {
+    const webClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID;
+    if (!webClientId) {
+      throw new Error("Configure VITE_GOOGLE_WEB_CLIENT_ID no Vercel com o Client ID Web do Google.");
+    }
+
+    const { SocialLogin } = await import("@capgo/capacitor-social-login");
+    await SocialLogin.initialize({
+      google: {
+        webClientId,
+      },
+    });
+
+    const login = await SocialLogin.login({
+      provider: "google",
+      options: {
+        scopes: ["email", "profile"],
+      },
+    });
+
+    const idToken = (login as any)?.result?.idToken;
+    if (!idToken) throw new Error("O Google não retornou idToken para autenticar no Supabase.");
+
+    const { error } = await supabase.auth.signInWithIdToken({
+      provider: "google",
+      token: idToken,
+    });
+    if (error) throw error;
+    navigate({ to: "/app", replace: true });
+  };
+
   const google = async () => {
     setLoading(true);
     try {
@@ -82,6 +113,11 @@ function AuthPage() {
       const isWebViewish =
         /(; wv\)|\bwv\b)/i.test(ua) || /DreamFlow|Flutter|Capacitor/i.test(ua);
       const isNativeWrapper = isCapacitor || isAndroid || isWebViewish;
+
+      if (isCapacitor || isWebViewish) {
+        await googleNative();
+        return;
+      }
 
       try {
         sessionStorage.setItem("lov:native", isNativeWrapper ? "1" : "0");
