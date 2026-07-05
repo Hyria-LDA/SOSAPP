@@ -15,32 +15,19 @@ function getPublicOrigin() {
 }
 
 async function openExternalLogin(url: string) {
-  const w = window as any;
-
   try {
-    const externalBrowser = w?.Capacitor?.Plugins?.ExternalBrowser;
-    if (externalBrowser?.openUrl) {
-      await externalBrowser.openUrl({ url });
-      return;
-    }
-  } catch (error) {
-    console.warn("[auth/google] ExternalBrowser indisponivel", error);
-  }
-
-  try {
-    const { Browser } = await import("@capacitor/browser");
-    await Browser.open({
-      url,
-      presentationStyle: "fullscreen",
-      windowName: "_blank",
-    });
+    const { registerPlugin } = await import("@capacitor/core");
+    const ExternalBrowser = registerPlugin<{ openUrl(options: { url: string }): Promise<void> }>(
+      "ExternalBrowser",
+    );
+    await ExternalBrowser.openUrl({ url });
     return;
   } catch (error) {
-    console.warn("[auth/google] Browser indisponivel", error);
+    console.warn("[auth/google] ExternalBrowser indisponivel", error);
+    throw new Error(
+      "Instale a versao mais nova do app para abrir o login Google no Chrome.",
+    );
   }
-
-  const opened = window.open(url, "_blank", "noopener,noreferrer");
-  if (!opened) window.location.assign(url);
 }
 
 export const Route = createFileRoute("/auth")({
