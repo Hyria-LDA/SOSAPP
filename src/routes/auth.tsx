@@ -93,14 +93,12 @@ function AuthPage() {
     await SocialLogin.initialize({
       google: {
         webClientId,
+        mode: "online",
       },
     });
 
     const login = await SocialLogin.login({
       provider: "google",
-      options: {
-        scopes: ["email", "profile"],
-      },
     });
 
     const idToken = (login as any)?.result?.idToken;
