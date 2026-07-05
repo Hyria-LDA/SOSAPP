@@ -53,11 +53,13 @@ function isMobileBrowserOutsideApp() {
   if (typeof window === "undefined") return false;
   const ua = navigator.userAgent || "";
   const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
+  const isAndroidWebView = /(; wv\)|\bwv\b)/i.test(ua);
   const w = window as any;
   const platform = w?.Capacitor?.getPlatform?.();
   const isNative =
     !!w?.Capacitor?.isNativePlatform?.() ||
-    (!!platform && ["android", "ios"].includes(platform));
+    (!!platform && ["android", "ios"].includes(platform)) ||
+    isAndroidWebView;
 
   return isMobile && !isNative;
 }
