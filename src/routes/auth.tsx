@@ -133,7 +133,10 @@ function AuthPage() {
           return;
         } catch (nativeError) {
           if (!isMissingNativePlugin(nativeError)) throw nativeError;
-          console.warn("[auth/google] SocialLogin indisponivel, tentando Browser OAuth", nativeError);
+          console.warn("[auth/google] SocialLogin indisponivel no APK instalado", nativeError);
+          throw new Error(
+            "Este APK ainda nao tem o login Google nativo. Instale a versao mais nova do app.",
+          );
         }
       }
 
@@ -159,21 +162,7 @@ function AuthPage() {
 
       if (error) throw error;
 
-      if (isNativeWrapper) {
-        if (!data?.url) throw new Error("URL de login Google nao foi gerada.");
-        try {
-          const { Browser } = await import("@capacitor/browser");
-          await Browser.open({
-            url: data.url,
-            presentationStyle: "fullscreen",
-            windowName: "_blank",
-          });
-        } catch (pluginError) {
-          console.warn("[auth/google] Browser plugin indisponivel, usando fallback", pluginError);
-          const opened = window.open(data.url, "_blank", "noopener,noreferrer");
-          if (!opened) window.location.assign(data.url);
-        }
-      }
+      if (isNativeWrapper) throw new Error("O app Android precisa usar o login Google nativo.");
     } catch (err: any) {
       console.error("[auth/google] excecao", err);
       const msg = String(err?.message ?? "");
