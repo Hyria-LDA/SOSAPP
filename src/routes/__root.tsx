@@ -37,6 +37,7 @@ function buildNativeIntentUrl(session: {
   provider_refresh_token?: string | null;
 }) {
   const query = new URLSearchParams();
+  query.set("from_app", "1");
   query.set("access_token", session.access_token);
   query.set("refresh_token", session.refresh_token);
   if (session.expires_in) query.set("expires_in", String(session.expires_in));
