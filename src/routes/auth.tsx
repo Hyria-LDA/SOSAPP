@@ -10,11 +10,6 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-function toAndroidBrowserIntent(url: string) {
-  const withoutScheme = url.replace(/^https?:\/\//i, "");
-  return `intent://${withoutScheme}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(url)};end`;
-}
-
 function AuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -112,10 +107,6 @@ function AuthPage() {
 
       if (isNativeWrapper) {
         if (!data?.url) throw new Error("URL de login Google nao foi gerada.");
-        if (isAndroid) {
-          window.location.assign(toAndroidBrowserIntent(data.url));
-          return;
-        }
         try {
           const { Browser } = await import("@capacitor/browser");
           await Browser.open({
