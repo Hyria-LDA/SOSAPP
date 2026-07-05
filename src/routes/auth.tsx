@@ -1,34 +1,14 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { Logo } from "@/components/logo";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
   component: AuthPage,
 });
-
-function isMissingProviderError(msg: string | undefined | null): boolean {
-  if (!msg) return false;
-  const m = msg.toLowerCase();
-  return (
-    m.includes("missing oauth secret") ||
-    m.includes("unsupported provider") ||
-    m.includes("provider is not enabled")
-  );
-}
-
-function generateOAuthState() {
-  const bytes = new Uint8Array(16);
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-  }
-  return `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
-}
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -37,8 +17,8 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
-  // Quando o Google OAuth está indisponível no backend, escondemos o botão e
-  // forçamos o fluxo apenas por e-mail/senha.
+  // Quando o Google OAuth estÃ¡ indisponÃ­vel no backend, escondemos o botÃ£o e
+  // forÃ§amos o fluxo apenas por e-mail/senha.
   const [googleUnavailable, setGoogleUnavailable] = useState(false);
 
   useEffect(() => {
@@ -93,18 +73,16 @@ function AuthPage() {
     setLoading(true);
     try {
       const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
-      // Detecta wrapper nativo: Capacitor (Android/iOS), DreamFlow/Flutter, ou WebView Android.
-      // Quando for o caso, marcamos a flag para que /auth/callback faça o handoff via
-      // deep link `sosmarceneiros://auth-callback` de volta ao app nativo após o login.
       const w = typeof window !== "undefined" ? (window as any) : {};
       const isCapacitor =
         !!w?.Capacitor?.isNativePlatform?.() ||
-        !!w?.Capacitor?.getPlatform?.() &&
-          ["android", "ios"].includes(w.Capacitor.getPlatform());
+        (!!w?.Capacitor?.getPlatform?.() &&
+          ["android", "ios"].includes(w.Capacitor.getPlatform()));
       const isAndroid = /Android/i.test(ua);
       const isWebViewish =
         /(; wv\)|\bwv\b)/i.test(ua) || /DreamFlow|Flutter|Capacitor/i.test(ua);
       const isNativeWrapper = isCapacitor || (isAndroid && isWebViewish);
+
       try {
         sessionStorage.setItem("lov:native", isNativeWrapper ? "1" : "0");
       } catch {}
@@ -113,86 +91,40 @@ function AuthPage() {
         isNativeWrapper ? "?native=1" : ""
       }`;
 
-      // eslint-disable-next-line no-console
-      console.info("[auth/google] iniciando via Lovable Cloud wrapper", {
-        ua,
-        redirectTo,
-        isNativeWrapper,
-        origin: window.location.origin,
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+          skipBrowserRedirect: isNativeWrapper,
+        } as any,
       });
 
-      if (isNativeWrapper) {
-        const params = new URLSearchParams({
-          provider: "google",
-          redirect_uri: redirectTo,
-          state: generateOAuthState(),
-          access_type: "offline",
-          prompt: "select_account",
-        });
-        const oauthUrl = `${window.location.origin}/~oauth/initiate?${params.toString()}`;
-        const { Browser } = await import("@capacitor/browser");
+      if (error) throw error;
 
+      if (isNativeWrapper) {
+        if (!data?.url) throw new Error("URL de login Google nao foi gerada.");
+        const { Browser } = await import("@capacitor/browser");
         await Browser.open({
-          url: oauthUrl,
+          url: data.url,
           presentationStyle: "fullscreen",
           windowName: "_blank",
         });
-        return;
       }
-
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: redirectTo,
-        extraParams: {
-          access_type: "offline",
-          prompt: "select_account",
-        },
-      });
-
-      // eslint-disable-next-line no-console
-      console.info("[auth/google] resposta Lovable wrapper", {
-        redirected: (result as any)?.redirected,
-        hasTokens: !!(result as any)?.tokens,
-        error: (result as any)?.error?.message,
-      });
-
-      if ((result as any)?.error) {
-        const err = (result as any).error as Error;
-        // eslint-disable-next-line no-console
-        console.error("[auth/google] erro wrapper", {
-          name: err?.name,
-          message: err?.message,
-        });
-
-        if (isMissingProviderError(err?.message)) {
-          setGoogleUnavailable(true);
-          toast.error(
-            "O login Google ainda não está configurado no servidor do projeto. " +
-              "É necessário concluir a configuração do provedor Google OAuth no Lovable Cloud. " +
-              "Use e-mail e senha para entrar.",
-            { duration: 8000 },
-          );
-        } else {
-          toast.error(`Falha no Google: ${err?.message ?? "erro desconhecido"}`);
-        }
-        setLoading(false);
-        return;
-      }
-
-      if ((result as any)?.redirected) {
-        // Navegador redirecionou para o provider — nada a fazer aqui.
-        return;
-      }
-
-      // Tokens retornados via popup/web_message: sessão já foi setada pelo wrapper.
-      navigate({ to: "/app" });
     } catch (err: any) {
-      // eslint-disable-next-line no-console
-      console.error("[auth/google] exceção", err);
-      if (isMissingProviderError(err?.message)) {
+      console.error("[auth/google] excecao", err);
+      const msg = String(err?.message ?? "");
+      if (
+        msg.toLowerCase().includes("provider is not enabled") ||
+        msg.toLowerCase().includes("unsupported provider")
+      ) {
         setGoogleUnavailable(true);
         toast.error(
-          "O login Google ainda não está configurado no servidor do projeto. " +
-            "É necessário concluir a configuração do provedor Google OAuth no Lovable Cloud. " +
+          "O login Google ainda nao esta configurado no Supabase. " +
+            "Conclua a configuracao do provedor Google OAuth no Supabase. " +
             "Use e-mail e senha para entrar.",
           { duration: 8000 },
         );
@@ -228,7 +160,7 @@ function AuthPage() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   className={inputCls}
-                  placeholder="João da Silva"
+                  placeholder="JoÃ£o da Silva"
                 />
               </Field>
             )}
@@ -250,7 +182,7 @@ function AuthPage() {
                 required
                 minLength={6}
                 className={inputCls}
-                placeholder="••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
               />
             </Field>
 
@@ -287,7 +219,7 @@ function AuthPage() {
 
           {googleUnavailable && (
             <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Login com Google temporariamente indisponível. Use e-mail e senha acima.
+              Login com Google temporariamente indisponÃ­vel. Use e-mail e senha acima.
             </p>
           )}
 
@@ -297,11 +229,11 @@ function AuthPage() {
           >
             {mode === "signin" ? (
               <>
-                Não tem conta? <span className="font-semibold text-primary">Cadastrar</span>
+                NÃ£o tem conta? <span className="font-semibold text-primary">Cadastrar</span>
               </>
             ) : (
               <>
-                Já tem conta? <span className="font-semibold text-primary">Entrar</span>
+                JÃ¡ tem conta? <span className="font-semibold text-primary">Entrar</span>
               </>
             )}
           </button>

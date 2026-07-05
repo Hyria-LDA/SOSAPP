@@ -18,22 +18,21 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "br.com.sosmarceneiros.app",
   appName: "SOS Marceneiros",
-  webDir: ".output/public",
+  webDir: "capacitor-shell",
   server: {
-  url: "http://10.0.2.2:8080",
-  cleartext: true,
-  androidScheme: "http",
-  allowNavigation: [
-    "10.0.2.2",
-    "localhost",
-    "127.0.0.1",
-    "*.supabase.co",
-    "accounts.google.com",
-    "*.googleusercontent.com",
-  ],
-},
+    url: "https://sosmarceneiros.com.br",
+    cleartext: false,
+    allowNavigation: [
+      "sosmarceneiros.com.br",
+      "www.sosmarceneiros.com.br",
+      "sosapp-murex.vercel.app",
+      "*.supabase.co",
+      "accounts.google.com",
+      "*.googleusercontent.com",
+    ],
+  },
 android: {
-  allowMixedContent: true,
+  allowMixedContent: false,
 },
   ios: {
     scheme: "sosmarceneiros",
