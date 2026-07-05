@@ -19,9 +19,19 @@ public class ExternalBrowserPlugin extends Plugin {
         }
 
         try {
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            intent.addCategory(Intent.CATEGORY_BROWSABLE);
-            getActivity().startActivity(intent);
+            Uri uri = Uri.parse(url);
+
+            Intent chromeIntent = new Intent(Intent.ACTION_VIEW, uri);
+            chromeIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+            chromeIntent.setPackage("com.android.chrome");
+
+            try {
+                getActivity().startActivity(chromeIntent);
+            } catch (Exception chromeError) {
+                Intent fallbackIntent = new Intent(Intent.ACTION_VIEW, uri);
+                fallbackIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+                getActivity().startActivity(fallbackIntent);
+            }
 
             JSObject result = new JSObject();
             result.put("opened", true);
