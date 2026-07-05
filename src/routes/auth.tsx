@@ -14,6 +14,11 @@ function getPublicOrigin() {
   return PUBLIC_SITE_URL;
 }
 
+function isMissingNativePlugin(err: unknown) {
+  const msg = String((err as any)?.message ?? err ?? "").toLowerCase();
+  return msg.includes("not implemented") || msg.includes("plugin is not implemented");
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
   component: AuthPage,
@@ -118,14 +123,18 @@ function AuthPage() {
       const isCapacitor =
         !!w?.Capacitor?.isNativePlatform?.() ||
         (!!platform && ["android", "ios"].includes(platform));
-      const isAndroid = platform === "android" || /Android/i.test(ua);
       const isWebViewish =
         /(; wv\)|\bwv\b)/i.test(ua) || /DreamFlow|Flutter|Capacitor/i.test(ua);
-      const isNativeWrapper = isCapacitor || isAndroid || isWebViewish;
+      const isNativeWrapper = isCapacitor || isWebViewish;
 
-      if (isCapacitor || isWebViewish) {
-        await googleNative();
-        return;
+      if (isNativeWrapper) {
+        try {
+          await googleNative();
+          return;
+        } catch (nativeError) {
+          if (!isMissingNativePlugin(nativeError)) throw nativeError;
+          console.warn("[auth/google] SocialLogin indisponivel, tentando Browser OAuth", nativeError);
+        }
       }
 
       try {
@@ -179,6 +188,11 @@ function AuthPage() {
             "Use e-mail e senha para entrar.",
           { duration: 8000 },
         );
+      } else if (isMissingNativePlugin(err)) {
+        toast.error(
+          "Este APK ainda nao tem o login Google nativo. Instale a versao mais nova do app.",
+          { duration: 8000 },
+        );
       } else {
         toast.error(err?.message || "Falha inesperada no login com Google");
       }
@@ -211,7 +225,7 @@ function AuthPage() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   className={inputCls}
-                  placeholder="JoÃ£o da Silva"
+                  placeholder="Joao da Silva"
                 />
               </Field>
             )}
@@ -233,7 +247,7 @@ function AuthPage() {
                 required
                 minLength={6}
                 className={inputCls}
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                placeholder="Sua senha"
               />
             </Field>
 
