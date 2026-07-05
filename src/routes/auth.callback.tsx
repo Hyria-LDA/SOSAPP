@@ -110,7 +110,9 @@ function AuthCallback() {
           return;
         }
 
+        const isAppDeepLinkCallback = params.from_app === "1";
         const isNative =
+          isAppDeepLinkCallback ||
           params.native === "1" ||
           (typeof sessionStorage !== "undefined" &&
             sessionStorage.getItem("lov:native") === "1");
@@ -192,6 +194,17 @@ function AuthCallback() {
             window.location.pathname,
           );
         } catch {}
+
+        if (isAppDeepLinkCallback) {
+          try {
+            sessionStorage.removeItem("lov:native");
+          } catch {}
+          console.info("[auth/callback] sessao OK no app — redirecionando para /app", {
+            flow,
+          });
+          navigate({ to: "/app" });
+          return;
+        }
 
         if (isNative) {
           const deepUrl = buildNativeUrl({

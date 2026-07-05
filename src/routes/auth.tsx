@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 
 const PUBLIC_SITE_URL = "https://sosmarceneiros.com.br";
+const NATIVE_REDIRECT_URL = "sosmarceneiros://auth-callback?from_app=1";
 
 function getPublicOrigin() {
   if (typeof window === "undefined") return PUBLIC_SITE_URL;
@@ -111,9 +112,9 @@ function AuthPage() {
         sessionStorage.setItem("lov:native", isNativeWrapper ? "1" : "0");
       } catch {}
 
-      const redirectTo = `${getPublicOrigin()}/auth/callback${
-        isNativeWrapper ? "?native=1" : ""
-      }`;
+      const redirectTo = isNativeWrapper
+        ? NATIVE_REDIRECT_URL
+        : `${getPublicOrigin()}/auth/callback`;
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
