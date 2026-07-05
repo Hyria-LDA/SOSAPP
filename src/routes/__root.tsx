@@ -6,12 +6,14 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
+
+const NATIVE_SCHEME = "sosmarceneiros://auth-callback";
 
 function authCallbackPathFromDeepLink(url: string) {
   try {
@@ -26,6 +28,38 @@ function authCallbackPathFromDeepLink(url: string) {
     console.warn("[deep-link] URL invalida recebida", { url, error });
     return null;
   }
+}
+
+function buildNativeUrl(session: {
+  access_token: string;
+  refresh_token: string;
+  expires_in?: number;
+  token_type?: string;
+  provider_token?: string | null;
+  provider_refresh_token?: string | null;
+}) {
+  const frag = new URLSearchParams();
+  frag.set("access_token", session.access_token);
+  frag.set("refresh_token", session.refresh_token);
+  if (session.expires_in) frag.set("expires_in", String(session.expires_in));
+  frag.set("token_type", session.token_type ?? "bearer");
+  if (session.provider_token) frag.set("provider_token", session.provider_token);
+  if (session.provider_refresh_token)
+    frag.set("provider_refresh_token", session.provider_refresh_token);
+  return `${NATIVE_SCHEME}#${frag.toString()}`;
+}
+
+function isMobileBrowserOutsideApp() {
+  if (typeof window === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
+  const w = window as any;
+  const platform = w?.Capacitor?.getPlatform?.();
+  const isNative =
+    !!w?.Capacitor?.isNativePlatform?.() ||
+    (!!platform && ["android", "ios"].includes(platform));
+
+  return isMobile && !isNative;
 }
 
 function NotFoundComponent() {
@@ -137,6 +171,56 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function OpenAppBridgePrompt() {
+  const [nativeUrl, setNativeUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isMobileBrowserOutsideApp()) return;
+    if (!window.location.pathname.startsWith("/app")) return;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled || !data.session) return;
+      setNativeUrl(
+        buildNativeUrl({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          expires_in: data.session.expires_in,
+          token_type: data.session.token_type,
+          provider_token: data.session.provider_token,
+          provider_refresh_token: data.session.provider_refresh_token,
+        }),
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!nativeUrl) return null;
+
+  return (
+    <div className="fixed inset-x-3 bottom-4 z-50 rounded-2xl border border-primary/20 bg-card p-3 shadow-card">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Login feito no navegador</p>
+          <p className="text-xs text-muted-foreground">
+            Toque para continuar dentro do aplicativo.
+          </p>
+        </div>
+        <a
+          href={nativeUrl}
+          className="shrink-0 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+        >
+          Abrir app
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
@@ -210,6 +294,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <OpenAppBridgePrompt />
       <Toaster position="top-center" richColors />
     </QueryClientProvider>
   );
