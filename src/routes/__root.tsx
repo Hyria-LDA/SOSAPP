@@ -13,7 +13,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-const NATIVE_SCHEME = "sosmarceneiros://auth-callback";
+const ANDROID_PACKAGE = "br.com.sosmarceneiros.app";
 
 function authCallbackPathFromDeepLink(url: string) {
   try {
@@ -30,7 +30,7 @@ function authCallbackPathFromDeepLink(url: string) {
   }
 }
 
-function buildNativeUrl(session: {
+function buildNativeIntentUrl(session: {
   access_token: string;
   refresh_token: string;
   expires_in?: number;
@@ -38,15 +38,23 @@ function buildNativeUrl(session: {
   provider_token?: string | null;
   provider_refresh_token?: string | null;
 }) {
-  const frag = new URLSearchParams();
-  frag.set("access_token", session.access_token);
-  frag.set("refresh_token", session.refresh_token);
-  if (session.expires_in) frag.set("expires_in", String(session.expires_in));
-  frag.set("token_type", session.token_type ?? "bearer");
-  if (session.provider_token) frag.set("provider_token", session.provider_token);
+  const query = new URLSearchParams();
+  query.set("access_token", session.access_token);
+  query.set("refresh_token", session.refresh_token);
+  if (session.expires_in) query.set("expires_in", String(session.expires_in));
+  query.set("token_type", session.token_type ?? "bearer");
+  if (session.provider_token) query.set("provider_token", session.provider_token);
   if (session.provider_refresh_token)
-    frag.set("provider_refresh_token", session.provider_refresh_token);
-  return `${NATIVE_SCHEME}#${frag.toString()}`;
+    query.set("provider_refresh_token", session.provider_refresh_token);
+
+  const fallbackUrl =
+    typeof window !== "undefined"
+      ? window.location.href
+      : "https://www.sosmarceneiros.com.br/app";
+
+  return `intent://auth-callback?${query.toString()}#Intent;scheme=sosmarceneiros;package=${ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(
+    fallbackUrl,
+  )};end`;
 }
 
 function isMobileBrowserOutsideApp() {
@@ -183,7 +191,7 @@ function OpenAppBridgePrompt() {
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled || !data.session) return;
       setNativeUrl(
-        buildNativeUrl({
+        buildNativeIntentUrl({
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token,
           expires_in: data.session.expires_in,
