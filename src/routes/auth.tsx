@@ -25,9 +25,7 @@ async function openExternalLogin(url: string) {
     return;
   } catch (error) {
     console.warn("[auth/google] ExternalBrowser indisponivel", error);
-    throw new Error(
-      "Instale a versao mais nova do app para abrir o login Google no Chrome.",
-    );
+    window.location.assign(url);
   }
 }
 
