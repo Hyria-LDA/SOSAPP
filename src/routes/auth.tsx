@@ -81,7 +81,7 @@ function AuthPage() {
       const isAndroid = /Android/i.test(ua);
       const isWebViewish =
         /(; wv\)|\bwv\b)/i.test(ua) || /DreamFlow|Flutter|Capacitor/i.test(ua);
-      const isNativeWrapper = isCapacitor || (isAndroid && isWebViewish);
+      const isNativeWrapper = isCapacitor || isAndroid || isWebViewish;
 
       try {
         sessionStorage.setItem("lov:native", isNativeWrapper ? "1" : "0");
