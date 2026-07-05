@@ -1,7 +1,12 @@
 package br.com.sosmarceneiros.app;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebViewClient;
 import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
 import ee.forgr.capacitor.social.login.SocialLoginPlugin;
 
@@ -11,8 +16,57 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(ExternalBrowserPlugin.class);
         registerPlugin(SocialLoginPlugin.class);
         super.onCreate(savedInstanceState);
+        forceGoogleOAuthOutsideWebView();
     }
 
     @Override
     public void IHaveModifiedTheMainActivityForTheUseWithSocialLoginPlugin() {}
+
+    private void forceGoogleOAuthOutsideWebView() {
+        if (getBridge() == null) return;
+
+        getBridge().setWebViewClient(new BridgeWebViewClient(getBridge()) {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri url = request.getUrl();
+                if (shouldOpenInExternalBrowser(url)) {
+                    openInExternalBrowser(url);
+                    return true;
+                }
+
+                return super.shouldOverrideUrlLoading(view, request);
+            }
+        });
+    }
+
+    private boolean shouldOpenInExternalBrowser(Uri url) {
+        if (url == null) return false;
+
+        String host = url.getHost();
+        String path = url.getPath();
+        String query = url.getQuery();
+
+        if ("accounts.google.com".equalsIgnoreCase(host)) return true;
+
+        boolean isSupabaseAuth =
+            "yzbfjqeltqgqpqecmwdv.supabase.co".equalsIgnoreCase(host) &&
+            path != null &&
+            path.startsWith("/auth/v1/authorize");
+
+        return isSupabaseAuth && query != null && query.contains("provider=google");
+    }
+
+    private void openInExternalBrowser(Uri url) {
+        Intent chromeIntent = new Intent(Intent.ACTION_VIEW, url);
+        chromeIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+        chromeIntent.setPackage("com.android.chrome");
+
+        try {
+            startActivity(chromeIntent);
+        } catch (Exception chromeError) {
+            Intent fallbackIntent = new Intent(Intent.ACTION_VIEW, url);
+            fallbackIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+            startActivity(fallbackIntent);
+        }
+    }
 }
