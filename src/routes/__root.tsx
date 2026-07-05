@@ -13,8 +13,6 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-const ANDROID_PACKAGE = "br.com.sosmarceneiros.app";
-
 function authCallbackPathFromDeepLink(url: string) {
   try {
     const deepLink = new URL(url);
@@ -47,14 +45,7 @@ function buildNativeIntentUrl(session: {
   if (session.provider_refresh_token)
     query.set("provider_refresh_token", session.provider_refresh_token);
 
-  const fallbackUrl =
-    typeof window !== "undefined"
-      ? window.location.href
-      : "https://www.sosmarceneiros.com.br/app";
-
-  return `intent://auth-callback?${query.toString()}#Intent;scheme=sosmarceneiros;package=${ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(
-    fallbackUrl,
-  )};end`;
+  return `intent://auth-callback?${query.toString()}#Intent;scheme=sosmarceneiros;end`;
 }
 
 function isMobileBrowserOutsideApp() {
