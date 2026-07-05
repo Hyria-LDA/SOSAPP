@@ -10,6 +10,11 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+function toAndroidBrowserIntent(url: string) {
+  const withoutScheme = url.replace(/^https?:\/\//i, "");
+  return `intent://${withoutScheme}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(url)};end`;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -74,11 +79,11 @@ function AuthPage() {
     try {
       const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
       const w = typeof window !== "undefined" ? (window as any) : {};
+      const platform = w?.Capacitor?.getPlatform?.();
       const isCapacitor =
         !!w?.Capacitor?.isNativePlatform?.() ||
-        (!!w?.Capacitor?.getPlatform?.() &&
-          ["android", "ios"].includes(w.Capacitor.getPlatform()));
-      const isAndroid = /Android/i.test(ua);
+        (!!platform && ["android", "ios"].includes(platform));
+      const isAndroid = platform === "android" || /Android/i.test(ua);
       const isWebViewish =
         /(; wv\)|\bwv\b)/i.test(ua) || /DreamFlow|Flutter|Capacitor/i.test(ua);
       const isNativeWrapper = isCapacitor || isAndroid || isWebViewish;
@@ -107,6 +112,10 @@ function AuthPage() {
 
       if (isNativeWrapper) {
         if (!data?.url) throw new Error("URL de login Google nao foi gerada.");
+        if (isAndroid) {
+          window.location.assign(toAndroidBrowserIntent(data.url));
+          return;
+        }
         try {
           const { Browser } = await import("@capacitor/browser");
           await Browser.open({
