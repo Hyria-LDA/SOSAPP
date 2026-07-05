@@ -30,7 +30,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri url = request.getUrl();
                 if (shouldOpenInExternalBrowser(url)) {
-                    openInExternalBrowser(url);
+                    openInExternalBrowser(withNativeCallback(url));
                     return true;
                 }
 
@@ -56,7 +56,49 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         return isSupabaseAuth && query != null && query.contains("provider=google");
     }
 
+    private Uri withNativeCallback(Uri url) {
+        if (url == null) return null;
+
+        String host = url.getHost();
+        String path = url.getPath();
+        String query = url.getQuery();
+        boolean isSupabaseGoogleAuth =
+            "yzbfjqeltqgqpqecmwdv.supabase.co".equalsIgnoreCase(host) &&
+            path != null &&
+            path.startsWith("/auth/v1/authorize") &&
+            query != null &&
+            query.contains("provider=google");
+
+        if (!isSupabaseGoogleAuth) return url;
+
+        String redirectTo = url.getQueryParameter("redirect_to");
+        if (redirectTo == null || redirectTo.trim().isEmpty()) return url;
+
+        Uri redirectUri = Uri.parse(redirectTo);
+        if ("1".equals(redirectUri.getQueryParameter("native"))) return url;
+
+        Uri nativeRedirect = redirectUri.buildUpon()
+            .appendQueryParameter("native", "1")
+            .build();
+
+        Uri.Builder builder = url.buildUpon().clearQuery();
+        for (String name : url.getQueryParameterNames()) {
+            if ("redirect_to".equals(name)) {
+                builder.appendQueryParameter(name, nativeRedirect.toString());
+                continue;
+            }
+
+            for (String value : url.getQueryParameters(name)) {
+                builder.appendQueryParameter(name, value);
+            }
+        }
+
+        return builder.build();
+    }
+
     private void openInExternalBrowser(Uri url) {
+        if (url == null) return;
+
         Intent chromeIntent = new Intent(Intent.ACTION_VIEW, url);
         chromeIntent.addCategory(Intent.CATEGORY_BROWSABLE);
         chromeIntent.setPackage("com.android.chrome");
