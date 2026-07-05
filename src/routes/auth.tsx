@@ -5,6 +5,15 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 
+const PUBLIC_SITE_URL = "https://sosmarceneiros.com.br";
+
+function getPublicOrigin() {
+  if (typeof window === "undefined") return PUBLIC_SITE_URL;
+  const origin = window.location.origin;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) return origin;
+  return PUBLIC_SITE_URL;
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
   component: AuthPage,
@@ -51,7 +60,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: getPublicOrigin(),
             data: { full_name: name },
           },
         });
@@ -123,7 +132,7 @@ function AuthPage() {
         sessionStorage.setItem("lov:native", isNativeWrapper ? "1" : "0");
       } catch {}
 
-      const redirectTo = `${window.location.origin}/auth/callback${
+      const redirectTo = `${getPublicOrigin()}/auth/callback${
         isNativeWrapper ? "?native=1" : ""
       }`;
 
