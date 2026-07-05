@@ -107,12 +107,18 @@ function AuthPage() {
 
       if (isNativeWrapper) {
         if (!data?.url) throw new Error("URL de login Google nao foi gerada.");
-        const { Browser } = await import("@capacitor/browser");
-        await Browser.open({
-          url: data.url,
-          presentationStyle: "fullscreen",
-          windowName: "_blank",
-        });
+        try {
+          const { Browser } = await import("@capacitor/browser");
+          await Browser.open({
+            url: data.url,
+            presentationStyle: "fullscreen",
+            windowName: "_blank",
+          });
+        } catch (pluginError) {
+          console.warn("[auth/google] Browser plugin indisponivel, usando fallback", pluginError);
+          const opened = window.open(data.url, "_blank", "noopener,noreferrer");
+          if (!opened) window.location.assign(data.url);
+        }
       }
     } catch (err: any) {
       console.error("[auth/google] excecao", err);
