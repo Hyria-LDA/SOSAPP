@@ -14,6 +14,35 @@ function getPublicOrigin() {
   return PUBLIC_SITE_URL;
 }
 
+async function openExternalLogin(url: string) {
+  const w = window as any;
+
+  try {
+    const externalBrowser = w?.Capacitor?.Plugins?.ExternalBrowser;
+    if (externalBrowser?.openUrl) {
+      await externalBrowser.openUrl({ url });
+      return;
+    }
+  } catch (error) {
+    console.warn("[auth/google] ExternalBrowser indisponivel", error);
+  }
+
+  try {
+    const { Browser } = await import("@capacitor/browser");
+    await Browser.open({
+      url,
+      presentationStyle: "fullscreen",
+      windowName: "_blank",
+    });
+    return;
+  } catch (error) {
+    console.warn("[auth/google] Browser indisponivel", error);
+  }
+
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (!opened) window.location.assign(url);
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
   component: AuthPage,
@@ -115,12 +144,7 @@ function AuthPage() {
 
       if (isNativeWrapper) {
         if (!data?.url) throw new Error("URL de login Google nao foi gerada.");
-        const { Browser } = await import("@capacitor/browser");
-        await Browser.open({
-          url: data.url,
-          presentationStyle: "fullscreen",
-          windowName: "_blank",
-        });
+        await openExternalLogin(data.url);
       }
     } catch (err: any) {
       console.error("[auth/google] excecao", err);
