@@ -228,18 +228,31 @@ function RootComponent() {
   useEffect(() => {
     let removeDeepLinkListener: (() => void) | undefined;
     let cancelled = false;
+    const openAuthCallback = (url: string) => {
+      const callbackPath = authCallbackPathFromDeepLink(url);
+      if (!callbackPath) return false;
+
+      import("@capacitor/browser")
+        .then(({ Browser }) => Browser.close())
+        .catch(() => {});
+      window.location.replace(callbackPath);
+      return true;
+    };
 
     import("@capacitor/app")
-      .then(({ App }) =>
-        App.addListener("appUrlOpen", ({ url }) => {
-          const callbackPath = authCallbackPathFromDeepLink(url);
-          if (!callbackPath) return;
-          import("@capacitor/browser")
-            .then(({ Browser }) => Browser.close())
-            .catch(() => {});
-          window.location.replace(callbackPath);
-        }),
-      )
+      .then(async ({ App }) => {
+        App.getLaunchUrl()
+          .then((launch) => {
+            if (!cancelled && launch?.url) openAuthCallback(launch.url);
+          })
+          .catch((error) => {
+            console.warn("[deep-link] launch url indisponivel", error);
+          });
+
+        return App.addListener("appUrlOpen", ({ url }) => {
+          openAuthCallback(url);
+        });
+      })
       .then((handle) => {
         if (cancelled) {
           handle.remove();

@@ -12,6 +12,14 @@ export const Route = createFileRoute("/auth/callback")({
 const NATIVE_SCHEME = "sosmarceneiros://auth-callback";
 const SESSION_WAIT_MS = 5000;
 
+function goTo(path: "/app" | "/auth", navigate: ReturnType<typeof useNavigate>) {
+  try {
+    window.location.replace(path);
+  } catch {
+    navigate({ to: path });
+  }
+}
+
 function buildNativeUrl(session: {
   access_token: string;
   refresh_token: string;
@@ -28,7 +36,7 @@ function buildNativeUrl(session: {
   if (session.provider_token) frag.set("provider_token", session.provider_token);
   if (session.provider_refresh_token)
     frag.set("provider_refresh_token", session.provider_refresh_token);
-  return `${NATIVE_SCHEME}#${frag.toString()}`;
+  return `${NATIVE_SCHEME}?from_app=1#${frag.toString()}`;
 }
 
 /**
@@ -106,7 +114,7 @@ function AuthCallback() {
         if (providerError) {
           console.error("[auth/callback] erro do provider", providerError);
           toast.error(decodeURIComponent(providerError));
-          navigate({ to: "/auth" });
+          goTo("/auth", navigate);
           return;
         }
 
@@ -138,7 +146,7 @@ function AuthCallback() {
           });
           if (error) {
             toast.error(`Falha ao restaurar sessão: ${error.message}`);
-            navigate({ to: "/auth" });
+            goTo("/auth", navigate);
             return;
           }
         }
@@ -154,7 +162,7 @@ function AuthCallback() {
           });
           if (error) {
             toast.error(`Falha ao concluir login: ${error.message}`);
-            navigate({ to: "/auth" });
+            goTo("/auth", navigate);
             return;
           }
         } else {
@@ -180,7 +188,7 @@ function AuthCallback() {
         if (!sessData?.session) {
           console.warn("[auth/callback] sessão nula após fluxo", { flow });
           toast.error("Sessão não encontrada após o login.");
-          navigate({ to: "/auth" });
+          goTo("/auth", navigate);
           return;
         }
 
@@ -202,7 +210,7 @@ function AuthCallback() {
           console.info("[auth/callback] sessao OK no app — redirecionando para /app", {
             flow,
           });
-          navigate({ to: "/app" });
+          goTo("/app", navigate);
           return;
         }
 
@@ -227,11 +235,11 @@ function AuthCallback() {
         console.info("[auth/callback] sessão OK — redirecionando para /app", {
           flow,
         });
-        navigate({ to: "/app" });
+        goTo("/app", navigate);
       } catch (err: any) {
         console.error("[auth/callback] exceção", err);
         toast.error(err?.message || "Erro ao concluir login");
-        navigate({ to: "/auth" });
+        goTo("/auth", navigate);
       }
     };
 

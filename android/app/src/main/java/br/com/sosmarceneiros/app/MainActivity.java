@@ -17,10 +17,17 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(SocialLoginPlugin.class);
         super.onCreate(savedInstanceState);
         forceGoogleOAuthOutsideWebView();
+        openAuthCallbackInWebView(getIntent());
     }
 
     @Override
     public void IHaveModifiedTheMainActivityForTheUseWithSocialLoginPlugin() {}
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        openAuthCallbackInWebView(intent);
+    }
 
     private void forceGoogleOAuthOutsideWebView() {
         if (getBridge() == null) return;
@@ -75,10 +82,15 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         if (redirectTo == null || redirectTo.trim().isEmpty()) return url;
 
         Uri redirectUri = Uri.parse(redirectTo);
-        if ("1".equals(redirectUri.getQueryParameter("native"))) return url;
+        if (
+            "1".equals(redirectUri.getQueryParameter("from_app")) ||
+            "1".equals(redirectUri.getQueryParameter("native"))
+        ) {
+            return url;
+        }
 
         Uri nativeRedirect = redirectUri.buildUpon()
-            .appendQueryParameter("native", "1")
+            .appendQueryParameter("from_app", "1")
             .build();
 
         Uri.Builder builder = url.buildUpon().clearQuery();
@@ -110,5 +122,36 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
             fallbackIntent.addCategory(Intent.CATEGORY_BROWSABLE);
             startActivity(fallbackIntent);
         }
+    }
+
+    private void openAuthCallbackInWebView(Intent intent) {
+        if (intent == null || intent.getData() == null) return;
+        Uri data = intent.getData();
+        boolean isAuthCallback =
+            "sosmarceneiros".equalsIgnoreCase(data.getScheme()) &&
+            "auth-callback".equalsIgnoreCase(data.getHost());
+
+        if (!isAuthCallback) return;
+
+        Uri.Builder callback = Uri.parse("https://sosmarceneiros.com.br/auth/callback").buildUpon();
+        String query = data.getEncodedQuery();
+        String fragment = data.getEncodedFragment();
+
+        if (query != null && !query.trim().isEmpty()) {
+            callback.encodedQuery(query);
+        }
+        if (fragment != null && !fragment.trim().isEmpty()) {
+            callback.encodedFragment(fragment);
+        }
+
+        String callbackUrl = callback.build().toString();
+        if (getBridge() == null || getBridge().getWebView() == null) {
+            getWindow()
+                .getDecorView()
+                .postDelayed(() -> openAuthCallbackInWebView(intent), 300);
+            return;
+        }
+
+        getBridge().getWebView().post(() -> getBridge().getWebView().loadUrl(callbackUrl));
     }
 }
