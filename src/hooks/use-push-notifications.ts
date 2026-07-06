@@ -27,18 +27,24 @@ function errorMessage(error: unknown) {
   return String(error);
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function waitForPushPlugin() {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    if (Capacitor.isPluginAvailable("PushNotifications")) return true;
+    await sleep(500);
+  }
+  return false;
+}
+
 export function usePushNotifications() {
   const { user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!user || !Capacitor.isNativePlatform()) return;
-    if (!Capacitor.isPluginAvailable("PushNotifications")) {
-      toast.error(
-        "Este APK ainda nao tem notificacoes nativas. Instale a versao 1.0.3 ou mais nova.",
-      );
-      return;
-    }
 
     let cancelled = false;
     const handles: PluginListenerHandle[] = [];
@@ -54,6 +60,15 @@ export function usePushNotifications() {
 
     const registerDevice = async () => {
       try {
+        const hasPushPlugin = await waitForPushPlugin();
+        if (cancelled) return;
+        if (!hasPushPlugin) {
+          toast.error(
+            "Este APK ainda nao tem notificacoes nativas. Instale a versao 1.0.5 ou mais nova.",
+          );
+          return;
+        }
+
         handles.push(
           await PushNotifications.addListener("registration", async (token: Token) => {
             if (!token.value) {
