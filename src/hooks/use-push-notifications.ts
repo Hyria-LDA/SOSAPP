@@ -1,4 +1,10 @@
-import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
+import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
+import {
+  PushNotifications,
+  type ActionPerformed,
+  type PushNotificationSchema,
+  type Token,
+} from "@capacitor/push-notifications";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { toast } from "sonner";
@@ -6,55 +12,19 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
-type PermissionState = "prompt" | "prompt-with-rationale" | "granted" | "denied";
-type PermissionStatus = { receive: PermissionState };
-type PushToken = { value: string };
 type PushData = Record<string, unknown>;
-type PushNotificationSchema = {
-  title?: string;
-  body?: string;
-  data?: PushData;
-};
-type PushNotificationAction = {
-  notification: PushNotificationSchema;
-};
-type PushNotificationChannel = {
-  id: string;
-  name: string;
-  description?: string;
-  importance?: number;
-  visibility?: number;
-  sound?: string;
-  vibration?: boolean;
-  lights?: boolean;
-};
-type PushNotificationsPlugin = {
-  checkPermissions: () => Promise<PermissionStatus>;
-  requestPermissions: () => Promise<PermissionStatus>;
-  register: () => Promise<void>;
-  createChannel: (channel: PushNotificationChannel) => Promise<void>;
-  addListener: (
-    eventName: "registration",
-    listenerFunc: (token: PushToken) => void,
-  ) => Promise<PluginListenerHandle>;
-  addListener: (
-    eventName: "registrationError",
-    listenerFunc: (error: { error: string }) => void,
-  ) => Promise<PluginListenerHandle>;
-  addListener: (
-    eventName: "pushNotificationReceived",
-    listenerFunc: (notification: PushNotificationSchema) => void,
-  ) => Promise<PluginListenerHandle>;
-  addListener: (
-    eventName: "pushNotificationActionPerformed",
-    listenerFunc: (action: PushNotificationAction) => void,
-  ) => Promise<PluginListenerHandle>;
-};
-
-const PushNotifications = registerPlugin<PushNotificationsPlugin>("PushNotifications");
 
 function asString(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+function errorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return String(error);
 }
 
 export function usePushNotifications() {
@@ -79,18 +49,30 @@ export function usePushNotifications() {
     const registerDevice = async () => {
       try {
         handles.push(
-          await PushNotifications.addListener("registration", async (token) => {
+          await PushNotifications.addListener("registration", async (token: Token) => {
+            if (!token.value) {
+              toast.error("Firebase nao retornou token de notificacao.");
+              return;
+            }
+
             const { error } = await supabase.rpc("register_push_token", {
               p_platform: Capacitor.getPlatform(),
               p_token: token.value,
             });
-            if (error) console.warn("[push] erro ao salvar token", error);
+            if (error) {
+              console.warn("[push] erro ao salvar token", error);
+              toast.error(`Erro ao salvar token: ${error.message}`);
+              return;
+            }
+
+            toast.success("Notificacoes ativadas neste celular.");
           }),
         );
 
         handles.push(
           await PushNotifications.addListener("registrationError", (error) => {
             console.warn("[push] erro ao registrar notificacoes", error);
+            toast.error(`Firebase nao registrou o celular: ${error.error}`);
           }),
         );
 
@@ -107,9 +89,12 @@ export function usePushNotifications() {
         );
 
         handles.push(
-          await PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
-            openNotificationTarget(action.notification.data);
-          }),
+          await PushNotifications.addListener(
+            "pushNotificationActionPerformed",
+            (action: ActionPerformed) => {
+              openNotificationTarget(action.notification.data);
+            },
+          ),
         );
 
         await PushNotifications.createChannel({
@@ -128,10 +113,16 @@ export function usePushNotifications() {
           permission = await PushNotifications.requestPermissions();
         }
 
-        if (cancelled || permission.receive !== "granted") return;
+        if (cancelled) return;
+        if (permission.receive !== "granted") {
+          toast.error("Permissao de notificacao negada no Android.");
+          return;
+        }
+
         await PushNotifications.register();
       } catch (error) {
         console.warn("[push] notificacoes nativas indisponiveis", error);
+        toast.error(`Erro ao ativar notificacoes: ${errorMessage(error)}`);
       }
     };
 
