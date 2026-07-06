@@ -33,6 +33,12 @@ export function usePushNotifications() {
 
   useEffect(() => {
     if (!user || !Capacitor.isNativePlatform()) return;
+    if (!Capacitor.isPluginAvailable("PushNotifications")) {
+      toast.error(
+        "Este APK ainda nao tem notificacoes nativas. Instale a versao 1.0.3 ou mais nova.",
+      );
+      return;
+    }
 
     let cancelled = false;
     const handles: PluginListenerHandle[] = [];
