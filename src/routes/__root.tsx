@@ -7,11 +7,31 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
+
+type AppNotification = {
+  id: string;
+  user_id: string;
+  tipo: string;
+  titulo: string;
+  mensagem: string;
+  material_id: string | null;
+  pedido_id: string | null;
+  alerta_id?: string | null;
+};
+
+type CapacitorWindow = Window &
+  typeof globalThis & {
+    Capacitor?: {
+      getPlatform?: () => string;
+      isNativePlatform?: () => boolean;
+    };
+  };
 
 function authCallbackPathFromDeepLink(url: string) {
   try {
@@ -54,7 +74,7 @@ function isMobileBrowserOutsideApp() {
   const ua = navigator.userAgent || "";
   const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
   const isAndroidWebView = /(; wv\)|\bwv\b)/i.test(ua);
-  const w = window as any;
+  const w = window as CapacitorWindow;
   const platform = w?.Capacitor?.getPlatform?.();
   const isNative =
     !!w?.Capacitor?.isNativePlatform?.() ||
@@ -223,6 +243,72 @@ function OpenAppBridgePrompt() {
   );
 }
 
+function InAppNotificationListener({ queryClient }: { queryClient: QueryClient }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    let currentChannel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+
+    const cleanupChannel = () => {
+      if (!currentChannel) return;
+      supabase.removeChannel(currentChannel);
+      currentChannel = null;
+    };
+
+    const subscribeForUser = (userId: string) => {
+      cleanupChannel();
+      currentChannel = supabase
+        .channel(`notif-toast-${userId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notificacoes",
+            filter: `user_id=eq.${userId}`,
+          },
+          ({ new: notification }) => {
+            const notif = notification as AppNotification;
+            queryClient.invalidateQueries({ queryKey: ["notificacoes", userId] });
+            queryClient.invalidateQueries({ queryKey: ["notificacoes-unread", userId] });
+
+            if (window.location.pathname === "/app/notificacoes") return;
+
+            toast(notif.titulo || "Nova notificacao", {
+              description: notif.mensagem,
+              action: {
+                label: "Ver",
+                onClick: () => router.navigate({ to: "/app/notificacoes" }),
+              },
+            });
+          },
+        )
+        .subscribe();
+    };
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (!cancelled && data.user) subscribeForUser(data.user.id);
+    });
+
+    const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        subscribeForUser(session.user.id);
+      } else {
+        cleanupChannel();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      cleanupChannel();
+      authSub.subscription.unsubscribe();
+    };
+  }, [queryClient, router]);
+
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
@@ -234,9 +320,7 @@ function RootComponent() {
       const callbackPath = authCallbackPathFromDeepLink(url);
       if (!callbackPath) return false;
 
-      import("@capacitor/browser")
-        .then(({ Browser }) => Browser.close())
-        .catch(() => {});
+      import("@capacitor/browser").then(({ Browser }) => Browser.close()).catch(() => {});
       window.location.replace(callbackPath);
       return true;
     };
@@ -287,7 +371,6 @@ function RootComponent() {
           /* network/CORS */
         }
       }
-      // eslint-disable-next-line no-console
       console.warn("[img-error] falha ao carregar imagem", {
         url: url || "(vazio)",
         httpStatus: status,
@@ -309,6 +392,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <InAppNotificationListener queryClient={queryClient} />
       <OpenAppBridgePrompt />
       <Toaster position="top-center" richColors />
     </QueryClientProvider>
