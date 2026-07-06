@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
+import com.capacitorjs.plugins.pushnotifications.PushNotificationsPlugin;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebViewClient;
 import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
@@ -14,6 +15,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(ExternalBrowserPlugin.class);
+        registerPlugin(PushNotificationsPlugin.class);
         registerPlugin(SocialLoginPlugin.class);
         super.onCreate(savedInstanceState);
         forceGoogleOAuthOutsideWebView();
