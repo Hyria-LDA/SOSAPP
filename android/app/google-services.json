@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1086557068570",
+    "project_id": "sos-marceneiros",
+    "storage_bucket": "sos-marceneiros.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1086557068570:android:e3986bb9067891575d60a3",
+        "android_client_info": {
+          "package_name": "br.com.sosmarceneiros.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUHwkU7PlljK9gMp3TacPKaiCrn_0Ke_s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
