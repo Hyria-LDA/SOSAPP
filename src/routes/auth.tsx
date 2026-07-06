@@ -29,6 +29,31 @@ async function openExternalLogin(url: string) {
   }
 }
 
+type CapacitorWindow = Window & {
+  Capacitor?: {
+    getPlatform?: () => string;
+    isNativePlatform?: () => boolean;
+  };
+};
+
+function authErrorMessage(err: unknown) {
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  const lower = msg.toLowerCase();
+
+  if (
+    lower.includes("email rate limit") ||
+    lower.includes("over_email_send_rate_limit") ||
+    lower.includes("rate limit exceeded")
+  ) {
+    return (
+      "O Supabase bloqueou novos e-mails por alguns minutos porque muitos cadastros foram tentados. " +
+      "Aguarde um pouco ou configure SMTP próprio no Supabase para produção."
+    );
+  }
+
+  return msg || "Erro ao autenticar";
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
   component: AuthPage,
@@ -66,12 +91,34 @@ function AuthPage() {
     };
   }, [navigate]);
 
+  useEffect(() => {
+    const unlockIfReturnedWithoutSession = async () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate({ to: "/app", replace: true });
+        return;
+      }
+
+      setLoading(false);
+    };
+
+    window.addEventListener("focus", unlockIfReturnedWithoutSession);
+    document.addEventListener("visibilitychange", unlockIfReturnedWithoutSession);
+
+    return () => {
+      window.removeEventListener("focus", unlockIfReturnedWithoutSession);
+      document.removeEventListener("visibilitychange", unlockIfReturnedWithoutSession);
+    };
+  }, [navigate]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -80,14 +127,19 @@ function AuthPage() {
           },
         });
         if (error) throw error;
+        if (!data.session) {
+          toast.success("Conta criada! Confira seu e-mail para confirmar o cadastro.");
+          setMode("signin");
+          return;
+        }
         toast.success("Conta criada!");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
       navigate({ to: "/app" });
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao autenticar");
+    } catch (err) {
+      toast.error(authErrorMessage(err), { duration: 8000 });
     } finally {
       setLoading(false);
     }
@@ -97,18 +149,19 @@ function AuthPage() {
     setLoading(true);
     try {
       const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
-      const w = typeof window !== "undefined" ? (window as any) : {};
+      const w = typeof window !== "undefined" ? (window as CapacitorWindow) : undefined;
       const platform = w?.Capacitor?.getPlatform?.();
       const isCapacitor =
         !!w?.Capacitor?.isNativePlatform?.() ||
         (!!platform && ["android", "ios"].includes(platform));
-      const isWebViewish =
-        /(; wv\)|\bwv\b)/i.test(ua) || /DreamFlow|Flutter|Capacitor/i.test(ua);
+      const isWebViewish = /(; wv\)|\bwv\b)/i.test(ua) || /DreamFlow|Flutter|Capacitor/i.test(ua);
       const isNativeWrapper = isCapacitor || isWebViewish;
 
       try {
         sessionStorage.setItem("lov:native", isNativeWrapper ? "1" : "0");
-      } catch {}
+      } catch {
+        // sessionStorage pode estar indisponível em alguns WebViews.
+      }
 
       const redirectTo = isNativeWrapper
         ? NATIVE_REDIRECT_URL
@@ -123,7 +176,7 @@ function AuthPage() {
             prompt: "select_account",
           },
           skipBrowserRedirect: isNativeWrapper,
-        } as any,
+        },
       });
 
       if (error) throw error;
@@ -131,10 +184,11 @@ function AuthPage() {
       if (isNativeWrapper) {
         if (!data?.url) throw new Error("URL de login Google nao foi gerada.");
         await openExternalLogin(data.url);
+        setLoading(false);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("[auth/google] excecao", err);
-      const msg = String(err?.message ?? "");
+      const msg = err instanceof Error ? err.message : String(err ?? "");
       if (
         msg.toLowerCase().includes("provider is not enabled") ||
         msg.toLowerCase().includes("unsupported provider")
@@ -147,7 +201,9 @@ function AuthPage() {
           { duration: 8000 },
         );
       } else {
-        toast.error(err?.message || "Falha inesperada no login com Google");
+        toast.error(authErrorMessage(err) || "Falha inesperada no login com Google", {
+          duration: 8000,
+        });
       }
       setLoading(false);
     }
