@@ -31,14 +31,17 @@ const config: CapacitorConfig = {
       "*.googleusercontent.com",
     ],
   },
-android: {
-  allowMixedContent: false,
-},
+  android: {
+    allowMixedContent: false,
+  },
   ios: {
     scheme: "sosmarceneiros",
     contentInset: "always",
   },
   plugins: {
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert", "banner", "list"],
+    },
     SocialLogin: {
       providers: {
         google: true,

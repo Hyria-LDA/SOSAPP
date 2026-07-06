@@ -1310,6 +1310,10 @@ export type Database = {
         Args: { _codigo: string; _referer?: string; _user_agent?: string }
         Returns: string
       }
+      register_push_token: {
+        Args: { p_platform?: string; p_token: string }
+        Returns: undefined
+      }
       vendedor_metrics: { Args: { _vendedor_id: string }; Returns: Json }
       verificar_aprovacao_indicacao: {
         Args: { _empresa_id: string }
