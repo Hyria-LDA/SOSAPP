@@ -1,4 +1,5 @@
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
+import { App } from "@capacitor/app";
 import {
   PushNotifications,
   type ActionPerformed,
@@ -65,8 +66,10 @@ export function usePushNotifications() {
         const hasPushPlugin = await waitForPushPlugin();
         if (cancelled) return;
         if (!hasPushPlugin) {
+          const appInfo = await App.getInfo().catch(() => null);
+          const versionText = appInfo?.version ? ` Versao instalada: ${appInfo.version}.` : "";
           toast.error(
-            "Notificacoes nativas indisponiveis. Reinstale o APK mais novo e limpe os dados do app se continuar.",
+            `Notificacoes nativas indisponiveis.${versionText} Reinstale o APK 1.0.6 e limpe os dados do app se continuar.`,
           );
           return;
         }

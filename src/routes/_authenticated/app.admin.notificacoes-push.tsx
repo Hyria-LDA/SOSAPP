@@ -1,4 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { App } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { ArrowLeft, BellRing, Send } from "lucide-react";
 import { useState } from "react";
@@ -43,6 +45,23 @@ function readableError(error: unknown) {
 function AdminPushNotifications() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+
+  const { data: appDiagnostics } = useQuery({
+    queryKey: ["admin-push-app-diagnostics"],
+    queryFn: async () => {
+      const appInfo = Capacitor.isNativePlatform()
+        ? await App.getInfo().catch(() => null)
+        : null;
+
+      return {
+        platform: Capacitor.getPlatform(),
+        native: Capacitor.isNativePlatform(),
+        pushAvailable: Capacitor.isPluginAvailable("PushNotifications"),
+        appVersion: appInfo?.version ?? null,
+        appBuild: appInfo?.build ?? null,
+      };
+    },
+  });
 
   const { data: tokenCount } = useQuery({
     queryKey: ["admin-push-token-count"],
@@ -130,6 +149,22 @@ function AdminPushNotifications() {
       </section>
 
       <section className="mt-4 rounded-2xl bg-card p-4 shadow-card">
+        <div className="text-sm font-bold">Diagnostico do app</div>
+        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+          <Info label="Versao" value={appDiagnostics?.appVersion ?? "--"} />
+          <Info label="Build" value={appDiagnostics?.appBuild ?? "--"} />
+          <Info label="Plataforma" value={appDiagnostics?.platform ?? "--"} />
+          <Info label="Push plugin" value={appDiagnostics?.pushAvailable ? "ativo" : "inativo"} />
+        </div>
+        {appDiagnostics?.native && !appDiagnostics.pushAvailable ? (
+          <p className="mt-3 rounded-xl bg-destructive/10 p-3 text-xs font-semibold text-destructive">
+            O site carregou dentro do app, mas este APK nao tem o plugin nativo de notificacao.
+            Reinstale o APK 1.0.6 e limpe os dados do aplicativo.
+          </p>
+        ) : null}
+      </section>
+
+      <section className="mt-4 rounded-2xl bg-card p-4 shadow-card">
         <label className="text-sm font-bold" htmlFor="push-title">
           Titulo
         </label>
@@ -165,6 +200,15 @@ function AdminPushNotifications() {
           {sendPush.isPending ? "Enviando..." : "Enviar para todos"}
         </button>
       </section>
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-secondary px-3 py-2">
+      <div className="text-[10px] font-bold uppercase text-muted-foreground">{label}</div>
+      <div className="mt-0.5 break-words font-black">{value}</div>
     </div>
   );
 }
