@@ -24,6 +24,22 @@ type PushResponse = {
   failed: number;
 };
 
+function readableError(error: unknown) {
+  if (error instanceof Error) {
+    if (error.message.includes("Failed to send a request")) {
+      return "A funcao send-push ainda nao foi publicada no Supabase ou esta sem configuracao.";
+    }
+    return error.message;
+  }
+
+  if (typeof error === "object" && error && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return readableError(new Error(message));
+  }
+
+  return "Erro ao enviar notificacao.";
+}
+
 function AdminPushNotifications() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -46,6 +62,9 @@ function AdminPushNotifications() {
       const cleanBody = body.trim();
       if (!cleanTitle) throw new Error("Digite o titulo da notificacao.");
       if (!cleanBody) throw new Error("Digite a mensagem da notificacao.");
+      if (!tokenCount) {
+        throw new Error("Nenhum celular registrou notificacoes ainda. Abra o app 1.0.6, faca login e aceite a permissao.");
+      }
 
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
@@ -74,7 +93,7 @@ function AdminPushNotifications() {
       setBody("");
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Erro ao enviar notificacao.");
+      toast.error(readableError(error));
     },
   });
 
@@ -101,6 +120,11 @@ function AdminPushNotifications() {
           <div>
             <div className="text-sm font-bold">Dispositivos ativos</div>
             <div className="text-2xl font-black">{tokenCount ?? "--"}</div>
+            {tokenCount === 0 ? (
+              <div className="mt-1 text-xs text-muted-foreground">
+                Abra o app no celular, faca login e aceite a permissao de notificacao.
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
@@ -134,7 +158,7 @@ function AdminPushNotifications() {
         <button
           type="button"
           onClick={() => sendPush.mutate()}
-          disabled={sendPush.isPending}
+          disabled={sendPush.isPending || !tokenCount}
           className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 font-black text-primary-foreground disabled:opacity-60"
         >
           <Send className="h-5 w-5" />

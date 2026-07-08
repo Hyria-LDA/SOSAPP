@@ -88,6 +88,7 @@ export function usePushNotifications() {
               return;
             }
 
+            registeredForUserRef.current = user.id;
             toast.success("Notificacoes ativadas neste celular.");
           }),
         );
@@ -143,7 +144,6 @@ export function usePushNotifications() {
         }
 
         await PushNotifications.register();
-        registeredForUserRef.current = user.id;
       } catch (error) {
         console.warn("[push] notificacoes nativas indisponiveis", error);
         toast.error(`Erro ao ativar notificacoes: ${errorMessage(error)}`);
