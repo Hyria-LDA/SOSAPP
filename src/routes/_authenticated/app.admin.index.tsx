@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Building2, Package, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Building2, Package, CheckCircle2, AlertTriangle, BellRing } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -100,6 +100,22 @@ function Admin() {
           <div className="text-base font-bold">🖼️ Banners</div>
           <div className="text-xs text-muted-foreground">
             Criar, agendar e medir banners da home
+          </div>
+        </div>
+        <span className="text-xl">→</span>
+      </Link>
+
+      <Link
+        to="/app/admin/notificacoes-push"
+        className="mt-3 flex items-center justify-between rounded-2xl bg-card p-4 shadow-card"
+      >
+        <div className="flex items-start gap-3">
+          <BellRing className="mt-0.5 h-5 w-5 text-accent" />
+          <div>
+            <div className="text-base font-bold">Notificacoes Push</div>
+            <div className="text-xs text-muted-foreground">
+              Enviar aviso personalizado para todos os celulares
+            </div>
           </div>
         </div>
         <span className="text-xl">→</span>

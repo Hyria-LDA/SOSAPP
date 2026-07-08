@@ -18,6 +18,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(PushNotificationsPlugin.class);
         registerPlugin(SocialLoginPlugin.class);
         super.onCreate(savedInstanceState);
+        clearWebViewCache();
         forceGoogleOAuthOutsideWebView();
         openAuthCallbackInWebView(getIntent());
     }
@@ -46,6 +47,11 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
                 return super.shouldOverrideUrlLoading(view, request);
             }
         });
+    }
+
+    private void clearWebViewCache() {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        getBridge().getWebView().clearCache(true);
     }
 
     private boolean shouldOpenInExternalBrowser(Uri url) {

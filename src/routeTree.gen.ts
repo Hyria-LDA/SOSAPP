@@ -30,6 +30,7 @@ import { Route as AuthenticatedAppAdminIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedAppMaterialIdRouteImport } from './routes/_authenticated/app.material.$id'
 import { Route as AuthenticatedAppEmpresaIdRouteImport } from './routes/_authenticated/app.empresa.$id'
 import { Route as AuthenticatedAppAdminPlanosRouteImport } from './routes/_authenticated/app.admin.planos'
+import { Route as AuthenticatedAppAdminNotificacoesPushRouteImport } from './routes/_authenticated/app.admin.notificacoes-push'
 import { Route as AuthenticatedAppAdminModeracaoFotosRouteImport } from './routes/_authenticated/app.admin.moderacao-fotos'
 import { Route as AuthenticatedAppAdminDenunciasRouteImport } from './routes/_authenticated/app.admin.denuncias'
 import { Route as AuthenticatedAppAdminBannersRouteImport } from './routes/_authenticated/app.admin.banners'
@@ -149,6 +150,12 @@ const AuthenticatedAppAdminPlanosRoute =
     path: '/planos',
     getParentRoute: () => AuthenticatedAppAdminRoute,
   } as any)
+const AuthenticatedAppAdminNotificacoesPushRoute =
+  AuthenticatedAppAdminNotificacoesPushRouteImport.update({
+    id: '/notificacoes-push',
+    path: '/notificacoes-push',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
 const AuthenticatedAppAdminModeracaoFotosRoute =
   AuthenticatedAppAdminModeracaoFotosRouteImport.update({
     id: '/moderacao-fotos',
@@ -211,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/app/admin/banners': typeof AuthenticatedAppAdminBannersRoute
   '/app/admin/denuncias': typeof AuthenticatedAppAdminDenunciasRoute
   '/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
+  '/app/admin/notificacoes-push': typeof AuthenticatedAppAdminNotificacoesPushRoute
   '/app/admin/planos': typeof AuthenticatedAppAdminPlanosRoute
   '/app/empresa/$id': typeof AuthenticatedAppEmpresaIdRoute
   '/app/material/$id': typeof AuthenticatedAppMaterialIdRoute
@@ -238,6 +246,7 @@ export interface FileRoutesByTo {
   '/app/admin/banners': typeof AuthenticatedAppAdminBannersRoute
   '/app/admin/denuncias': typeof AuthenticatedAppAdminDenunciasRoute
   '/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
+  '/app/admin/notificacoes-push': typeof AuthenticatedAppAdminNotificacoesPushRoute
   '/app/admin/planos': typeof AuthenticatedAppAdminPlanosRoute
   '/app/empresa/$id': typeof AuthenticatedAppEmpresaIdRoute
   '/app/material/$id': typeof AuthenticatedAppMaterialIdRoute
@@ -269,6 +278,7 @@ export interface FileRoutesById {
   '/_authenticated/app/admin/banners': typeof AuthenticatedAppAdminBannersRoute
   '/_authenticated/app/admin/denuncias': typeof AuthenticatedAppAdminDenunciasRoute
   '/_authenticated/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
+  '/_authenticated/app/admin/notificacoes-push': typeof AuthenticatedAppAdminNotificacoesPushRoute
   '/_authenticated/app/admin/planos': typeof AuthenticatedAppAdminPlanosRoute
   '/_authenticated/app/empresa/$id': typeof AuthenticatedAppEmpresaIdRoute
   '/_authenticated/app/material/$id': typeof AuthenticatedAppMaterialIdRoute
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/app/admin/banners'
     | '/app/admin/denuncias'
     | '/app/admin/moderacao-fotos'
+    | '/app/admin/notificacoes-push'
     | '/app/admin/planos'
     | '/app/empresa/$id'
     | '/app/material/$id'
@@ -327,6 +338,7 @@ export interface FileRouteTypes {
     | '/app/admin/banners'
     | '/app/admin/denuncias'
     | '/app/admin/moderacao-fotos'
+    | '/app/admin/notificacoes-push'
     | '/app/admin/planos'
     | '/app/empresa/$id'
     | '/app/material/$id'
@@ -357,6 +369,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin/banners'
     | '/_authenticated/app/admin/denuncias'
     | '/_authenticated/app/admin/moderacao-fotos'
+    | '/_authenticated/app/admin/notificacoes-push'
     | '/_authenticated/app/admin/planos'
     | '/_authenticated/app/empresa/$id'
     | '/_authenticated/app/material/$id'
@@ -524,6 +537,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminPlanosRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
+    '/_authenticated/app/admin/notificacoes-push': {
+      id: '/_authenticated/app/admin/notificacoes-push'
+      path: '/notificacoes-push'
+      fullPath: '/app/admin/notificacoes-push'
+      preLoaderRoute: typeof AuthenticatedAppAdminNotificacoesPushRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
     '/_authenticated/app/admin/moderacao-fotos': {
       id: '/_authenticated/app/admin/moderacao-fotos'
       path: '/moderacao-fotos'
@@ -580,6 +600,7 @@ interface AuthenticatedAppAdminRouteChildren {
   AuthenticatedAppAdminBannersRoute: typeof AuthenticatedAppAdminBannersRoute
   AuthenticatedAppAdminDenunciasRoute: typeof AuthenticatedAppAdminDenunciasRoute
   AuthenticatedAppAdminModeracaoFotosRoute: typeof AuthenticatedAppAdminModeracaoFotosRoute
+  AuthenticatedAppAdminNotificacoesPushRoute: typeof AuthenticatedAppAdminNotificacoesPushRoute
   AuthenticatedAppAdminPlanosRoute: typeof AuthenticatedAppAdminPlanosRoute
   AuthenticatedAppAdminIndexRoute: typeof AuthenticatedAppAdminIndexRoute
   AuthenticatedAppAdminEmpresasIdRoute: typeof AuthenticatedAppAdminEmpresasIdRoute
@@ -593,6 +614,8 @@ const AuthenticatedAppAdminRouteChildren: AuthenticatedAppAdminRouteChildren = {
   AuthenticatedAppAdminDenunciasRoute: AuthenticatedAppAdminDenunciasRoute,
   AuthenticatedAppAdminModeracaoFotosRoute:
     AuthenticatedAppAdminModeracaoFotosRoute,
+  AuthenticatedAppAdminNotificacoesPushRoute:
+    AuthenticatedAppAdminNotificacoesPushRoute,
   AuthenticatedAppAdminPlanosRoute: AuthenticatedAppAdminPlanosRoute,
   AuthenticatedAppAdminIndexRoute: AuthenticatedAppAdminIndexRoute,
   AuthenticatedAppAdminEmpresasIdRoute: AuthenticatedAppAdminEmpresasIdRoute,

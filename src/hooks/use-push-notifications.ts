@@ -6,7 +6,7 @@ import {
   type Token,
 } from "@capacitor/push-notifications";
 import { useRouter } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -42,9 +42,11 @@ async function waitForPushPlugin() {
 export function usePushNotifications() {
   const { user } = useAuth();
   const router = useRouter();
+  const registeredForUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user || !Capacitor.isNativePlatform()) return;
+    if (registeredForUserRef.current === user.id) return;
 
     let cancelled = false;
     const handles: PluginListenerHandle[] = [];
@@ -64,7 +66,7 @@ export function usePushNotifications() {
         if (cancelled) return;
         if (!hasPushPlugin) {
           toast.error(
-            "Este APK ainda nao tem notificacoes nativas. Instale a versao 1.0.5 ou mais nova.",
+            "Notificacoes nativas indisponiveis. Reinstale o APK mais novo e limpe os dados do app se continuar.",
           );
           return;
         }
@@ -141,6 +143,7 @@ export function usePushNotifications() {
         }
 
         await PushNotifications.register();
+        registeredForUserRef.current = user.id;
       } catch (error) {
         console.warn("[push] notificacoes nativas indisponiveis", error);
         toast.error(`Erro ao ativar notificacoes: ${errorMessage(error)}`);

@@ -1,0 +1,146 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { ArrowLeft, BellRing, Send } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+import { supabase } from "@/integrations/supabase/client";
+
+export const Route = createFileRoute("/_authenticated/app/admin/notificacoes-push")({
+  beforeLoad: async () => {
+    const { data: u } = await supabase.auth.getUser();
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", u.user!.id);
+    if (!(roles ?? []).some((r: any) => r.role === "admin")) throw redirect({ to: "/app" });
+  },
+  component: AdminPushNotifications,
+});
+
+type PushResponse = {
+  total: number;
+  sent: number;
+  failed: number;
+};
+
+function AdminPushNotifications() {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+
+  const { data: tokenCount } = useQuery({
+    queryKey: ["admin-push-token-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("push_tokens" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("active", true);
+      if (error) return null;
+      return count ?? 0;
+    },
+  });
+
+  const sendPush = useMutation({
+    mutationFn: async () => {
+      const cleanTitle = title.trim();
+      const cleanBody = body.trim();
+      if (!cleanTitle) throw new Error("Digite o titulo da notificacao.");
+      if (!cleanBody) throw new Error("Digite a mensagem da notificacao.");
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error("Sessao expirada. Entre novamente.");
+
+      const { data, error } = await supabase.functions.invoke("send-push", {
+        body: {
+          title: cleanTitle,
+          body: cleanBody,
+          target: "all",
+        },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (error) throw error;
+      return data as PushResponse;
+    },
+    onSuccess: (result) => {
+      toast.success(`Notificacao enviada para ${result.sent} celular(es).`);
+      if (result.failed > 0) {
+        toast.warning(`${result.failed} token(s) falharam e podem estar antigos.`);
+      }
+      setTitle("");
+      setBody("");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Erro ao enviar notificacao.");
+    },
+  });
+
+  return (
+    <div className="safe-top px-5 pt-4 pb-10">
+      <header className="flex items-center gap-2">
+        <Link
+          to="/app/admin"
+          className="grid h-10 w-10 place-items-center rounded-xl bg-secondary"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div>
+          <h1 className="text-xl font-black">Notificacoes Push</h1>
+          <p className="text-xs text-muted-foreground">Envio para celulares com app instalado</p>
+        </div>
+      </header>
+
+      <section className="mt-5 rounded-2xl bg-card p-4 shadow-card">
+        <div className="flex items-center gap-3">
+          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-accent/10 text-accent">
+            <BellRing className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-sm font-bold">Dispositivos ativos</div>
+            <div className="text-2xl font-black">{tokenCount ?? "--"}</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-2xl bg-card p-4 shadow-card">
+        <label className="text-sm font-bold" htmlFor="push-title">
+          Titulo
+        </label>
+        <input
+          id="push-title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          maxLength={80}
+          className="mt-2 w-full rounded-2xl border border-border bg-secondary px-4 py-3 text-base outline-none focus:border-accent"
+          placeholder="Ex: Novas sobras disponiveis"
+        />
+
+        <label className="mt-4 block text-sm font-bold" htmlFor="push-body">
+          Mensagem
+        </label>
+        <textarea
+          id="push-body"
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          maxLength={180}
+          rows={5}
+          className="mt-2 w-full resize-none rounded-2xl border border-border bg-secondary px-4 py-3 text-base outline-none focus:border-accent"
+          placeholder="Escreva a mensagem que vai aparecer no celular."
+        />
+
+        <button
+          type="button"
+          onClick={() => sendPush.mutate()}
+          disabled={sendPush.isPending}
+          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 font-black text-primary-foreground disabled:opacity-60"
+        >
+          <Send className="h-5 w-5" />
+          {sendPush.isPending ? "Enviando..." : "Enviar para todos"}
+        </button>
+      </section>
+    </div>
+  );
+}
