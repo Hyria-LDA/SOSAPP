@@ -1,7 +1,10 @@
 package br.com.sosmarceneiros.app;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
@@ -12,6 +15,10 @@ import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
 import ee.forgr.capacitor.social.login.SocialLoginPlugin;
 
 public class MainActivity extends BridgeActivity implements ModifiedMainActivityForSocialLoginPlugin {
+    private static final int PUSH_PERMISSION_REQUEST_CODE = 4507;
+    private Runnable pendingPushPermissionGranted;
+    private Runnable pendingPushPermissionDenied;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(ExternalBrowserPlugin.class);
@@ -19,6 +26,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(SocialLoginPlugin.class);
         super.onCreate(savedInstanceState);
         clearWebViewCache();
+        installSOSPushBridge();
         forceGoogleOAuthOutsideWebView();
         openAuthCallbackInWebView(getIntent());
     }
@@ -30,6 +38,40 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         openAuthCallbackInWebView(intent);
+    }
+
+    void runWithNotificationPermission(Runnable onGranted, Runnable onDenied) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            onGranted.run();
+            return;
+        }
+
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            onGranted.run();
+            return;
+        }
+
+        pendingPushPermissionGranted = onGranted;
+        pendingPushPermissionDenied = onDenied;
+        requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, PUSH_PERMISSION_REQUEST_CODE);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != PUSH_PERMISSION_REQUEST_CODE) return;
+
+        Runnable onGranted = pendingPushPermissionGranted;
+        Runnable onDenied = pendingPushPermissionDenied;
+        pendingPushPermissionGranted = null;
+        pendingPushPermissionDenied = null;
+
+        boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+        if (granted && onGranted != null) {
+            onGranted.run();
+        } else if (!granted && onDenied != null) {
+            onDenied.run();
+        }
     }
 
     private void forceGoogleOAuthOutsideWebView() {
@@ -52,6 +94,41 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     private void clearWebViewCache() {
         if (getBridge() == null || getBridge().getWebView() == null) return;
         getBridge().getWebView().clearCache(true);
+    }
+
+    private void installSOSPushBridge() {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        getBridge().getWebView().addJavascriptInterface(new SOSPushBridge(this), "SOSPush");
+    }
+
+    boolean isTrustedWebHost() {
+        if (getBridge() == null || getBridge().getWebView() == null) return false;
+        String currentUrl = getBridge().getWebView().getUrl();
+        if (currentUrl == null) return false;
+
+        Uri uri = Uri.parse(currentUrl);
+        String host = uri.getHost();
+        return "sosmarceneiros.com.br".equalsIgnoreCase(host)
+            || "www.sosmarceneiros.com.br".equalsIgnoreCase(host)
+            || "sosapp-murex.vercel.app".equalsIgnoreCase(host);
+    }
+
+    void emitSOSPushResult(boolean ok, String message) {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+
+        String safeMessage = message == null ? "" : message
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\n", " ");
+
+        String script =
+            "window.dispatchEvent(new CustomEvent('sos-push-result', { detail: { ok: "
+                + ok
+                + ", message: '"
+                + safeMessage
+                + "' } }));";
+
+        getBridge().getWebView().post(() -> getBridge().getWebView().evaluateJavascript(script, null));
     }
 
     private boolean shouldOpenInExternalBrowser(Uri url) {

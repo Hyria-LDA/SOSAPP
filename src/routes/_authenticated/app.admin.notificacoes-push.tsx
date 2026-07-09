@@ -56,6 +56,10 @@ function AdminPushNotifications() {
       return {
         platform: Capacitor.getPlatform(),
         native: Capacitor.isNativePlatform(),
+        nativeBridge:
+          typeof window !== "undefined" &&
+          typeof window.SOSPush?.register === "function" &&
+          (typeof window.SOSPush?.isAvailable !== "function" || window.SOSPush.isAvailable()),
         pushAvailable: Capacitor.isPluginAvailable("PushNotifications"),
         appVersion: appInfo?.version ?? null,
         appBuild: appInfo?.build ?? null,
@@ -82,7 +86,7 @@ function AdminPushNotifications() {
       if (!cleanTitle) throw new Error("Digite o titulo da notificacao.");
       if (!cleanBody) throw new Error("Digite a mensagem da notificacao.");
       if (!tokenCount) {
-        throw new Error("Nenhum celular registrou notificacoes ainda. Abra o app 1.0.6, faca login e aceite a permissao.");
+        throw new Error("Nenhum celular registrou notificacoes ainda. Abra o app 1.0.7, faca login e aceite a permissao.");
       }
 
       const { data: sessionData } = await supabase.auth.getSession();
@@ -154,12 +158,13 @@ function AdminPushNotifications() {
           <Info label="Versao" value={appDiagnostics?.appVersion ?? "--"} />
           <Info label="Build" value={appDiagnostics?.appBuild ?? "--"} />
           <Info label="Plataforma" value={appDiagnostics?.platform ?? "--"} />
+          <Info label="Bridge nativo" value={appDiagnostics?.nativeBridge ? "ativo" : "inativo"} />
           <Info label="Push plugin" value={appDiagnostics?.pushAvailable ? "ativo" : "inativo"} />
         </div>
-        {appDiagnostics?.native && !appDiagnostics.pushAvailable ? (
+        {appDiagnostics?.native && !appDiagnostics.nativeBridge && !appDiagnostics.pushAvailable ? (
           <p className="mt-3 rounded-xl bg-destructive/10 p-3 text-xs font-semibold text-destructive">
-            O site carregou dentro do app, mas este APK nao tem o plugin nativo de notificacao.
-            Reinstale o APK 1.0.6 e limpe os dados do aplicativo.
+            O site carregou dentro do app, mas este APK nao tem a ponte nativa de notificacao.
+            Reinstale o APK 1.0.7 e limpe os dados do aplicativo.
           </p>
         ) : null}
       </section>
