@@ -550,7 +550,7 @@ function Anunciar() {
         )}
 
         <button
-          disabled={saving}
+          disabled={saving || photos.length === 0}
           className="flex h-14 w-full items-center justify-center rounded-2xl bg-primary text-base font-bold text-primary-foreground shadow-pop disabled:opacity-60"
         >
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Publicar anúncio"}

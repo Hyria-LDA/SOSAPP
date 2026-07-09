@@ -187,8 +187,8 @@ function PlanoForm({
   const [ordem, setOrdem] = useState(plano?.ordem ?? 0);
   const [ativo, setAtivo] = useState(plano?.ativo ?? true);
   const [maxAnuncios, setMaxAnuncios] = useState(plano?.max_anuncios ?? 10);
-  const [maxBuscas, setMaxBuscas] = useState(plano?.max_buscas ?? 20);
-  const [maxAlertas, setMaxAlertas] = useState(plano?.max_alertas ?? 3);
+  const [maxBuscas, setMaxBuscas] = useState(plano?.max_buscas ?? 1);
+  const [maxAlertas, setMaxAlertas] = useState(plano?.max_alertas ?? 1);
   const [maxFotos, setMaxFotos] = useState(plano?.max_fotos ?? 3);
   const [recursos, setRecursos] = useState((plano?.recursos ?? []).join("\n"));
   const [saving, setSaving] = useState(false);

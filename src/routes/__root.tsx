@@ -153,13 +153,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/25a36d39-5a4b-4c75-987c-a21c72a9da2b/id-preview-ca42ccfa--2ded2322-5956-41ac-8550-33cd82f00f13.lovable.app-1781281176409.png",
+        content: "https://sosmarceneiros.com.br/logo-sos-marceneiros-v3.png",
       },
       {
         name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/25a36d39-5a4b-4c75-987c-a21c72a9da2b/id-preview-ca42ccfa--2ded2322-5956-41ac-8550-33cd82f00f13.lovable.app-1781281176409.png",
+        content: "https://sosmarceneiros.com.br/logo-sos-marceneiros-v3.png",
       },
       { name: "twitter:card", content: "summary_large_image" },
     ],

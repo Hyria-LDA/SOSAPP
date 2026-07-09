@@ -6,7 +6,23 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi"] },
+  {
+    ignores: [
+      "node_modules",
+      "dist",
+      "dist-ssr",
+      ".output",
+      ".vinxi",
+      ".tanstack",
+      ".nitro",
+      ".wrangler",
+      "android/.gradle",
+      "android/build",
+      "android/app/build",
+      "android/capacitor-cordova-android-plugins/build",
+      "supabase/.temp",
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],

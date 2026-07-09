@@ -66,8 +66,8 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
-  // Quando o Google OAuth estÃ¡ indisponÃ­vel no backend, escondemos o botÃ£o e
-  // forÃ§amos o fluxo apenas por e-mail/senha.
+  // Quando o Google OAuth esta indisponivel no backend, escondemos o botao e
+  // forcamos o fluxo apenas por e-mail/senha.
   const [googleUnavailable, setGoogleUnavailable] = useState(false);
 
   useEffect(() => {
@@ -234,7 +234,7 @@ function AuthPage() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   className={inputCls}
-                  placeholder="Joao da Silva"
+                  placeholder="João da Silva"
                 />
               </Field>
             )}
@@ -293,7 +293,7 @@ function AuthPage() {
 
           {googleUnavailable && (
             <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Login com Google temporariamente indisponÃ­vel. Use e-mail e senha acima.
+              Login com Google temporariamente indisponível. Use e-mail e senha acima.
             </p>
           )}
 
@@ -303,11 +303,11 @@ function AuthPage() {
           >
             {mode === "signin" ? (
               <>
-                NÃ£o tem conta? <span className="font-semibold text-primary">Cadastrar</span>
+                Não tem conta? <span className="font-semibold text-primary">Cadastrar</span>
               </>
             ) : (
               <>
-                JÃ¡ tem conta? <span className="font-semibold text-primary">Entrar</span>
+                Já tem conta? <span className="font-semibold text-primary">Entrar</span>
               </>
             )}
           </button>
