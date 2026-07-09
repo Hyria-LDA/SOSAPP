@@ -458,7 +458,7 @@ function Anunciar() {
         {espessuraMm && (
           <Section title="Dimensões">
             <div className="grid grid-cols-2 gap-3">
-              <FieldLabel label="Comprimento (cm) - sentido do veio">
+              <FieldLabel label="Comprimento (cm)">
                 <input
                   required
                   type="number"
@@ -468,6 +468,9 @@ function Anunciar() {
                   value={f.comprimento_cm}
                   onChange={set("comprimento_cm")}
                 />
+                <span className="mt-1 block text-[10px] font-semibold leading-tight text-muted-foreground">
+                  Sentido do veio
+                </span>
               </FieldLabel>
               <FieldLabel label="Largura (cm)">
                 <input
