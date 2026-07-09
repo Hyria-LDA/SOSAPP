@@ -7,16 +7,24 @@ import {
   shouldDeactivateToken,
 } from "../_shared/firebase-push.ts";
 
+type NotificationRecord = {
+  id: string;
+  user_id: string;
+  tipo: string;
+  titulo: string;
+  mensagem: string;
+  material_id?: string | null;
+  pedido_id?: string | null;
+};
+
 type PushToken = {
   id: string;
   token: string;
 };
 
-type PushRequest = {
-  title?: string;
-  body?: string;
-  target?: "all";
-};
+function getNotificationRecord(payload: any): NotificationRecord | null {
+  return payload?.record ?? payload?.new ?? payload?.data?.record ?? null;
+}
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -26,30 +34,23 @@ Deno.serve(async (request) => {
     const supabaseUrl = getEnv("SUPABASE_URL");
     const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
     const authHeader = request.headers.get("Authorization") ?? "";
-    const jwt = authHeader.replace("Bearer ", "");
 
-    if (!jwt) return json({ error: "not_authenticated" }, 401);
+    if (authHeader !== `Bearer ${serviceRoleKey}`) {
+      return json({ error: "forbidden" }, 403);
+    }
+
+    const payload = await request.json();
+    const notification = getNotificationRecord(payload);
+
+    if (!notification?.id || !notification.user_id || !notification.titulo || !notification.mensagem) {
+      return json({ error: "invalid_notification_payload" }, 400);
+    }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const { data: userData, error: userError } = await adminClient.auth.getUser(jwt);
-    if (userError || !userData.user) return json({ error: "not_authenticated" }, 401);
-
-    const { data: roles, error: roleError } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userData.user.id)
-      .eq("role", "admin");
-    if (roleError) throw roleError;
-    if (!roles?.length) return json({ error: "forbidden" }, 403);
-
-    const payload = (await request.json()) as PushRequest;
-    const title = payload.title?.trim().slice(0, 80);
-    const body = payload.body?.trim().slice(0, 180);
-    if (!title || !body) return json({ error: "missing_title_or_body" }, 400);
-
     const { data: tokens, error: tokenError } = await adminClient
       .from("push_tokens")
       .select("id, token")
+      .eq("user_id", notification.user_id)
       .eq("active", true);
     if (tokenError) throw tokenError;
 
@@ -60,10 +61,13 @@ Deno.serve(async (request) => {
     for (const pushToken of (tokens ?? []) as PushToken[]) {
       const result = await sendFirebasePush({
         token: pushToken.token,
-        title,
-        body,
+        title: notification.titulo,
+        body: notification.mensagem,
         data: {
-          type: "admin_broadcast",
+          type: notification.tipo,
+          notification_id: notification.id,
+          material_id: notification.material_id ?? "",
+          pedido_id: notification.pedido_id ?? "",
           path: "/app/notificacoes",
         },
       });
@@ -81,19 +85,12 @@ Deno.serve(async (request) => {
       await adminClient.from("push_tokens").update({ active: false }).in("id", inactiveIds);
     }
 
-    await adminClient.from("push_broadcasts").insert({
-      title,
-      body,
-      target: payload.target ?? "all",
-      sent_by: userData.user.id,
-      total_tokens: tokens?.length ?? 0,
-      success_count: sent,
-      failure_count: failed,
-    });
-
     return json({ total: tokens?.length ?? 0, sent, failed });
   } catch (error) {
-    console.error("[send-push]", error);
-    return json({ error: error instanceof Error ? error.message : "send_push_failed" }, 500);
+    console.error("[push-notification-created]", error);
+    return json(
+      { error: error instanceof Error ? error.message : "push_notification_created_failed" },
+      500,
+    );
   }
 });
