@@ -8,13 +8,13 @@ do site reflita imediatamente no app sem precisar republicar nas lojas.
 
 > ⚠️ Os comandos abaixo **precisam ser executados localmente**. Capacitor
 > exige Android Studio (Android) e Xcode em macOS (iOS). Não dá para rodar
-> dentro do Lovable.
+> dentro do ambiente web de ediÃ§Ã£o.
 
 ---
 
 ## Pré-requisitos
 
-- Node 20+ e Bun (ou npm/pnpm)
+- Node 20+ e npm
 - **Android**: Android Studio Hedgehog+ com SDK 34 e JDK 21
 - **iOS**: macOS + Xcode 15+ + CocoaPods (`sudo gem install cocoapods`)
 
@@ -23,7 +23,7 @@ do site reflita imediatamente no app sem precisar republicar nas lojas.
 ## Setup inicial (uma vez)
 
 ```bash
-bun install
+npm install
 
 # Cria as pastas nativas android/ e ios/
 npx cap add android
