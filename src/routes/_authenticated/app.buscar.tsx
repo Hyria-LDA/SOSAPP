@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { haversineKm, formatDistance } from "@/lib/distance";
 import { formatBRL } from "@/lib/whatsapp";
+import { formatDimensions } from "@/lib/material-dimensions";
 import { GrainBadge } from "@/components/grain";
 import { PlanoBadge } from "@/components/premium-badge";
 import { Slider } from "@/components/ui/slider";
@@ -617,7 +618,7 @@ function Buscar() {
                         {formatBRL(Number(m.preco))}
                       </div>
                       <div className="text-[10px] text-muted-foreground">
-                        {Number(m.area_m2).toFixed(2)} m²
+                        {formatDimensions(m.comprimento_cm, m.largura_cm)}
                       </div>
                       <PlanoBadge
                         plano_slug={m.plano_slug}

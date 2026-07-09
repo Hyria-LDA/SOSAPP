@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, MapPin, MessageCircle, Eye, Phone, Heart, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatBRL, waLink } from "@/lib/whatsapp";
+import { formatDimensions } from "@/lib/material-dimensions";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { haversineKm, formatDistance } from "@/lib/distance";
 import { GrainBoard } from "@/components/grain";
@@ -179,7 +180,7 @@ Obrigado!`;
           <div className="shrink-0 text-right">
             <div className="text-2xl font-black text-primary">{formatBRL(Number(data.preco))}</div>
             <div className="text-[11px] text-muted-foreground">
-              {formatBRL(Number(data.valor_m2))}/m²
+              {formatDimensions(data.comprimento_cm, data.largura_cm)}
             </div>
           </div>
         </div>
@@ -188,7 +189,7 @@ Obrigado!`;
           <Info label="Espessura" value={`${Number(data.espessura_mm)}mm`} />
           <Info label="Compr." value={`${Number(data.comprimento_cm)}cm`} />
           <Info label="Largura" value={`${Number(data.largura_cm)}cm`} />
-          <Info label="Área" value={`${Number(data.area_m2).toFixed(2)}m²`} />
+          <Info label="Qtd." value={`${Number(data.quantidade ?? 1)}`} />
         </div>
 
         {data.grain_direction && (

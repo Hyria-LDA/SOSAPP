@@ -22,7 +22,7 @@ import { UpgradeModal } from "@/components/upgrade-modal";
 import { Sheet } from "@/components/sheet";
 
 const MAX_PHOTOS = 3;
-const MAX_FILE_MB = 5;
+const MAX_FILE_MB = 20;
 const PHOTO_SLOTS: { title: string; hint: string }[] = [
   { title: "Foto Principal", hint: "Visão geral da peça inteira" },
   { title: "Foto Opcional", hint: "Detalhes da superfície (cor, padrão, veio)" },
@@ -30,6 +30,11 @@ const PHOTO_SLOTS: { title: string; hint: string }[] = [
 ];
 
 type PhotoItem = { file: File; preview: string };
+
+function isLikelyImage(file: File) {
+  if (file.type.startsWith("image/")) return true;
+  return /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.name);
+}
 
 function commitSelect(handler: () => void) {
   return (e: React.PointerEvent | React.MouseEvent) => {
@@ -53,6 +58,7 @@ type Esp = { id: string; valor_mm: number };
 function Anunciar() {
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
+  const submittingRef = useRef(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState<string>("");
   const { data: planStatus } = usePlanStatus();
@@ -84,7 +90,7 @@ function Anunciar() {
   }, []);
 
   const addPhoto = (file: File) => {
-    if (!file.type.startsWith("image/")) {
+    if (!isLikelyImage(file)) {
       toast.error("Selecione um arquivo de imagem.");
       return;
     }
@@ -189,16 +195,21 @@ function Anunciar() {
       return;
     }
     // Verificação de limite do plano
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    let materialId: string | null = null;
+    const uploadedPaths: string[] = [];
+    try {
     const lim = await checkPlanLimit("anuncios");
     if (!lim.allowed) {
       setUpgradeReason(
         `Você atingiu o limite do plano ${lim.plano} (${lim.atual}/${lim.limite} anúncios ativos). Faça upgrade para publicar mais.`,
       );
       setShowUpgrade(true);
+      submittingRef.current = false;
       return;
     }
     setSaving(true);
-    try {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Sem sessão");
       const { data: emp } = await supabase
@@ -231,6 +242,7 @@ function Anunciar() {
         .select("id")
         .single();
       if (error) throw error;
+      materialId = mat.id;
 
       // Upload de fotos (comprimidas) → armazena somente o PATH em fotos_materiais.
       // URLs assinadas curtas são geradas sob demanda na leitura (ver src/lib/material-photos.ts).
@@ -243,19 +255,31 @@ function Anunciar() {
           .from("materiais")
           .upload(path, blob, { contentType: mime, upsert: false });
         if (up.error) throw up.error;
+        uploadedPaths.push(path);
         rows.push({ material_id: mat.id, empresa_id: emp.id, url: path, ordem: i, needs_ai_analysis: true, ai_status: "pending" });
       }
-      if (rows.length > 0) {
-        const ins = await supabase.from("fotos_materiais").insert(rows as any);
-        if (ins.error) throw ins.error;
-      }
+      if (rows.length === 0) throw new Error("Nenhuma foto foi enviada.");
+      const ins = await supabase.from("fotos_materiais").insert(rows as any);
+      if (ins.error) throw ins.error;
 
       toast.success("Anúncio publicado!");
       navigate({ to: "/app/estoque" });
     } catch (err: any) {
-      toast.error(err?.message || "Erro ao publicar");
+      if (materialId) {
+        if (uploadedPaths.length > 0) {
+          await supabase.storage.from("materiais").remove(uploadedPaths);
+        }
+        await supabase.from("materiais").delete().eq("id", materialId);
+      }
+      const msg = err?.message || "Erro ao publicar";
+      toast.error(
+        msg.toLowerCase().includes("imagem") || msg.includes("comprimir")
+          ? "Nao foi possivel ler essa imagem. Tente tirar uma foto pela camera ou escolha outra imagem."
+          : msg,
+      );
     } finally {
       setSaving(false);
+      submittingRef.current = false;
     }
   };
 
@@ -838,8 +862,16 @@ function PhotoSlot({
   onRemove: () => void;
   onMakeMain: () => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [showSourcePicker, setShowSourcePicker] = useState(false);
   const isMain = index === 0;
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) onAdd(file);
+    e.target.value = "";
+    setShowSourcePicker(false);
+  };
   return (
     <div className="flex flex-col gap-1.5">
       <div
@@ -876,7 +908,7 @@ function PhotoSlot({
         ) : (
           <button
             type="button"
-            onClick={() => inputRef.current?.click()}
+            onClick={() => setShowSourcePicker(true)}
             className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground"
           >
             {isMain ? <Camera className="h-6 w-6" /> : <ImagePlus className="h-6 w-6" />}
@@ -886,16 +918,47 @@ function PhotoSlot({
           </button>
         )}
         <input
-          ref={inputRef}
+          ref={galleryInputRef}
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) onAdd(file);
-            e.target.value = "";
-          }}
+          onChange={handleFile}
         />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleFile}
+        />
+        {showSourcePicker && (
+          <div className="absolute inset-0 z-10 grid place-items-center bg-background/95 p-2">
+            <div className="grid w-full gap-2">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary text-xs font-bold text-primary-foreground"
+              >
+                <Camera className="h-4 w-4" /> Camera
+              </button>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-secondary text-xs font-bold text-foreground"
+              >
+                <ImagePlus className="h-4 w-4" /> Galeria
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSourcePicker(false)}
+                className="h-8 rounded-lg text-[11px] font-semibold text-muted-foreground"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       <div className="px-0.5">
         <p className="text-[10px] font-bold uppercase tracking-wider text-foreground">

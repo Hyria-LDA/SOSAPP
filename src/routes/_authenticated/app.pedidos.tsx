@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Search, Trash2, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/use-geolocation";
+import { checkPlanLimit } from "@/hooks/use-plan-status";
 
 const schema = z.object({
   novo: z.coerce.number().optional().default(0),
@@ -278,6 +279,7 @@ function NovoPedidoForm({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     const fab = fabricantes?.find((x) => x.id === fabricanteId);
     const pad = padroes?.find((x) => x.id === padraoId);
     if (!pad) return toast.error("Escolha um padrão");
@@ -285,6 +287,12 @@ function NovoPedidoForm({
 
     setSaving(true);
     try {
+      const lim = await checkPlanLimit("buscas");
+      if (!lim.allowed) {
+        throw new Error(
+          `Voce atingiu o limite do plano ${lim.plano} (${lim.atual}/${lim.limite} buscas automaticas).`,
+        );
+      }
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Você precisa estar logado");
       const { data: emp } = await supabase
