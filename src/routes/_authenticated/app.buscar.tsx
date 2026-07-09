@@ -445,33 +445,6 @@ function Buscar() {
               )}
             </FieldLabel>
 
-            {/* Sentido do Veio */}
-            <FieldLabel label="🌲 Sentido do veio">
-              <div className="flex gap-2">
-                {(
-                  [
-                    ["vertical", "Vertical", "↕"],
-                    ["horizontal", "Horizontal", "↔"],
-                    ["", "Não informado", "—"],
-                  ] as const
-                ).map(([val, label, ic]) => (
-                  <button
-                    key={val || "any"}
-                    type="button"
-                    onClick={() => update({ grain: val as any })}
-                    className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2.5 text-xs font-bold transition ${
-                      params.grain === val
-                        ? "bg-primary text-primary-foreground shadow-card"
-                        : "bg-card text-foreground ring-1 ring-border"
-                    }`}
-                  >
-                    <span className="text-base leading-none">{ic}</span>
-                    <span>{label}</span>
-                  </button>
-                ))}
-              </div>
-            </FieldLabel>
-
             {/* Medidas mínimas */}
             <FieldGroup label="Medidas mínimas (cm)">
               <div className="grid grid-cols-2 gap-3">
@@ -486,6 +459,9 @@ function Buscar() {
                     onChange={(e) => setCompMinInput(e.target.value)}
                     className={inputCls}
                   />
+                  <span className="mt-1 block text-[10px] font-semibold leading-tight text-muted-foreground">
+                    Sentido do veio
+                  </span>
                 </FieldLabel>
                 <FieldLabel label="Largura (cm)">
                   <input
