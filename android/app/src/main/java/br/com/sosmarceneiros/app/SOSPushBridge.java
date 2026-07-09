@@ -19,25 +19,27 @@ public class SOSPushBridge {
 
     @JavascriptInterface
     public boolean isAvailable() {
-        return activity.isTrustedWebHost();
+        return true;
     }
 
     @JavascriptInterface
     public void register(String accessToken, String supabaseUrl, String anonKey) {
-        if (!activity.isTrustedWebHost()) {
-            activity.emitSOSPushResult(false, "Origem do app nao autorizada para registrar notificacoes.");
-            return;
-        }
+        activity.runOnUiThread(() -> {
+            if (!activity.isTrustedWebHost()) {
+                activity.emitSOSPushResult(false, "Origem do app nao autorizada para registrar notificacoes.");
+                return;
+            }
 
-        if (isBlank(accessToken) || isBlank(supabaseUrl) || isBlank(anonKey)) {
-            activity.emitSOSPushResult(false, "Sessao ou configuracao do Supabase ausente.");
-            return;
-        }
+            if (isBlank(accessToken) || isBlank(supabaseUrl) || isBlank(anonKey)) {
+                activity.emitSOSPushResult(false, "Sessao ou configuracao do Supabase ausente.");
+                return;
+            }
 
-        activity.runWithNotificationPermission(
-            () -> requestFirebaseToken(accessToken, supabaseUrl, anonKey),
-            () -> activity.emitSOSPushResult(false, "Permissao de notificacao negada no Android.")
-        );
+            activity.runWithNotificationPermission(
+                () -> requestFirebaseToken(accessToken, supabaseUrl, anonKey),
+                () -> activity.emitSOSPushResult(false, "Permissao de notificacao negada no Android.")
+            );
+        });
     }
 
     private void requestFirebaseToken(String accessToken, String supabaseUrl, String anonKey) {

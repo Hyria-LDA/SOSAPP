@@ -57,9 +57,7 @@ async function waitForPushPlugin() {
 function hasSOSPushBridge() {
   if (typeof window === "undefined") return false;
   if (!Capacitor.isNativePlatform()) return false;
-  if (typeof window.SOSPush?.register !== "function") return false;
-  if (typeof window.SOSPush?.isAvailable !== "function") return true;
-  return window.SOSPush.isAvailable();
+  return typeof window.SOSPush?.register === "function";
 }
 
 export function usePushNotifications() {
@@ -117,7 +115,7 @@ export function usePushNotifications() {
           const appInfo = await App.getInfo().catch(() => null);
           const versionText = appInfo?.version ? ` Versao instalada: ${appInfo.version}.` : "";
           toast.error(
-            `Notificacoes nativas indisponiveis.${versionText} Reinstale o APK 1.0.7 e limpe os dados do app se continuar.`,
+            `Notificacoes nativas indisponiveis.${versionText} Reinstale o APK 1.0.8 e limpe os dados do app se continuar.`,
           );
           return;
         }

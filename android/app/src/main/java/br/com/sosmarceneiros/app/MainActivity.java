@@ -114,21 +114,23 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     }
 
     void emitSOSPushResult(boolean ok, String message) {
-        if (getBridge() == null || getBridge().getWebView() == null) return;
+        runOnUiThread(() -> {
+            if (getBridge() == null || getBridge().getWebView() == null) return;
 
-        String safeMessage = message == null ? "" : message
-            .replace("\\", "\\\\")
-            .replace("'", "\\'")
-            .replace("\n", " ");
+            String safeMessage = message == null ? "" : message
+                .replace("\\", "\\\\")
+                .replace("'", "\\'")
+                .replace("\n", " ");
 
-        String script =
-            "window.dispatchEvent(new CustomEvent('sos-push-result', { detail: { ok: "
-                + ok
-                + ", message: '"
-                + safeMessage
-                + "' } }));";
+            String script =
+                "window.dispatchEvent(new CustomEvent('sos-push-result', { detail: { ok: "
+                    + ok
+                    + ", message: '"
+                    + safeMessage
+                    + "' } }));";
 
-        getBridge().getWebView().post(() -> getBridge().getWebView().evaluateJavascript(script, null));
+            getBridge().getWebView().evaluateJavascript(script, null);
+        });
     }
 
     private boolean shouldOpenInExternalBrowser(Uri url) {
