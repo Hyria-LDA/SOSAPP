@@ -14,8 +14,6 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatBRL } from "@/lib/whatsapp";
-import { isAmadeirado, grainArrow } from "@/lib/grain";
 import { compressImage } from "@/lib/image-compress";
 import { checkPlanLimit, usePlanStatus } from "@/hooks/use-plan-status";
 import { UpgradeModal } from "@/components/upgrade-modal";
@@ -67,7 +65,6 @@ function Anunciar() {
   const [padraoId, setPadraoId] = useState<string>("");
   const [espessuraMm, setEspessuraMm] = useState<string>("");
   const [espessuraOutra, setEspessuraOutra] = useState(false);
-  const [grain, setGrain] = useState<"vertical" | "horizontal" | "">("");
   const [showFabPicker, setShowFabPicker] = useState(false);
 
   const [f, setF] = useState({
@@ -165,16 +162,9 @@ function Anunciar() {
     },
   });
 
-  const area = (Number(f.comprimento_cm) * Number(f.largura_cm) * Number(f.quantidade)) / 10000;
-  const valorM2 = area > 0 && Number(f.preco) > 0 ? Number(f.preco) / area : 0;
-
   useEffect(() => {
     setPadraoId("");
   }, [fabricanteId]);
-  useEffect(() => {
-    setGrain("");
-  }, [padraoId]);
-
   const padraoSelected = useMemo(
     () => padroes?.find((p) => p.id === padraoId),
     [padroes, padraoId],
@@ -237,7 +227,7 @@ function Anunciar() {
           estado: emp.estado,
           latitude: emp.latitude,
           longitude: emp.longitude,
-          grain_direction: grain || null,
+          grain_direction: null,
         } as any)
         .select("id")
         .single();
@@ -282,8 +272,6 @@ function Anunciar() {
       submittingRef.current = false;
     }
   };
-
-  const showVeio = padraoSelected && isAmadeirado(padraoSelected.nome, padraoSelected.categoria);
 
   const limiteAnuncios = planStatus?.plano.max_anuncios ?? -1;
   const usoAnuncios = planStatus?.uso.anuncios ?? 0;
@@ -464,48 +452,13 @@ function Anunciar() {
             </FieldLabel>
           )}
 
-          {/* Sentido do Veio */}
-          {espessuraMm && showVeio && (
-            <FieldLabel label="🌲 Sentido do veio (opcional)">
-              <div className="flex gap-2">
-                {(
-                  [
-                    ["vertical", "Vertical", "↕"],
-                    ["horizontal", "Horizontal", "↔"],
-                    ["", "Não informado", "—"],
-                  ] as const
-                ).map(([val, label, ic]) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => setGrain(val as any)}
-                    className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-2.5 text-xs font-bold transition ${
-                      grain === val
-                        ? "bg-primary text-primary-foreground shadow-card"
-                        : "bg-card text-foreground ring-1 ring-border"
-                    }`}
-                  >
-                    <span className="text-base leading-none">{ic}</span>
-                    <span>{label}</span>
-                  </button>
-                ))}
-              </div>
-              {grain && (
-                <div className="mt-2 inline-flex items-center gap-1 rounded-md bg-accent/10 px-2 py-1 text-xs font-semibold text-accent">
-                  <span>🌲</span>
-                  <span>{grainArrow(grain)}</span>
-                  <span className="text-muted-foreground">{padraoSelected?.nome}</span>
-                </div>
-              )}
-            </FieldLabel>
-          )}
         </Section>
 
         {/* ============ BLOCO: DIMENSÕES ============ */}
         {espessuraMm && (
           <Section title="Dimensões">
             <div className="grid grid-cols-2 gap-3">
-              <FieldLabel label="Comprimento (cm)">
+              <FieldLabel label="Comprimento (cm) - sentido do veio">
                 <input
                   required
                   type="number"
@@ -528,21 +481,6 @@ function Anunciar() {
                 />
               </FieldLabel>
             </div>
-
-            {area > 0 && (
-              <div className="rounded-2xl bg-accent/10 px-4 py-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Área calculada</span>
-                  <strong className="text-base">{area.toFixed(2)} m²</strong>
-                </div>
-                {valorM2 > 0 && (
-                  <div className="mt-1 flex items-center justify-between">
-                    <span className="text-muted-foreground">Valor / m²</span>
-                    <strong>{formatBRL(valorM2)}</strong>
-                  </div>
-                )}
-              </div>
-            )}
           </Section>
         )}
 
