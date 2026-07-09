@@ -42,6 +42,44 @@ function readableError(error: unknown) {
   return "Erro ao enviar notificacao.";
 }
 
+async function invokeSendPush(accessToken: string, title: string, body: string) {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!supabaseUrl || !anonKey) {
+    throw new Error("Configuracao do Supabase ausente no site.");
+  }
+
+  const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/functions/v1/send-push`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: anonKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      title,
+      body,
+      target: "all",
+    }),
+  });
+
+  const text = await response.text();
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const message = data?.error || data?.message || text || `HTTP ${response.status}`;
+    throw new Error(`send-push ${response.status}: ${message}`);
+  }
+
+  return data as PushResponse;
+}
+
 function AdminPushNotifications() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -92,19 +130,7 @@ function AdminPushNotifications() {
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) throw new Error("Sessao expirada. Entre novamente.");
 
-      const { data, error } = await supabase.functions.invoke("send-push", {
-        body: {
-          title: cleanTitle,
-          body: cleanBody,
-          target: "all",
-        },
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (error) throw error;
-      return data as PushResponse;
+      return invokeSendPush(accessToken, cleanTitle, cleanBody);
     },
     onSuccess: (result) => {
       toast.success(`Notificacao enviada para ${result.sent} celular(es).`);
