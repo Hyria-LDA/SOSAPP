@@ -63,6 +63,7 @@ const PLANOS: Plano[] = [
       "Destaque visual nos resultados",
       "Selo Premium",
       "Possibilidade de aparecer na Home",
+      "Sorteio de brindes exclusivos",
     ],
   },
 ];
