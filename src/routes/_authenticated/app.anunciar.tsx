@@ -21,6 +21,8 @@ import { Sheet } from "@/components/sheet";
 
 const MAX_PHOTOS = 3;
 const MAX_FILE_MB = 20;
+const MAX_COMPRIMENTO_CM = 275;
+const MAX_LARGURA_CM = 185;
 const PHOTO_SLOTS: { title: string; hint: string }[] = [
   { title: "Foto Principal", hint: "Visão geral da peça inteira" },
   { title: "Foto Opcional", hint: "Detalhes da superfície (cor, padrão, veio)" },
@@ -43,6 +45,15 @@ function commitSelect(handler: () => void) {
     }
     handler();
   };
+}
+
+function clampDimensionInput(value: string, max: number) {
+  if (value === "") return "";
+  const numericValue = Number(value);
+  if (Number.isNaN(numericValue)) return value;
+  if (numericValue > max) return String(max);
+  if (numericValue < 0) return "0";
+  return value;
 }
 
 export const Route = createFileRoute("/_authenticated/app/anunciar")({
@@ -182,6 +193,12 @@ function Anunciar() {
     }
     if (photos.length === 0) {
       toast.error("É necessário adicionar pelo menos uma foto da sobra para publicar o anúncio.");
+      return;
+    }
+    const comprimento = Number(f.comprimento_cm);
+    const largura = Number(f.largura_cm);
+    if (comprimento > MAX_COMPRIMENTO_CM || largura > MAX_LARGURA_CM) {
+      toast.error(`As medidas maximas da chapa sao ${MAX_COMPRIMENTO_CM} x ${MAX_LARGURA_CM} cm.`);
       return;
     }
     // Verificação de limite do plano
@@ -463,13 +480,20 @@ function Anunciar() {
                   required
                   type="number"
                   inputMode="numeric"
-                  placeholder="ex: 120"
+                  min={1}
+                  max={MAX_COMPRIMENTO_CM}
+                  placeholder={`ex: ${MAX_COMPRIMENTO_CM}`}
                   className={inputCls}
                   value={f.comprimento_cm}
-                  onChange={set("comprimento_cm")}
+                  onChange={(e) =>
+                    setF((s) => ({
+                      ...s,
+                      comprimento_cm: clampDimensionInput(e.target.value, MAX_COMPRIMENTO_CM),
+                    }))
+                  }
                 />
-                <span className="mt-1 block text-[10px] font-semibold leading-tight text-muted-foreground">
-                  Sentido do veio
+                <span className="mt-1.5 inline-flex rounded-full bg-primary/10 px-2 py-1 text-[11px] font-black uppercase leading-tight text-primary">
+                  Comprimento = sentido do veio
                 </span>
               </FieldLabel>
               <FieldLabel label="Largura (cm)">
@@ -477,10 +501,17 @@ function Anunciar() {
                   required
                   type="number"
                   inputMode="numeric"
-                  placeholder="ex: 50"
+                  min={1}
+                  max={MAX_LARGURA_CM}
+                  placeholder={`ex: ${MAX_LARGURA_CM}`}
                   className={inputCls}
                   value={f.largura_cm}
-                  onChange={set("largura_cm")}
+                  onChange={(e) =>
+                    setF((s) => ({
+                      ...s,
+                      largura_cm: clampDimensionInput(e.target.value, MAX_LARGURA_CM),
+                    }))
+                  }
                 />
               </FieldLabel>
             </div>

@@ -13,8 +13,22 @@ const schema = z.object({
   fabricante_id: z.string().optional().default(""),
   padrao_id: z.string().optional().default(""),
   espessura: z.string().optional().default(""),
+  comprimento_cm: z.coerce.number().optional().default(0),
+  largura_cm: z.coerce.number().optional().default(0),
   raio: z.coerce.number().optional().default(50),
 });
+
+const MAX_COMPRIMENTO_CM = 275;
+const MAX_LARGURA_CM = 185;
+
+function clampDimensionInput(value: string, max: number) {
+  if (value === "") return "";
+  const numericValue = Number(value);
+  if (Number.isNaN(numericValue)) return value;
+  if (numericValue > max) return String(max);
+  if (numericValue < 0) return "0";
+  return value;
+}
 
 export const Route = createFileRoute("/_authenticated/app/pedidos")({
   validateSearch: (s) => schema.parse(s),
@@ -90,6 +104,8 @@ function PedidosPage() {
             fabricante_id: params.fabricante_id,
             padrao_id: params.padrao_id,
             espessura: params.espessura,
+            comprimento_cm: params.comprimento_cm,
+            largura_cm: params.largura_cm,
             raio: params.raio,
           }}
           onDone={() => {
@@ -214,7 +230,14 @@ function NovoPedidoForm({
   onDone,
   onCancel,
 }: {
-  defaults: { fabricante_id: string; padrao_id: string; espessura: string; raio: number };
+  defaults: {
+    fabricante_id: string;
+    padrao_id: string;
+    espessura: string;
+    comprimento_cm: number;
+    largura_cm: number;
+    raio: number;
+  };
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -224,8 +247,8 @@ function NovoPedidoForm({
   const [padraoId, setPadraoId] = useState(defaults.padrao_id);
   const [espessura, setEspessura] = useState(defaults.espessura);
   const [f, setF] = useState({
-    comprimento_min_cm: "",
-    largura_min_cm: "",
+    comprimento_min_cm: defaults.comprimento_cm > 0 ? String(defaults.comprimento_cm) : "",
+    largura_min_cm: defaults.largura_cm > 0 ? String(defaults.largura_cm) : "",
     quantidade: "1",
     raio_km: String(defaults.raio || 50),
     observacoes: "",
@@ -284,6 +307,12 @@ function NovoPedidoForm({
     const pad = padroes?.find((x) => x.id === padraoId);
     if (!pad) return toast.error("Escolha um padrão");
     if (!espessura) return toast.error("Escolha a espessura");
+    const comprimento = Number(f.comprimento_min_cm) || 0;
+    const largura = Number(f.largura_min_cm) || 0;
+    if (comprimento > MAX_COMPRIMENTO_CM || largura > MAX_LARGURA_CM) {
+      toast.error(`As medidas maximas da chapa sao ${MAX_COMPRIMENTO_CM} x ${MAX_LARGURA_CM} cm.`);
+      return;
+    }
 
     setSaving(true);
     try {
@@ -387,26 +416,41 @@ function NovoPedidoForm({
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Comprimento mín. (cm)">
+        <Field label="Comprimento (cm)">
           <input
             type="number"
-            inputMode="decimal"
+            inputMode="numeric"
             min="0"
+            max={MAX_COMPRIMENTO_CM}
             value={f.comprimento_min_cm}
-            onChange={set("comprimento_min_cm")}
+            onChange={(e) =>
+              setF((s) => ({
+                ...s,
+                comprimento_min_cm: clampDimensionInput(e.target.value, MAX_COMPRIMENTO_CM),
+              }))
+            }
             className={inputCls}
-            placeholder="120"
+            placeholder={`ex: ${MAX_COMPRIMENTO_CM}`}
           />
+          <span className="mt-1.5 inline-flex rounded-full bg-primary/10 px-2 py-1 text-[11px] font-black uppercase leading-tight text-primary">
+            Comprimento = sentido do veio
+          </span>
         </Field>
-        <Field label="Largura mín. (cm)">
+        <Field label="Largura (cm)">
           <input
             type="number"
-            inputMode="decimal"
+            inputMode="numeric"
             min="0"
+            max={MAX_LARGURA_CM}
             value={f.largura_min_cm}
-            onChange={set("largura_min_cm")}
+            onChange={(e) =>
+              setF((s) => ({
+                ...s,
+                largura_min_cm: clampDimensionInput(e.target.value, MAX_LARGURA_CM),
+              }))
+            }
             className={inputCls}
-            placeholder="50"
+            placeholder={`ex: ${MAX_LARGURA_CM}`}
           />
         </Field>
         <Field label="Quantidade">

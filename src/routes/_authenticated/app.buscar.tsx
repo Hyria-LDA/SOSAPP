@@ -15,6 +15,9 @@ import { Slider } from "@/components/ui/slider";
 import { pushRecentSearch } from "@/hooks/use-recent-searches";
 import { toast } from "sonner";
 
+const MAX_COMPRIMENTO_CM = 275;
+const MAX_LARGURA_CM = 185;
+
 const searchSchema = z.object({
   q: z.string().optional().default(""),
   fabricante_id: z.string().optional().default(""),
@@ -33,6 +36,15 @@ const searchSchema = z.object({
   comp_min: z.coerce.number().optional().default(0),
   larg_min: z.coerce.number().optional().default(0),
 });
+
+function clampDimensionInput(value: string, max: number) {
+  if (value === "") return "";
+  const numericValue = Number(value);
+  if (Number.isNaN(numericValue)) return value;
+  if (numericValue > max) return String(max);
+  if (numericValue < 0) return "0";
+  return value;
+}
 
 export const Route = createFileRoute("/_authenticated/app/buscar")({
   validateSearch: (s) => searchSchema.parse(s),
@@ -445,8 +457,8 @@ function Buscar() {
               )}
             </FieldLabel>
 
-            {/* Medidas mínimas */}
-            <FieldGroup label="Medidas mínimas (cm)">
+            {/* Medidas da chapa */}
+            <div>
               <div className="grid grid-cols-2 gap-3">
                 <FieldLabel label="Comprimento (cm)">
                   <input
@@ -454,13 +466,16 @@ function Buscar() {
                     type="number"
                     inputMode="numeric"
                     min={0}
-                    placeholder="120"
+                    max={MAX_COMPRIMENTO_CM}
+                    placeholder={`ex: ${MAX_COMPRIMENTO_CM}`}
                     value={compMinInput}
-                    onChange={(e) => setCompMinInput(e.target.value)}
+                    onChange={(e) =>
+                      setCompMinInput(clampDimensionInput(e.target.value, MAX_COMPRIMENTO_CM))
+                    }
                     className={inputCls}
                   />
-                  <span className="mt-1 block text-[10px] font-semibold leading-tight text-muted-foreground">
-                    Sentido do veio
+                  <span className="mt-1.5 inline-flex rounded-full bg-primary/10 px-2 py-1 text-[11px] font-black uppercase leading-tight text-primary">
+                    Comprimento = sentido do veio
                   </span>
                 </FieldLabel>
                 <FieldLabel label="Largura (cm)">
@@ -469,9 +484,12 @@ function Buscar() {
                     type="number"
                     inputMode="numeric"
                     min={0}
-                    placeholder="50"
+                    max={MAX_LARGURA_CM}
+                    placeholder={`ex: ${MAX_LARGURA_CM}`}
                     value={largMinInput}
-                    onChange={(e) => setLargMinInput(e.target.value)}
+                    onChange={(e) =>
+                      setLargMinInput(clampDimensionInput(e.target.value, MAX_LARGURA_CM))
+                    }
                     className={inputCls}
                   />
                 </FieldLabel>
@@ -488,7 +506,7 @@ function Buscar() {
                   Limpar medidas
                 </button>
               )}
-            </FieldGroup>
+            </div>
 
             {/* Distância slider */}
             <div className="rounded-2xl bg-secondary px-4 py-3">
