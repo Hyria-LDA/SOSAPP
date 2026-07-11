@@ -15,6 +15,7 @@ type PushToken = {
 type PushRequest = {
   title?: string;
   body?: string;
+  imageUrl?: string;
   target?: "all";
 };
 
@@ -45,7 +46,12 @@ Deno.serve(async (request) => {
     const payload = (await request.json()) as PushRequest;
     const title = payload.title?.trim().slice(0, 80);
     const body = payload.body?.trim().slice(0, 180);
+    const imageUrl = payload.imageUrl?.trim();
     if (!title || !body) return json({ error: "missing_title_or_body" }, 400);
+    if (imageUrl) {
+      const url = new URL(imageUrl);
+      if (url.protocol !== "https:") return json({ error: "invalid_image_url" }, 400);
+    }
 
     const { data: tokens, error: tokenError } = await adminClient
       .from("push_tokens")
@@ -62,9 +68,11 @@ Deno.serve(async (request) => {
         token: pushToken.token,
         title,
         body,
+        imageUrl,
         data: {
           type: "admin_broadcast",
           path: "/app/notificacoes",
+          image_url: imageUrl ?? "",
         },
       });
 
@@ -86,6 +94,7 @@ Deno.serve(async (request) => {
       body,
       target: payload.target ?? "all",
       sent_by: userData.user.id,
+      image_url: imageUrl ?? null,
       total_tokens: tokens?.length ?? 0,
       success_count: sent,
       failure_count: failed,

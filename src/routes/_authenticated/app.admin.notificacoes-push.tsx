@@ -2,11 +2,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { ArrowLeft, BellRing, Send } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, BellRing, ImagePlus, Send, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/lib/image-compress";
 
 export const Route = createFileRoute("/_authenticated/app/admin/notificacoes-push")({
   beforeLoad: async () => {
@@ -26,6 +27,16 @@ type PushResponse = {
   failed: number;
 };
 
+type SelectedImage = {
+  file: File;
+  preview: string;
+};
+
+function isLikelyImage(file: File) {
+  if (file.type.startsWith("image/")) return true;
+  return /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.name);
+}
+
 function readableError(error: unknown) {
   if (error instanceof Error) {
     if (error.message.includes("Failed to send a request")) {
@@ -42,7 +53,7 @@ function readableError(error: unknown) {
   return "Erro ao enviar notificacao.";
 }
 
-async function invokeSendPush(accessToken: string, title: string, body: string) {
+async function invokeSendPush(accessToken: string, title: string, body: string, imageUrl?: string) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -60,6 +71,7 @@ async function invokeSendPush(accessToken: string, title: string, body: string) 
     body: JSON.stringify({
       title,
       body,
+      imageUrl,
       target: "all",
     }),
   });
@@ -83,6 +95,55 @@ async function invokeSendPush(accessToken: string, title: string, body: string) 
 function AdminPushNotifications() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [image, setImage] = useState<SelectedImage | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (image?.preview) URL.revokeObjectURL(image.preview);
+    };
+  }, [image?.preview]);
+
+  const selectImage = (file?: File) => {
+    if (!file) return;
+    if (!isLikelyImage(file)) {
+      toast.error("Selecione uma imagem.");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("Imagem muito grande. Escolha uma imagem com ate 20 MB.");
+      return;
+    }
+    setImage((current) => {
+      if (current?.preview) URL.revokeObjectURL(current.preview);
+      return { file, preview: URL.createObjectURL(file) };
+    });
+  };
+
+  const removeImage = () => {
+    setImage((current) => {
+      if (current?.preview) URL.revokeObjectURL(current.preview);
+      return null;
+    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const uploadPushImage = async () => {
+    if (!image) return undefined;
+    const { blob, ext, mime } = await compressImage(image.file, { maxDim: 1200, quality: 0.82 });
+    const path = `push-broadcasts/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from("banners")
+      .upload(path, blob, { contentType: mime, upsert: false });
+    if (uploadError) throw uploadError;
+
+    const { data, error } = await supabase.storage
+      .from("banners")
+      .createSignedUrl(path, 60 * 60 * 24 * 7);
+    if (error) throw error;
+    if (!data?.signedUrl) throw new Error("Nao foi possivel gerar o link da imagem.");
+    return data.signedUrl;
+  };
 
   const { data: appDiagnostics } = useQuery({
     queryKey: ["admin-push-app-diagnostics"],
@@ -130,7 +191,8 @@ function AdminPushNotifications() {
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) throw new Error("Sessao expirada. Entre novamente.");
 
-      return invokeSendPush(accessToken, cleanTitle, cleanBody);
+      const imageUrl = await uploadPushImage();
+      return invokeSendPush(accessToken, cleanTitle, cleanBody, imageUrl);
     },
     onSuccess: (result) => {
       toast.success(`Notificacao enviada para ${result.sent} celular(es).`);
@@ -139,6 +201,7 @@ function AdminPushNotifications() {
       }
       setTitle("");
       setBody("");
+      removeImage();
     },
     onError: (error) => {
       toast.error(readableError(error));
@@ -219,6 +282,59 @@ function AdminPushNotifications() {
           className="mt-2 w-full resize-none rounded-2xl border border-border bg-secondary px-4 py-3 text-base outline-none focus:border-accent"
           placeholder="Escreva a mensagem que vai aparecer no celular."
         />
+
+        <div className="mt-4">
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-sm font-bold" htmlFor="push-image">
+              Imagem opcional
+            </label>
+            {image ? (
+              <button
+                type="button"
+                onClick={removeImage}
+                className="inline-flex items-center gap-1 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-bold text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                Remover
+              </button>
+            ) : null}
+          </div>
+
+          <input
+            ref={fileInputRef}
+            id="push-image"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(event) => selectImage(event.target.files?.[0])}
+          />
+
+          {image ? (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-2 block w-full overflow-hidden rounded-2xl border border-border bg-secondary text-left"
+            >
+              <img
+                src={image.preview}
+                alt="Previa da imagem da notificacao"
+                className="h-40 w-full object-cover"
+              />
+              <div className="px-4 py-3 text-xs font-semibold text-muted-foreground">
+                Toque para trocar a imagem. Ela pode aparecer expandida em alguns Androids.
+              </div>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-2 flex h-24 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-secondary px-4 text-sm font-bold text-muted-foreground"
+            >
+              <ImagePlus className="h-5 w-5" />
+              Adicionar imagem
+            </button>
+          )}
+        </div>
 
         <button
           type="button"
