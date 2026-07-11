@@ -7,7 +7,6 @@ import { useGeolocation } from "@/hooks/use-geolocation";
 import { Logo } from "@/components/logo";
 import { SplashBannerGate } from "@/components/splash-banner";
 import { BrilhanteSelo } from "@/components/premium-badge";
-import logoUrl from "@/assets/logo-sos-marceneiros-v3.png";
 import mascotUrl from "@/assets/mascote-sos-assistencia.png";
 import {
   Carousel,
@@ -313,21 +312,26 @@ function BannerSlide({ banner }: { banner: Banner }) {
 
   const content = (
     <div className="flex flex-col overflow-hidden rounded-3xl bg-[#fff7ed] shadow-pop">
-      <div className="relative flex h-[78px] items-center overflow-hidden px-3">
-        <div className="absolute -bottom-3 left-1 z-10 h-[92px] w-[96px] overflow-hidden rounded-3xl">
+      <div className="relative flex h-[70px] items-center overflow-hidden bg-gradient-to-r from-[#fff8ef] to-[#fff1e2] px-3">
+        <div className="absolute -bottom-5 left-2 z-10 h-[92px] w-[82px] overflow-hidden rounded-2xl shadow-sm ring-1 ring-white/70">
           <img
             src={mascotUrl}
             alt=""
-            className="h-full w-full object-cover object-[center_30%]"
+            className="h-full w-full object-cover object-[center_24%]"
             aria-hidden="true"
           />
         </div>
 
-        <div className="ml-[104px] flex min-w-0 flex-1 items-center gap-2">
-          <img src={logoUrl} alt="SOS Marceneiros" className="h-12 w-auto max-w-full object-contain" />
+        <div className="ml-[96px] min-w-0 flex-1">
+          <div className="truncate text-[12px] font-black uppercase leading-tight text-foreground">
+            Sobras perto de voce
+          </div>
+          <div className="mt-0.5 truncate text-[10px] font-semibold leading-tight text-muted-foreground">
+            Oportunidades localizadas no app
+          </div>
         </div>
 
-        <div className="hidden shrink-0 items-center gap-1 text-[10px] font-bold text-primary min-[390px]:flex">
+        <div className="hidden shrink-0 items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-[10px] font-bold text-primary min-[390px]:flex">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" />
           Localizado
         </div>
