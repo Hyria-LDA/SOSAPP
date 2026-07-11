@@ -7,6 +7,8 @@ import { useGeolocation } from "@/hooks/use-geolocation";
 import { Logo } from "@/components/logo";
 import { SplashBannerGate } from "@/components/splash-banner";
 import { BrilhanteSelo } from "@/components/premium-badge";
+import logoUrl from "@/assets/logo-sos-marceneiros-v3.png";
+import mascotUrl from "@/assets/mascote-sos-assistencia.png";
 import {
   Carousel,
   CarouselContent,
@@ -310,18 +312,35 @@ function BannerSlide({ banner }: { banner: Banner }) {
   const hasContent = !!(banner.titulo || banner.subtitulo || banner.botao_texto);
 
   const content = (
-    <div
-      className="flex flex-col overflow-hidden rounded-3xl shadow-pop"
-      style={{ aspectRatio: "16 / 9.6" }}
-    >
+    <div className="flex flex-col overflow-hidden rounded-3xl bg-[#fff7ed] shadow-pop">
+      <div className="relative flex h-[78px] items-center overflow-hidden px-3">
+        <div className="absolute -bottom-3 left-1 z-10 h-[92px] w-[96px] overflow-hidden rounded-3xl">
+          <img
+            src={mascotUrl}
+            alt=""
+            className="h-full w-full object-cover object-[center_30%]"
+            aria-hidden="true"
+          />
+        </div>
+
+        <div className="ml-[104px] flex min-w-0 flex-1 items-center gap-2">
+          <img src={logoUrl} alt="SOS Marceneiros" className="h-12 w-auto max-w-full object-contain" />
+        </div>
+
+        <div className="hidden shrink-0 items-center gap-1 text-[10px] font-bold text-primary min-[390px]:flex">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          Localizado
+        </div>
+      </div>
+
       <img
         src={banner.imagem_url}
         alt={banner.titulo ?? ""}
-        className={`w-full object-cover ${hasContent ? "h-[82.5%]" : "h-full"}`}
+        className={`w-full object-cover ${hasContent ? "h-[165px]" : "h-[190px]"}`}
       />
 
       {hasContent && (
-        <div className="flex h-[17.5%] items-center justify-between bg-card px-3">
+        <div className="flex min-h-[38px] items-center justify-between bg-card px-3">
           <div className="min-w-0">
             {banner.titulo && (
               <div className="truncate text-[11px] font-black leading-tight">{banner.titulo}</div>

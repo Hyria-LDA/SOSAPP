@@ -11,12 +11,14 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Path;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
+import android.widget.RemoteViews;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -61,8 +63,7 @@ public class SOSFirebaseMessagingService extends FirebaseMessagingService {
 
         ensureChannel();
 
-        Bitmap image = loadRemoteBitmap(imageUrl);
-        Bitmap largeIcon = image != null ? circleCrop(image) : defaultLargeIcon();
+        RemoteViews compactView = buildCompactNotificationView(title, body, imageUrl);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
@@ -73,22 +74,29 @@ public class SOSFirebaseMessagingService extends FirebaseMessagingService {
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
             .setContentIntent(openAppIntent(path))
-            .setStyle(new NotificationCompat.BigTextStyle().bigText(body));
-
-        if (largeIcon != null) {
-            builder.setLargeIcon(largeIcon);
-        }
-
-        if (image != null) {
-            builder.setStyle(
-                new NotificationCompat.BigPictureStyle()
-                    .bigPicture(image)
-                    .bigLargeIcon((Bitmap) null)
-                    .setSummaryText(body)
-            );
-        }
+            .setCustomContentView(compactView)
+            .setCustomBigContentView(compactView)
+            .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
 
         NotificationManagerCompat.from(this).notify((int) (System.currentTimeMillis() % Integer.MAX_VALUE), builder.build());
+    }
+
+    private RemoteViews buildCompactNotificationView(String title, String body, String imageUrl) {
+        RemoteViews view = new RemoteViews(getPackageName(), R.layout.notification_sos_compact);
+        view.setTextViewText(R.id.sos_notification_title, title);
+        view.setTextViewText(R.id.sos_notification_body, body);
+
+        Bitmap image = loadRemoteBitmap(imageUrl);
+        if (image == null) {
+            image = defaultLargeIcon();
+        }
+
+        Bitmap roundedImage = roundedSquare(image, dpToPx(64), dpToPx(12));
+        if (roundedImage != null) {
+            view.setImageViewBitmap(R.id.sos_notification_image, roundedImage);
+        }
+
+        return view;
     }
 
     private PendingIntent openAppIntent(String path) {
@@ -157,23 +165,40 @@ public class SOSFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
-    private Bitmap circleCrop(Bitmap source) {
+    private Bitmap roundedSquare(Bitmap source, int targetSize, int cornerRadius) {
         if (source == null) return null;
-        int size = Math.min(source.getWidth(), source.getHeight());
-        int left = (source.getWidth() - size) / 2;
-        int top = (source.getHeight() - size) / 2;
+        int sourceWidth = source.getWidth();
+        int sourceHeight = source.getHeight();
+        if (sourceWidth <= 0 || sourceHeight <= 0) return null;
 
-        Bitmap square = Bitmap.createBitmap(source, left, top, size, size);
-        Bitmap output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        float sourceRatio = (float) sourceWidth / (float) sourceHeight;
+        int cropWidth = sourceWidth;
+        int cropHeight = sourceHeight;
+        int cropLeft = 0;
+        int cropTop = 0;
+
+        if (sourceRatio > 1f) {
+            cropWidth = sourceHeight;
+            cropLeft = (sourceWidth - cropWidth) / 2;
+        } else if (sourceRatio < 1f) {
+            cropHeight = sourceWidth;
+            cropTop = (sourceHeight - cropHeight) / 2;
+        }
+
+        Rect sourceRect = new Rect(cropLeft, cropTop, cropLeft + cropWidth, cropTop + cropHeight);
+        RectF targetRect = new RectF(0, 0, targetSize, targetSize);
+        Bitmap output = Bitmap.createBitmap(targetSize, targetSize, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(output);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        Rect rect = new Rect(0, 0, size, size);
-        RectF rectF = new RectF(rect);
-        Path path = new Path();
-        path.addOval(rectF, Path.Direction.CCW);
-        canvas.clipPath(path);
-        canvas.drawBitmap(square, rect, rect, paint);
+        canvas.drawRoundRect(targetRect, cornerRadius, cornerRadius, paint);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+        canvas.drawBitmap(source, sourceRect, targetRect, paint);
+        paint.setXfermode(null);
         return output;
+    }
+
+    private int dpToPx(int dp) {
+        return Math.round(dp * getResources().getDisplayMetrics().density);
     }
 
     private String firstNonBlank(String... values) {
