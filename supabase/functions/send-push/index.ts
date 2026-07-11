@@ -16,8 +16,16 @@ type PushRequest = {
   title?: string;
   body?: string;
   imageUrl?: string;
+  path?: string;
   target?: "all";
 };
+
+const ALLOWED_PATHS = new Set([
+  "/app",
+  "/app/anunciar",
+  "/app/buscar",
+  "/app/perfil?upgrade=1",
+]);
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -47,7 +55,9 @@ Deno.serve(async (request) => {
     const title = payload.title?.trim().slice(0, 80);
     const body = payload.body?.trim().slice(0, 180);
     const imageUrl = payload.imageUrl?.trim();
+    const path = payload.path?.trim() || "/app";
     if (!title || !body) return json({ error: "missing_title_or_body" }, 400);
+    if (!ALLOWED_PATHS.has(path)) return json({ error: "invalid_path" }, 400);
     if (imageUrl) {
       const url = new URL(imageUrl);
       if (url.protocol !== "https:") return json({ error: "invalid_image_url" }, 400);
@@ -71,7 +81,7 @@ Deno.serve(async (request) => {
         imageUrl,
         data: {
           type: "admin_broadcast",
-          path: "/app/notificacoes",
+          path,
           image_url: imageUrl ?? "",
         },
       });

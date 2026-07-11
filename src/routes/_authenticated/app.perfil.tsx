@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { z } from "zod";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -21,15 +22,24 @@ import { usePlanStatus, planColor, planEmoji } from "@/hooks/use-plan-status";
 import { UpgradeModal } from "@/components/upgrade-modal";
 
 export const Route = createFileRoute("/_authenticated/app/perfil")({
+  validateSearch: (s) =>
+    z
+      .object({ upgrade: z.coerce.number().optional().default(0) })
+      .parse(s),
   component: Perfil,
 });
 
 function Perfil() {
+  const search = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const { data: planStatus } = usePlanStatus();
+
+  useEffect(() => {
+    if (search.upgrade === 1) setShowUpgrade(true);
+  }, [search.upgrade]);
 
   const { data } = useQuery({
     queryKey: ["perfil"],

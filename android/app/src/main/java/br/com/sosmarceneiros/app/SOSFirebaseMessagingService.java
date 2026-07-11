@@ -67,6 +67,7 @@ public class SOSFirebaseMessagingService extends FirebaseMessagingService {
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
+            .setLargeIcon(defaultLargeIcon())
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)

@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { ArrowLeft, BellRing, ImagePlus, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, BellRing, Home, ImagePlus, Plus, Search, Send, Sparkles, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -32,6 +32,15 @@ type SelectedImage = {
   preview: string;
 };
 
+const PUSH_TARGETS = [
+  { label: "Pagina inicial", path: "/app", icon: Home },
+  { label: "Anunciar sobra", path: "/app/anunciar", icon: Plus },
+  { label: "Buscar material", path: "/app/buscar", icon: Search },
+  { label: "Planos / upgrade", path: "/app/perfil?upgrade=1", icon: Sparkles },
+] as const;
+
+type PushTargetPath = (typeof PUSH_TARGETS)[number]["path"];
+
 function isLikelyImage(file: File) {
   if (file.type.startsWith("image/")) return true;
   return /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.name);
@@ -53,7 +62,13 @@ function readableError(error: unknown) {
   return "Erro ao enviar notificacao.";
 }
 
-async function invokeSendPush(accessToken: string, title: string, body: string, imageUrl?: string) {
+async function invokeSendPush(
+  accessToken: string,
+  title: string,
+  body: string,
+  imageUrl: string | undefined,
+  path: PushTargetPath,
+) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -72,6 +87,7 @@ async function invokeSendPush(accessToken: string, title: string, body: string, 
       title,
       body,
       imageUrl,
+      path,
       target: "all",
     }),
   });
@@ -96,6 +112,7 @@ function AdminPushNotifications() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [image, setImage] = useState<SelectedImage | null>(null);
+  const [targetPath, setTargetPath] = useState<PushTargetPath>("/app");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -192,7 +209,7 @@ function AdminPushNotifications() {
       if (!accessToken) throw new Error("Sessao expirada. Entre novamente.");
 
       const imageUrl = await uploadPushImage();
-      return invokeSendPush(accessToken, cleanTitle, cleanBody, imageUrl);
+      return invokeSendPush(accessToken, cleanTitle, cleanBody, imageUrl, targetPath);
     },
     onSuccess: (result) => {
       toast.success(`Notificacao enviada para ${result.sent} celular(es).`);
@@ -282,6 +299,31 @@ function AdminPushNotifications() {
           className="mt-2 w-full resize-none rounded-2xl border border-border bg-secondary px-4 py-3 text-base outline-none focus:border-accent"
           placeholder="Escreva a mensagem que vai aparecer no celular."
         />
+
+        <div className="mt-4">
+          <div className="text-sm font-bold">Ao clicar na notificacao</div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {PUSH_TARGETS.map((target) => {
+              const Icon = target.icon;
+              const selected = targetPath === target.path;
+              return (
+                <button
+                  key={target.path}
+                  type="button"
+                  onClick={() => setTargetPath(target.path)}
+                  className={`flex items-center gap-2 rounded-2xl border px-3 py-3 text-left text-xs font-black transition ${
+                    selected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-secondary text-foreground"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span>{target.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="mt-4">
           <div className="flex items-center justify-between gap-3">
