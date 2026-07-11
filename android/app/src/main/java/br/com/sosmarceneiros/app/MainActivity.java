@@ -29,6 +29,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         installSOSPushBridge();
         forceGoogleOAuthOutsideWebView();
         openAuthCallbackInWebView(getIntent());
+        openPushPathInWebView(getIntent());
     }
 
     @Override
@@ -38,6 +39,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         openAuthCallbackInWebView(intent);
+        openPushPathInWebView(intent);
     }
 
     void runWithNotificationPermission(Runnable onGranted, Runnable onDenied) {
@@ -240,5 +242,30 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         }
 
         getBridge().getWebView().post(() -> getBridge().getWebView().loadUrl(callbackUrl));
+    }
+
+    private void openPushPathInWebView(Intent intent) {
+        if (intent == null || !intent.hasExtra("sos_push_path")) return;
+
+        String path = intent.getStringExtra("sos_push_path");
+        if (path == null || path.trim().isEmpty()) path = "/app/notificacoes";
+
+        String targetUrl;
+        if (path.startsWith("https://sosmarceneiros.com.br")) {
+            targetUrl = path;
+        } else if (path.startsWith("http://") || path.startsWith("https://")) {
+            targetUrl = "https://sosmarceneiros.com.br/app/notificacoes";
+        } else {
+            targetUrl = "https://sosmarceneiros.com.br" + (path.startsWith("/") ? path : "/" + path);
+        }
+
+        if (getBridge() == null || getBridge().getWebView() == null) {
+            getWindow()
+                .getDecorView()
+                .postDelayed(() -> openPushPathInWebView(intent), 300);
+            return;
+        }
+
+        getBridge().getWebView().post(() -> getBridge().getWebView().loadUrl(targetUrl));
     }
 }

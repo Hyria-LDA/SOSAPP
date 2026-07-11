@@ -106,19 +106,13 @@ export async function sendFirebasePush(params: {
 }) {
   const projectId = getEnv("FIREBASE_PROJECT_ID");
   const accessToken = await getFirebaseAccessToken();
-  const notification = params.imageUrl
-    ? { title: params.title, body: params.body, image: params.imageUrl }
-    : { title: params.title, body: params.body };
-  const androidNotification = params.imageUrl
-    ? {
-        channel_id: "matches",
-        sound: "default",
-        image: params.imageUrl,
-      }
-    : {
-        channel_id: "matches",
-        sound: "default",
-      };
+  const dataPayload: Record<string, string> = {
+    ...(params.data ?? {}),
+    title: params.title,
+    body: params.body,
+    image_url: params.imageUrl ?? "",
+    sos_native_notification: "1",
+  };
 
   const response = await fetch(
     `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
@@ -131,11 +125,9 @@ export async function sendFirebasePush(params: {
       body: JSON.stringify({
         message: {
           token: params.token,
-          notification,
-          data: params.data ?? {},
+          data: dataPayload,
           android: {
             priority: "HIGH",
-            notification: androidNotification,
           },
         },
       }),

@@ -5,4 +5,6 @@
     <string name="package_name">br.com.sosmarceneiros.app</string>
     <string name="custom_url_scheme">br.com.sosmarceneiros.app</string>
     <string name="default_notification_channel_id">matches</string>
+    <string name="notification_channel_name">SOS Marceneiros</string>
+    <string name="notification_channel_description">Avisos de sobras, matches e mensagens importantes.</string>
 </resources>
