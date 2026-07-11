@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Slider } from "@/components/ui/slider";
 import { checkPlanLimit, usePlanStatus } from "@/hooks/use-plan-status";
 import { UpgradeModal } from "@/components/upgrade-modal";
+import { sortByNome } from "@/lib/sort";
 
 export const Route = createFileRoute("/_authenticated/app/alertas")({
   component: Alertas,
@@ -334,7 +335,7 @@ function NovoAlertaSheet({
         .eq("fabricante_id", form.fabricante_id)
         .order("nome");
       if (error) throw error;
-      return data as { id: string; nome: string }[];
+      return sortByNome(data as { id: string; nome: string }[]);
     },
   });
 

@@ -14,6 +14,7 @@ import { PlanoBadge } from "@/components/premium-badge";
 import { Slider } from "@/components/ui/slider";
 import { pushRecentSearch } from "@/hooks/use-recent-searches";
 import { toast } from "sonner";
+import { sortByNome } from "@/lib/sort";
 
 const MAX_COMPRIMENTO_CM = 275;
 const MAX_LARGURA_CM = 185;
@@ -787,12 +788,12 @@ function PadraoPicker({
       if (fabricanteId) query = query.eq("fabricante_id", fabricanteId);
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []).map((p: any) => ({
+      return sortByNome((data ?? []).map((p: any) => ({
         id: p.id,
         nome: p.nome,
         fabricante_id: p.fabricante_id,
         fabricante: p.fabricantes?.nome ?? "",
-      })) as AutoItem[];
+      })) as AutoItem[]);
     },
   });
 

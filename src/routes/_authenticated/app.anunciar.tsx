@@ -18,6 +18,7 @@ import { compressImage } from "@/lib/image-compress";
 import { checkPlanLimit, usePlanStatus } from "@/hooks/use-plan-status";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { Sheet } from "@/components/sheet";
+import { sortByNome } from "@/lib/sort";
 
 const MAX_PHOTOS = 3;
 const MAX_FILE_MB = 20;
@@ -153,10 +154,9 @@ function Anunciar() {
         .select("id, nome, categoria, fabricante_id")
         .eq("fabricante_id", fabricanteId)
         .eq("ativo", true)
-        .order("categoria")
-        .order("ordem");
+        .order("nome");
       if (error) throw error;
-      return data as Pad[];
+      return sortByNome(data as Pad[]);
     },
   });
 
@@ -626,17 +626,8 @@ function PadraoPicker({
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     if (!term) return padroes;
-    return padroes.filter((p) => p.nome.toLowerCase().includes(term));
+    return sortByNome(padroes.filter((p) => p.nome.toLowerCase().includes(term)));
   }, [q, padroes]);
-
-  const grouped = useMemo(() => {
-    const map = new Map<string, Pad[]>();
-    filtered.forEach((p) => {
-      if (!map.has(p.categoria)) map.set(p.categoria, []);
-      map.get(p.categoria)!.push(p);
-    });
-    return Array.from(map.entries());
-  }, [filtered]);
 
   return (
     <>
@@ -686,18 +677,13 @@ function PadraoPicker({
             </div>
           </div>
           <div className="max-h-[60vh] overflow-y-auto pb-2">
-            {grouped.length === 0 && (
+            {filtered.length === 0 && (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 Nenhum padrão encontrado.
               </p>
             )}
-            {grouped.map(([cat, list]) => (
-              <div key={cat} className="mb-4 px-4">
-                <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  {cat}
-                </h3>
-                <div className="space-y-1">
-                  {list.map((p) => {
+            <div className="space-y-1 px-4">
+              {filtered.map((p) => {
                     const select = () => {
                       onChange(p.id);
                       setQ("");
@@ -723,10 +709,8 @@ function PadraoPicker({
                         {value === p.id && <Check className="h-4 w-4" />}
                       </button>
                     );
-                  })}
-                </div>
-              </div>
-            ))}
+              })}
+            </div>
           </div>
           <div className="border-t border-border p-3">
             <button
