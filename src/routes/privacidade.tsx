@@ -84,6 +84,12 @@ function PrivacyPage() {
             .
           </Section>
         </div>
+
+        <footer className="mt-10 border-t border-[#e2daca] pt-5 text-sm">
+          <Link to="/termos" className="font-bold text-primary underline">
+            Ver Termos de Uso
+          </Link>
+        </footer>
       </article>
     </main>
   );

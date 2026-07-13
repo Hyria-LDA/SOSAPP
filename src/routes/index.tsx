@@ -90,6 +90,9 @@ function HomePage() {
             <Link to="/privacidade" className="font-semibold underline">
               Política de Privacidade
             </Link>
+            <Link to="/termos" className="font-semibold underline">
+              Termos de Uso
+            </Link>
             <a href="mailto:sosmarceneiroapp@gmail.com" className="font-semibold underline">
               Contato
             </a>

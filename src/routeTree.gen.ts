@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -40,6 +41,11 @@ import { Route as AuthenticatedAppAdminEmpresasIndexRouteImport } from './routes
 import { Route as AuthenticatedAppAdminVendedoresIdRouteImport } from './routes/_authenticated/app.admin.vendedores.$id'
 import { Route as AuthenticatedAppAdminEmpresasIdRouteImport } from './routes/_authenticated/app.admin.empresas.$id'
 
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
   id: '/privacidade',
   path: '/privacidade',
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/r/$codigo': typeof RCodigoRoute
@@ -271,6 +279,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
   '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -304,6 +313,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/privacidade'
+    | '/termos'
     | '/app'
     | '/onboarding'
     | '/auth/callback'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/privacidade'
+    | '/termos'
     | '/onboarding'
     | '/auth/callback'
     | '/r/$codigo'
@@ -365,6 +376,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/privacidade'
+    | '/termos'
     | '/_authenticated/app'
     | '/_authenticated/onboarding'
     | '/auth/callback'
@@ -398,11 +410,19 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   PrivacidadeRoute: typeof PrivacidadeRoute
+  TermosRoute: typeof TermosRoute
   RCodigoRoute: typeof RCodigoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacidade': {
       id: '/privacidade'
       path: '/privacidade'
@@ -713,6 +733,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   PrivacidadeRoute: PrivacidadeRoute,
+  TermosRoute: TermosRoute,
   RCodigoRoute: RCodigoRoute,
 }
 export const routeTree = rootRouteImport
