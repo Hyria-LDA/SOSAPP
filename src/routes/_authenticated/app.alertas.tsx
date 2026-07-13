@@ -90,7 +90,7 @@ function Alertas() {
       const lim = await checkPlanLimit("alertas");
       if (!lim.allowed) {
         throw new Error(
-          `LIMITE:Você atingiu o limite do plano ${lim.plano} (${lim.atual}/${lim.limite} alertas).`,
+          `LIMITE:Você atingiu o limite do plano ${lim.plano} (${lim.atual}/${lim.limite} alertas). O limite renova 30 dias após criar o alerta.`,
         );
       }
       const { data: u } = await supabase.auth.getUser();

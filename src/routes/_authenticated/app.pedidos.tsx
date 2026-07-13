@@ -319,7 +319,7 @@ function NovoPedidoForm({
       const lim = await checkPlanLimit("buscas");
       if (!lim.allowed) {
         throw new Error(
-          `Voce atingiu o limite do plano ${lim.plano} (${lim.atual}/${lim.limite} buscas automaticas).`,
+          `Voce atingiu o limite do plano ${lim.plano} (${lim.atual}/${lim.limite} buscas automaticas). O limite renova 30 dias apos criar a busca.`,
         );
       }
       const { data: u } = await supabase.auth.getUser();

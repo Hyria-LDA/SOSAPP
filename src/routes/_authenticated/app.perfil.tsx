@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import {
@@ -15,11 +15,14 @@ import {
   Save,
   MapPin,
   Sparkles,
+  Camera,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { EnderecoEmpresaForm, type EnderecoValue } from "@/components/endereco-empresa-form";
 import { usePlanStatus, planColor, planEmoji } from "@/hooks/use-plan-status";
 import { UpgradeModal } from "@/components/upgrade-modal";
+import { compressImage } from "@/lib/image-compress";
 
 export const Route = createFileRoute("/_authenticated/app/perfil")({
   validateSearch: (s) =>
@@ -108,6 +111,8 @@ function Perfil() {
   const [form, setForm] = useState<any>(null);
   const [editingEndereco, setEditingEndereco] = useState(false);
   const [endereco, setEndereco] = useState<EnderecoValue | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const emp: any = data?.empresa;
   const current = form ?? emp;
 
@@ -134,6 +139,48 @@ function Perfil() {
       toast.success("Perfil atualizado");
       setEditing(false);
       qc.invalidateQueries({ queryKey: ["perfil"] });
+    }
+  };
+
+  const uploadLogo = async (file: File | null | undefined) => {
+    if (!file || !emp?.id) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Escolha uma imagem valida para a logo.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Imagem muito grande. Escolha uma imagem com ate 8 MB.");
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Voce precisa estar logado");
+
+      const { blob, ext, mime } = await compressImage(file, { maxDim: 700, quality: 0.84 });
+      const path = `${u.user.id}/logo-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("logos")
+        .upload(path, blob, { contentType: mime, upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { data: publicData } = supabase.storage.from("logos").getPublicUrl(path);
+      const logoUrl = publicData.publicUrl;
+
+      const { error } = await supabase
+        .from("empresas")
+        .update({ logo_url: logoUrl } as any)
+        .eq("id", emp.id);
+      if (error) throw error;
+
+      toast.success("Logo atualizada");
+      qc.invalidateQueries({ queryKey: ["perfil"] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Falha ao enviar a logo");
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
     }
   };
 
@@ -213,9 +260,17 @@ function Perfil() {
 
       <div className="mt-6 rounded-3xl bg-gradient-to-br from-[oklch(0.27_0.03_260)] to-[oklch(0.35_0.03_260)] p-6 text-white shadow-pop">
         <div className="flex items-center gap-3">
-          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-primary text-2xl font-black">
-            <Building2 className="h-7 w-7" />
-          </div>
+          {emp?.logo_url ? (
+            <img
+              src={emp.logo_url}
+              alt={`Logo ${emp?.nome_empresa || "da empresa"}`}
+              className="h-14 w-14 rounded-2xl bg-white object-cover"
+            />
+          ) : (
+            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-primary text-2xl font-black">
+              <Building2 className="h-7 w-7" />
+            </div>
+          )}
           <div className="min-w-0">
             <div className="truncate text-lg font-bold">{emp?.nome_empresa || "Sem nome"}</div>
             <div className="text-xs opacity-80">
@@ -354,6 +409,47 @@ function Perfil() {
               Salvar
             </button>
           )}
+        </div>
+        <div className="border-t border-border px-4 py-4">
+          <div className="flex items-center gap-3">
+            {emp?.logo_url ? (
+              <img
+                src={emp.logo_url}
+                alt={`Logo ${emp?.nome_empresa || "da empresa"}`}
+                className="h-16 w-16 rounded-2xl border border-border bg-white object-cover"
+              />
+            ) : (
+              <div className="grid h-16 w-16 place-items-center rounded-2xl bg-secondary text-muted-foreground">
+                <Building2 className="h-7 w-7" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-bold">Logo da marcenaria</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                Essa imagem aparece no perfil da empresa e ajuda clientes a reconhecerem sua marca.
+              </div>
+              <button
+                type="button"
+                onClick={() => logoInputRef.current?.click()}
+                disabled={uploadingLogo}
+                className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+              >
+                {uploadingLogo ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Camera className="h-3.5 w-3.5" />
+                )}
+                {uploadingLogo ? "Enviando..." : emp?.logo_url ? "Trocar logo" : "Adicionar logo"}
+              </button>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => uploadLogo(e.target.files?.[0])}
+              />
+            </div>
+          </div>
         </div>
         <div className="space-y-1 px-4 pb-4">
           {[

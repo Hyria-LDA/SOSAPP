@@ -4,7 +4,7 @@
 INSERT INTO public.fabricantes (nome, ordem, ativo)
 VALUES
   ('Floraplac', 7, true),
-  ('Sudario', 8, true),
+  ('Sudati', 8, true),
   ('Fibraplac', 9, true),
   ('Placas do Brasil', 10, true)
 ON CONFLICT (nome) DO UPDATE
@@ -71,7 +71,7 @@ DECLARE
       ]
     },
     {
-      "fab": "Sudario",
+      "fab": "Sudati",
       "cat": "Geral",
       "items": [
         "Branco",
