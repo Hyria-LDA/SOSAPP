@@ -3,6 +3,7 @@ import { ArrowRight, Bell, MapPin, PackageSearch, ShieldCheck } from "lucide-rea
 import type { LucideIcon } from "lucide-react";
 import { useEffect } from "react";
 import { Logo } from "@/components/logo";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -23,12 +24,53 @@ function isNativeApp() {
   return !!w.Capacitor?.isNativePlatform?.() || (!!platform && ["android", "ios"].includes(platform));
 }
 
+function buildOpenAppIntentUrl(session: {
+  access_token: string;
+  refresh_token: string;
+  expires_in?: number;
+  token_type?: string;
+  provider_token?: string | null;
+  provider_refresh_token?: string | null;
+}) {
+  const query = new URLSearchParams();
+  query.set("from_app", "1");
+  query.set("access_token", session.access_token);
+  query.set("refresh_token", session.refresh_token);
+  if (session.expires_in) query.set("expires_in", String(session.expires_in));
+  query.set("token_type", session.token_type ?? "bearer");
+  if (session.provider_token) query.set("provider_token", session.provider_token);
+  if (session.provider_refresh_token)
+    query.set("provider_refresh_token", session.provider_refresh_token);
+
+  return `intent://auth-callback?${query.toString()}#Intent;scheme=sosmarceneiros;package=br.com.sosmarceneiros.app;S.browser_fallback_url=${encodeURIComponent(
+    "https://www.sosmarceneiros.com.br/auth",
+  )};end`;
+}
+
 function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
     if (isNativeApp()) navigate({ to: "/app", replace: true });
   }, [navigate]);
+
+  const openApp = async () => {
+    const { data } = await supabase.auth.getSession();
+
+    if (!data.session) {
+      navigate({ to: "/auth" });
+      return;
+    }
+
+    window.location.href = buildOpenAppIntentUrl({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      expires_in: data.session.expires_in,
+      token_type: data.session.token_type,
+      provider_token: data.session.provider_token,
+      provider_refresh_token: data.session.provider_refresh_token,
+    });
+  };
 
   return (
     <main className="min-h-screen bg-[#f6f2e9] text-[#111827]">
@@ -57,12 +99,13 @@ function HomePage() {
               fabricante, receba alertas automáticos e negocie direto com outras empresas.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Link
-                to="/auth"
+              <button
+                type="button"
+                onClick={openApp}
                 className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-black text-primary-foreground shadow-pop"
               >
                 Acessar o app <ArrowRight className="h-4 w-4" />
-              </Link>
+              </button>
               <Link
                 to="/privacidade"
                 className="inline-flex items-center gap-2 rounded-2xl border border-[#d8d1c2] bg-white px-5 py-3 text-sm font-bold"
