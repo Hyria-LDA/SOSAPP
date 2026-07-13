@@ -30,6 +30,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         forceGoogleOAuthOutsideWebView();
         openAuthCallbackInWebView(getIntent());
         openPushPathInWebView(getIntent());
+        openHomeOnLauncherIntent(getIntent());
     }
 
     @Override
@@ -267,5 +268,22 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         }
 
         getBridge().getWebView().post(() -> getBridge().getWebView().loadUrl(targetUrl));
+    }
+
+    private void openHomeOnLauncherIntent(Intent intent) {
+        if (intent == null) return;
+        if (!Intent.ACTION_MAIN.equals(intent.getAction())) return;
+        if (intent.getData() != null) return;
+        if (intent.hasExtra("sos_push_path")) return;
+
+        String homeUrl = "https://sosmarceneiros.com.br/app";
+        if (getBridge() == null || getBridge().getWebView() == null) {
+            getWindow()
+                .getDecorView()
+                .postDelayed(() -> openHomeOnLauncherIntent(intent), 300);
+            return;
+        }
+
+        getBridge().getWebView().post(() -> getBridge().getWebView().loadUrl(homeUrl));
     }
 }

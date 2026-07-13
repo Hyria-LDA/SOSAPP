@@ -320,7 +320,7 @@ function NovoAlertaSheet({
         .eq("ativo", true)
         .order("ordem");
       if (error) throw error;
-      return data as { id: string; nome: string }[];
+      return sortByNome(data as { id: string; nome: string }[]);
     },
   });
 
@@ -519,7 +519,7 @@ function Picker({
 }) {
   const [q, setQ] = useState("");
   const filtered = useMemo(
-    () => items.filter((i) => i.nome.toLowerCase().includes(q.toLowerCase())),
+    () => sortByNome(items.filter((i) => i.nome.toLowerCase().includes(q.toLowerCase()))),
     [items, q],
   );
   return (
