@@ -75,10 +75,8 @@ export function planColor(cor: string): string {
 export function planEmoji(slug: string): string {
   switch (slug) {
     case "tx":
-    case "plus":
       return "🔵";
     case "ultra":
-    case "standard":
       return "🟣";
     case "premium":
       return "🟡";

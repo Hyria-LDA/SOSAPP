@@ -24,9 +24,6 @@ export type PlanId =
   | "premium_yearly"
   | "tx"
   | "ultra"
-  // IDs legados (slugs no banco) — mantidos por compatibilidade
-  | "plus"
-  | "standard"
   | "premium";
 
 export type PurchaseResult =

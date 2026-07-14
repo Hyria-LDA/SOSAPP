@@ -43,7 +43,11 @@ function AdminPlanos() {
   const { data: planos } = useQuery({
     queryKey: ["admin-planos"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("planos").select("*").order("ordem");
+      const { data, error } = await supabase
+        .from("planos")
+        .select("*")
+        .not("slug", "in", "(standard,plus)")
+        .order("ordem");
       if (error) throw error;
       return (data ?? []) as unknown as Plano[];
     },

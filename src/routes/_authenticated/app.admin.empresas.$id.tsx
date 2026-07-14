@@ -53,7 +53,12 @@ function EmpresaDetail() {
         { data: materiais },
       ] = await Promise.all([
         supabase.from("empresas").select("*").eq("id", id).maybeSingle(),
-        supabase.from("planos").select("*").eq("ativo", true).order("preco"),
+        supabase
+          .from("planos")
+          .select("*")
+          .eq("ativo", true)
+          .not("slug", "in", "(standard,plus)")
+          .order("preco"),
         supabase
           .from("financeiro")
           .select("*")

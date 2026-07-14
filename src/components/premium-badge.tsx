@@ -45,11 +45,7 @@ const planStyles: Record<string, string> = {
     "bg-yellow-100 text-yellow-900 ring-yellow-300",
   ultra:
     "bg-purple-100 text-purple-900 ring-purple-300",
-  standard:
-    "bg-purple-100 text-purple-900 ring-purple-300",
   tx:
-    "bg-blue-100 text-blue-900 ring-blue-300",
-  plus:
     "bg-blue-100 text-blue-900 ring-blue-300",
   free:
     "bg-emerald-100 text-emerald-900 ring-emerald-300",
@@ -58,9 +54,7 @@ const planStyles: Record<string, string> = {
 const planLabels: Record<string, string> = {
   premium: "Brilhante",
   ultra: "Ultra",
-  standard: "Ultra",
   tx: "TX",
-  plus: "TX",
   free: "Free",
 };
 
