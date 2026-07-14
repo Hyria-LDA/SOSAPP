@@ -57,6 +57,27 @@ function clampDimensionInput(value: string, max: number) {
   return value;
 }
 
+function normalizePriceInput(value: string) {
+  const cleaned = value.replace(/\./g, ",").replace(/[^\d,]/g, "");
+  const [integerPart, ...decimalParts] = cleaned.split(",");
+  const decimals = decimalParts.join("").slice(0, 2);
+  return decimalParts.length > 0 ? `${integerPart},${decimals}` : integerPart;
+}
+
+function parsePriceInput(value: string) {
+  const normalized = value.replace(/\./g, "").replace(",", ".");
+  const price = Number(normalized);
+  return Number.isFinite(price) ? price : 0;
+}
+
+function formatPriceInput(value: string) {
+  if (!value.trim()) return "";
+  return parsePriceInput(value).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export const Route = createFileRoute("/_authenticated/app/anunciar")({
   component: Anunciar,
 });
@@ -238,7 +259,7 @@ function Anunciar() {
           comprimento_cm: Number(f.comprimento_cm),
           largura_cm: Number(f.largura_cm),
           quantidade: Number(f.quantidade),
-          preco: Number(f.preco),
+          preco: parsePriceInput(f.preco),
           observacoes: f.observacoes || null,
           cidade: emp.cidade,
           estado: emp.estado,
@@ -536,12 +557,17 @@ function Anunciar() {
               <FieldLabel label="Preço total (R$)">
                 <input
                   required
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   placeholder="0,00"
                   className={inputCls}
                   value={f.preco}
-                  onChange={set("preco")}
+                  onChange={(e) =>
+                    setF((s) => ({ ...s, preco: normalizePriceInput(e.target.value) }))
+                  }
+                  onBlur={(e) =>
+                    setF((s) => ({ ...s, preco: formatPriceInput(e.target.value) }))
+                  }
                 />
               </FieldLabel>
             </div>
