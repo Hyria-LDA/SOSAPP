@@ -155,23 +155,23 @@ function Home() {
         </Link>
         <Link
           to="/app/pedidos"
-          className="col-span-2 flex items-center gap-3 rounded-[20px] bg-white p-3 shadow-[0_2px_16px_-4px_rgba(0,0,0,0.08)] transition active:scale-[0.98]"
+          className="col-span-2 flex items-center gap-3 rounded-[20px] bg-black p-3 text-white shadow-[0_10px_24px_-10px_rgba(0,0,0,0.65)] transition active:scale-[0.98]"
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#dcfce7]">
-            <Bell className="h-4 w-4 text-[#15803d]" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff2e8]">
+            <Bell className="h-4 w-4 text-primary" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-[#1f2937]">Avisos Automáticos</span>
-              <span className="rounded-full bg-[#15803d] px-2 py-0.5 text-[10px] font-semibold text-white">
+              <span className="text-sm font-bold text-white">Avisos Automáticos</span>
+              <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-white">
                 Novidade
               </span>
             </div>
-            <p className="mt-0.5 text-xs leading-relaxed text-[#4b5563]">
+            <p className="mt-0.5 text-xs leading-relaxed text-white/80">
               Cadastre o material que procura e seja avisado quando aparecer uma sobra compatível.
             </p>
           </div>
-          <Search className="h-4 w-4 shrink-0 text-[#9ca3af]" />
+          <Search className="h-4 w-4 shrink-0 text-white/70" />
         </Link>
       </div>
 

@@ -28,35 +28,42 @@ WHERE e.plano IN ('standard', 'plus')
     WHEN 'plus' THEN 'tx'
   END;
 
-WITH map AS (
-  SELECT old_plan.id AS old_id, new_plan.id AS new_id
-  FROM public.planos old_plan
-  JOIN public.planos new_plan
-    ON new_plan.slug = CASE old_plan.slug
-      WHEN 'standard' THEN 'ultra'
-      WHEN 'plus' THEN 'tx'
-    END
-  WHERE old_plan.slug IN ('standard', 'plus')
-)
-UPDATE public.assinaturas a
-SET plano_id = map.new_id
-FROM map
-WHERE a.plano_id = map.old_id;
+DO $$
+BEGIN
+  IF to_regclass('public.assinaturas') IS NOT NULL THEN
+    WITH map AS (
+      SELECT old_plan.id AS old_id, new_plan.id AS new_id
+      FROM public.planos old_plan
+      JOIN public.planos new_plan
+        ON new_plan.slug = CASE old_plan.slug
+          WHEN 'standard' THEN 'ultra'
+          WHEN 'plus' THEN 'tx'
+        END
+      WHERE old_plan.slug IN ('standard', 'plus')
+    )
+    UPDATE public.assinaturas a
+    SET plano_id = map.new_id
+    FROM map
+    WHERE a.plano_id = map.old_id;
+  END IF;
 
-WITH map AS (
-  SELECT old_plan.id AS old_id, new_plan.id AS new_id
-  FROM public.planos old_plan
-  JOIN public.planos new_plan
-    ON new_plan.slug = CASE old_plan.slug
-      WHEN 'standard' THEN 'ultra'
-      WHEN 'plus' THEN 'tx'
-    END
-  WHERE old_plan.slug IN ('standard', 'plus')
-)
-UPDATE public.financeiro f
-SET plano_id = map.new_id
-FROM map
-WHERE f.plano_id = map.old_id;
+  IF to_regclass('public.financeiro') IS NOT NULL THEN
+    WITH map AS (
+      SELECT old_plan.id AS old_id, new_plan.id AS new_id
+      FROM public.planos old_plan
+      JOIN public.planos new_plan
+        ON new_plan.slug = CASE old_plan.slug
+          WHEN 'standard' THEN 'ultra'
+          WHEN 'plus' THEN 'tx'
+        END
+      WHERE old_plan.slug IN ('standard', 'plus')
+    )
+    UPDATE public.financeiro f
+    SET plano_id = map.new_id
+    FROM map
+    WHERE f.plano_id = map.old_id;
+  END IF;
+END $$;
 
 UPDATE public.planos
 SET ativo = false,
