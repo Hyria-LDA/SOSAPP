@@ -54,6 +54,49 @@ function authErrorMessage(err: unknown) {
   return msg || "Erro ao autenticar";
 }
 
+async function signInWithNativeGoogleOnIos() {
+  const iosClientId = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID?.trim();
+  const webClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID?.trim();
+
+  if (!iosClientId || !webClientId) {
+    throw new Error(
+      "Configure VITE_GOOGLE_IOS_CLIENT_ID e VITE_GOOGLE_WEB_CLIENT_ID no Vercel.",
+    );
+  }
+
+  const { SocialLogin } = await import("@capgo/capacitor-social-login");
+
+  await SocialLogin.initialize({
+    google: {
+      iOSClientId: iosClientId,
+      iOSServerClientId: webClientId,
+      mode: "online",
+    },
+  });
+
+  const login = await SocialLogin.login({
+    provider: "google",
+    options: {
+      scopes: ["email", "profile"],
+    },
+  });
+
+  if (
+    login.provider !== "google" ||
+    login.result.responseType !== "online" ||
+    !login.result.idToken
+  ) {
+    throw new Error("O Google nao retornou um token de identificacao valido.");
+  }
+
+  const { error } = await supabase.auth.signInWithIdToken({
+    provider: "google",
+    token: login.result.idToken,
+  });
+
+  if (error) throw error;
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
   component: AuthPage,
@@ -156,6 +199,14 @@ function AuthPage() {
         (!!platform && ["android", "ios"].includes(platform));
       const isWebViewish = /(; wv\)|\bwv\b)/i.test(ua) || /DreamFlow|Flutter|Capacitor/i.test(ua);
       const isNativeWrapper = isCapacitor || isWebViewish;
+
+      if (isCapacitor && platform === "ios") {
+        await signInWithNativeGoogleOnIos();
+        toast.success("Login realizado com Google!");
+        navigate({ to: "/app", replace: true });
+        setLoading(false);
+        return;
+      }
 
       try {
         sessionStorage.setItem("lov:native", isNativeWrapper ? "1" : "0");
