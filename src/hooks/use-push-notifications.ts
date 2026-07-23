@@ -145,7 +145,7 @@ export function usePushNotifications() {
         handles.push(
           await PushNotifications.addListener("registrationError", (error) => {
             console.warn("[push] erro ao registrar notificacoes", error);
-            toast.error(`Firebase nao registrou o celular: ${error.error}`);
+            toast.error(`O sistema nao registrou este celular: ${error.error}`);
           }),
         );
 
@@ -170,16 +170,18 @@ export function usePushNotifications() {
           ),
         );
 
-        await PushNotifications.createChannel({
-          id: "matches",
-          name: "Matches de materiais",
-          description: "Avisos quando aparecer uma sobra compativel",
-          importance: 5,
-          visibility: 1,
-          sound: "default",
-          vibration: true,
-          lights: true,
-        });
+        if (Capacitor.getPlatform() === "android") {
+          await PushNotifications.createChannel({
+            id: "matches",
+            name: "Matches de materiais",
+            description: "Avisos quando aparecer uma sobra compativel",
+            importance: 5,
+            visibility: 1,
+            sound: "default",
+            vibration: true,
+            lights: true,
+          });
+        }
 
         let permission = await PushNotifications.checkPermissions();
         if (permission.receive === "prompt" || permission.receive === "prompt-with-rationale") {
@@ -188,7 +190,7 @@ export function usePushNotifications() {
 
         if (cancelled) return;
         if (permission.receive !== "granted") {
-          toast.error("Permissao de notificacao negada no Android.");
+          toast.error("Permissao de notificacao negada neste aparelho.");
           return;
         }
 
