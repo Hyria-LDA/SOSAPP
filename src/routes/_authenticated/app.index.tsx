@@ -32,7 +32,10 @@ type Banner = {
 function Home() {
   const { coords } = useGeolocation();
   const rotationSeedRef = useRef<string>(Math.random().toString(36).slice(2));
-  const geoKey = coords?.lat && coords?.lng ? `${coords.lat.toFixed(4)},${coords.lng.toFixed(4)}` : "no-geo";
+  const lat = Number(coords?.lat);
+  const lng = Number(coords?.lng);
+  const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
+  const geoKey = hasValidCoords ? `${lat.toFixed(4)},${lng.toFixed(4)}` : "no-geo";
 
 
   const { data: userPlanSlug } = useQuery({
@@ -84,10 +87,10 @@ function Home() {
   const { data: popularesRaw } = useQuery({
     queryKey: ["sobras-perto", geoKey, rotationSeedRef.current],
     queryFn: async () => {
-      const hasGeo = coords?.lat != null && coords?.lng != null;
+      const hasGeo = hasValidCoords;
       const { data, error } = await supabase.rpc("materiais_perto_de_voce", {
-        _lat: coords?.lat ?? undefined,
-        _lon: coords?.lng ?? undefined,
+        _lat: hasGeo ? lat : undefined,
+        _lon: hasGeo ? lng : undefined,
         _limit: 12,
         _raio_km: hasGeo ? 5 : 999999,
         _seed: rotationSeedRef.current,
