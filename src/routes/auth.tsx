@@ -54,6 +54,26 @@ function authErrorMessage(err: unknown) {
   return msg || "Erro ao autenticar";
 }
 
+function createAuthNonce() {
+  const bytes = new Uint8Array(32);
+  window.crypto.getRandomValues(bytes);
+
+  return window
+    .btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+async function sha256(value: string) {
+  const data = new TextEncoder().encode(value);
+  const digest = await window.crypto.subtle.digest("SHA-256", data);
+
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 async function signInWithNativeGoogleOnIos() {
   const iosClientId = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID?.trim();
   const webClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID?.trim();
@@ -74,10 +94,15 @@ async function signInWithNativeGoogleOnIos() {
     },
   });
 
+  const rawNonce = createAuthNonce();
+  const hashedNonce = await sha256(rawNonce);
+
   const login = await SocialLogin.login({
     provider: "google",
     options: {
       scopes: ["email", "profile"],
+      nonce: hashedNonce,
+      forcePrompt: true,
     },
   });
 
@@ -92,6 +117,7 @@ async function signInWithNativeGoogleOnIos() {
   const { error } = await supabase.auth.signInWithIdToken({
     provider: "google",
     token: login.result.idToken,
+    nonce: rawNonce,
   });
 
   if (error) throw error;
