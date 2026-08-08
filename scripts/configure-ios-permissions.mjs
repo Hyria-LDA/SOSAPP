@@ -33,4 +33,24 @@ for (const [key, value] of Object.entries(permissions)) {
   }
 }
 
-console.log("Permissoes de camera e galeria configuradas no Info.plist do iOS.");
+const encryptionKey = "ITSAppUsesNonExemptEncryption";
+const encryptionResult = spawnSync(
+  plistBuddy,
+  ["-c", `Set :${encryptionKey} false`, infoPlist],
+  { stdio: "ignore" },
+);
+
+if (encryptionResult.status !== 0) {
+  const addEncryptionResult = spawnSync(
+    plistBuddy,
+    ["-c", `Add :${encryptionKey} bool false`, infoPlist],
+    { stdio: "inherit" },
+  );
+  if (addEncryptionResult.status !== 0) {
+    process.exit(addEncryptionResult.status ?? 1);
+  }
+}
+
+console.log(
+  "Permissoes e declaracao de criptografia configuradas no Info.plist do iOS.",
+);
