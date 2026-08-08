@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RCodigoRouteImport } from './routes/r.$codigo'
+import { Route as AuthRedefinirRouteImport } from './routes/auth.redefinir'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
@@ -69,6 +70,11 @@ const RCodigoRoute = RCodigoRouteImport.update({
   id: '/r/$codigo',
   path: '/r/$codigo',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRedefinirRoute = AuthRedefinirRouteImport.update({
+  id: '/redefinir',
+  path: '/redefinir',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/callback',
@@ -219,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/redefinir': typeof AuthRedefinirRoute
   '/r/$codigo': typeof RCodigoRoute
   '/app/admin': typeof AuthenticatedAppAdminRouteWithChildren
   '/app/alertas': typeof AuthenticatedAppAlertasRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByTo {
   '/termos': typeof TermosRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/redefinir': typeof AuthRedefinirRoute
   '/r/$codigo': typeof RCodigoRoute
   '/app/alertas': typeof AuthenticatedAppAlertasRoute
   '/app/anunciar': typeof AuthenticatedAppAnunciarRoute
@@ -283,6 +291,7 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/redefinir': typeof AuthRedefinirRoute
   '/r/$codigo': typeof RCodigoRoute
   '/_authenticated/app/admin': typeof AuthenticatedAppAdminRouteWithChildren
   '/_authenticated/app/alertas': typeof AuthenticatedAppAlertasRoute
@@ -317,6 +326,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/onboarding'
     | '/auth/callback'
+    | '/auth/redefinir'
     | '/r/$codigo'
     | '/app/admin'
     | '/app/alertas'
@@ -348,6 +358,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/onboarding'
     | '/auth/callback'
+    | '/auth/redefinir'
     | '/r/$codigo'
     | '/app/alertas'
     | '/app/anunciar'
@@ -380,6 +391,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/_authenticated/onboarding'
     | '/auth/callback'
+    | '/auth/redefinir'
     | '/r/$codigo'
     | '/_authenticated/app/admin'
     | '/_authenticated/app/alertas'
@@ -457,6 +469,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/r/$codigo'
       preLoaderRoute: typeof RCodigoRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/auth/redefinir': {
+      id: '/auth/redefinir'
+      path: '/redefinir'
+      fullPath: '/auth/redefinir'
+      preLoaderRoute: typeof AuthRedefinirRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/auth/callback': {
       id: '/auth/callback'
@@ -720,10 +739,12 @@ const AuthenticatedRouteRouteWithChildren =
 
 interface AuthRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
+  AuthRedefinirRoute: typeof AuthRedefinirRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
+  AuthRedefinirRoute: AuthRedefinirRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)

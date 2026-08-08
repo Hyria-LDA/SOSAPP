@@ -2,6 +2,34 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
+export const PASSWORD_RECOVERY_STORAGE_KEY = "sos:password-recovery";
+
+function hasRecoveryMarkerInUrl() {
+  if (typeof window === "undefined") return false;
+
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+
+  return (
+    window.location.pathname === "/auth/redefinir" ||
+    search.get("type") === "recovery" ||
+    hash.get("type") === "recovery"
+  );
+}
+
+export function isPasswordRecoveryPending() {
+  if (typeof window === "undefined") return false;
+  return (
+    hasRecoveryMarkerInUrl() ||
+    window.sessionStorage.getItem(PASSWORD_RECOVERY_STORAGE_KEY) === "1"
+  );
+}
+
+export function clearPasswordRecoveryPending() {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(PASSWORD_RECOVERY_STORAGE_KEY);
+}
+
 function createSupabaseClient() {
   // Use import.meta.env for client-side (Vite build-time replacement)
   // Fall back to process.env for SSR (server-side rendering)
@@ -19,13 +47,31 @@ function createSupabaseClient() {
     throw new Error(message);
   }
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  // Capture the recovery marker before Supabase consumes and removes the URL hash.
+  if (typeof window !== "undefined" && hasRecoveryMarkerInUrl()) {
+    window.sessionStorage.setItem(PASSWORD_RECOVERY_STORAGE_KEY, "1");
+  }
+
+  const client = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
       storage: typeof window !== "undefined" ? localStorage : undefined,
       persistSession: true,
       autoRefreshToken: true,
     },
   });
+
+  if (typeof window !== "undefined") {
+    client.auth.onAuthStateChange((event) => {
+      if (event !== "PASSWORD_RECOVERY") return;
+
+      window.sessionStorage.setItem(PASSWORD_RECOVERY_STORAGE_KEY, "1");
+      if (window.location.pathname !== "/auth/redefinir") {
+        window.location.replace("/auth/redefinir");
+      }
+    });
+  }
+
+  return client;
 }
 
 let _supabase: ReturnType<typeof createSupabaseClient> | undefined;

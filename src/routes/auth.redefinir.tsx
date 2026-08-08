@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Logo } from "@/components/logo";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  clearPasswordRecoveryPending,
+  supabase,
+} from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth/redefinir")({
   ssr: false,
@@ -61,6 +64,7 @@ function ResetPasswordPage() {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
+      clearPasswordRecoveryPending();
       await supabase.auth.signOut();
       toast.success("Senha alterada! Entre novamente com a nova senha.");
       navigate({ to: "/auth", replace: true });
@@ -131,6 +135,7 @@ function ResetPasswordPage() {
               </p>
               <Link
                 to="/auth"
+                onClick={clearPasswordRecoveryPending}
                 className="flex h-12 w-full items-center justify-center rounded-xl bg-primary font-semibold text-primary-foreground"
               >
                 Voltar para entrar

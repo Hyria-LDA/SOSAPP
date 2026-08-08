@@ -12,7 +12,10 @@ import { toast } from "sonner";
 import appCss from "../styles.css?url";
 import { reportAppError } from "../lib/app-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  isPasswordRecoveryPending,
+  supabase,
+} from "@/integrations/supabase/client";
 
 type AppNotification = {
   id: string;
@@ -53,7 +56,11 @@ function isPasswordRecoveryUrl() {
 
   const search = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  return search.get("type") === "recovery" || hash.get("type") === "recovery";
+  return (
+    search.get("type") === "recovery" ||
+    hash.get("type") === "recovery" ||
+    isPasswordRecoveryPending()
+  );
 }
 
 function buildNativeIntentUrl(session: {
