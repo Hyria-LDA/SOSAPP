@@ -30,7 +30,9 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         forceGoogleOAuthOutsideWebView();
         openAuthCallbackInWebView(getIntent());
         openPushPathInWebView(getIntent());
-        openHomeOnLauncherIntent(getIntent());
+        if (savedInstanceState == null) {
+            openHomeOnLauncherIntent(getIntent());
+        }
     }
 
     @Override

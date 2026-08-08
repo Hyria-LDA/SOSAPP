@@ -730,13 +730,13 @@ function FabricantePicker({
   return (
     <Sheet title="Selecionar Fabricante" onClose={onClose}>
       <div
-        className="max-h-[65vh] overflow-y-auto overscroll-contain pb-2"
+        className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain pb-2"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         <button
           type="button"
           onClick={() => onSelect("")}
-          className="flex min-h-[56px] w-full items-center justify-between px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
+          className="flex min-h-[56px] w-full touch-pan-y select-none items-center justify-between px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
         >
           <span className="font-semibold text-muted-foreground">Todos os fabricantes</span>
           {!selected && <Check className="h-4 w-4 text-primary" />}
@@ -746,7 +746,7 @@ function FabricantePicker({
             key={f.id}
             type="button"
             onClick={() => onSelect(f.id)}
-            className="flex min-h-[56px] w-full items-center justify-between px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
+            className="flex min-h-[56px] w-full touch-pan-y select-none items-center justify-between px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
           >
             <span className="font-semibold">{f.nome}</span>
             {selected === f.id && <Check className="h-4 w-4 text-primary" />}
@@ -798,13 +798,13 @@ function PadraoPicker({
   return (
     <Sheet title="Selecionar Cor / Padrão" onClose={onClose}>
       <div
-        className="max-h-[65vh] overflow-y-auto overscroll-contain pb-2"
+        className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain pb-2"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         <button
           type="button"
           onClick={() => onSelect(null)}
-          className="flex min-h-[56px] w-full items-center justify-between px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
+          className="flex min-h-[56px] w-full touch-pan-y select-none items-center justify-between px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
         >
           <span className="font-semibold text-muted-foreground">Qualquer padrão</span>
         </button>
@@ -816,7 +816,7 @@ function PadraoPicker({
               onSelect(item);
               toast.success(`Padrão selecionado: ${item.nome}`, { duration: 1000 });
             }}
-            className="flex min-h-[56px] w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
+            className="flex min-h-[56px] w-full touch-pan-y select-none items-center justify-between gap-2 px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
           >
             <span className="truncate font-semibold">{item.nome}</span>
             <span className="shrink-0 text-xs text-muted-foreground">{item.fabricante}</span>

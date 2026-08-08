@@ -3,6 +3,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  Camera as NativeCamera,
+  CameraDirection,
+  EncodingType,
+  MediaTypeSelection,
+  type MediaResult,
+} from "@capacitor/camera";
+import { Capacitor } from "@capacitor/core";
+import {
   ArrowLeft,
   Camera,
   Check,
@@ -24,6 +32,14 @@ const MAX_PHOTOS = 3;
 const MAX_FILE_MB = 20;
 const MAX_COMPRIMENTO_CM = 275;
 const MAX_LARGURA_CM = 185;
+const DRAFT_STORAGE_KEY = "sos:anunciar-draft:v1";
+const EMPTY_FORM = {
+  comprimento_cm: "",
+  largura_cm: "",
+  quantidade: "1",
+  preco: "",
+  observacoes: "",
+};
 const PHOTO_SLOTS: { title: string; hint: string }[] = [
   { title: "Foto Principal", hint: "Visão geral da peça inteira" },
   { title: "Foto Opcional", hint: "Detalhes da superfície (cor, padrão, veio)" },
@@ -32,20 +48,31 @@ const PHOTO_SLOTS: { title: string; hint: string }[] = [
 
 type PhotoItem = { file: File; preview: string };
 
+async function mediaResultToFile(result: MediaResult, prefix: string) {
+  const source = result.webPath ?? (result.uri ? Capacitor.convertFileSrc(result.uri) : "");
+  if (!source) throw new Error("A imagem capturada nao possui um endereco valido.");
+
+  const response = await fetch(source);
+  if (!response.ok) throw new Error("Nao foi possivel ler a imagem capturada.");
+
+  const blob = await response.blob();
+  const rawFormat = result.metadata?.format?.toLowerCase() || "jpg";
+  const extension = rawFormat === "jpeg" ? "jpg" : rawFormat;
+  const mimeFormat = rawFormat === "jpg" ? "jpeg" : rawFormat;
+
+  return new File([blob], `${prefix}-${Date.now()}.${extension}`, {
+    type: blob.type || `image/${mimeFormat}`,
+  });
+}
+
+function cameraActionWasCancelled(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /cancel|cancelled|canceled|cancelado/i.test(message);
+}
+
 function isLikelyImage(file: File) {
   if (file.type.startsWith("image/")) return true;
   return /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.name);
-}
-
-function commitSelect(handler: () => void) {
-  return (e: React.PointerEvent | React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-    handler();
-  };
 }
 
 function clampDimensionInput(value: string, max: number) {
@@ -85,28 +112,53 @@ export const Route = createFileRoute("/_authenticated/app/anunciar")({
 type Fab = { id: string; nome: string };
 type Pad = { id: string; nome: string; categoria: string; fabricante_id: string };
 type Esp = { id: string; valor_mm: number };
+type AnunciarDraft = {
+  fabricanteId: string;
+  padraoId: string;
+  espessuraMm: string;
+  espessuraOutra: boolean;
+  form: typeof EMPTY_FORM;
+};
+
+function loadAnunciarDraft(): AnunciarDraft | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw) as Partial<AnunciarDraft>;
+    return {
+      fabricanteId: typeof draft.fabricanteId === "string" ? draft.fabricanteId : "",
+      padraoId: typeof draft.padraoId === "string" ? draft.padraoId : "",
+      espessuraMm: typeof draft.espessuraMm === "string" ? draft.espessuraMm : "",
+      espessuraOutra: draft.espessuraOutra === true,
+      form: {
+        ...EMPTY_FORM,
+        ...(draft.form && typeof draft.form === "object" ? draft.form : {}),
+      },
+    };
+  } catch {
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    return null;
+  }
+}
 
 function Anunciar() {
   const navigate = useNavigate();
+  const [initialDraft] = useState(loadAnunciarDraft);
   const [saving, setSaving] = useState(false);
   const submittingRef = useRef(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState<string>("");
   const { data: planStatus } = usePlanStatus();
 
-  const [fabricanteId, setFabricanteId] = useState<string>("");
-  const [padraoId, setPadraoId] = useState<string>("");
-  const [espessuraMm, setEspessuraMm] = useState<string>("");
-  const [espessuraOutra, setEspessuraOutra] = useState(false);
+  const [fabricanteId, setFabricanteId] = useState<string>(initialDraft?.fabricanteId ?? "");
+  const [padraoId, setPadraoId] = useState<string>(initialDraft?.padraoId ?? "");
+  const [espessuraMm, setEspessuraMm] = useState<string>(initialDraft?.espessuraMm ?? "");
+  const [espessuraOutra, setEspessuraOutra] = useState(initialDraft?.espessuraOutra ?? false);
   const [showFabPicker, setShowFabPicker] = useState(false);
 
-  const [f, setF] = useState({
-    comprimento_cm: "",
-    largura_cm: "",
-    quantidade: "1",
-    preco: "",
-    observacoes: "",
-  });
+  const [f, setF] = useState(initialDraft?.form ?? EMPTY_FORM);
   const set =
     (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setF((s) => ({ ...s, [k]: e.target.value }));
@@ -194,9 +246,23 @@ function Anunciar() {
     },
   });
 
+  const previousFabricanteId = useRef(fabricanteId);
   useEffect(() => {
+    if (previousFabricanteId.current === fabricanteId) return;
+    previousFabricanteId.current = fabricanteId;
     setPadraoId("");
   }, [fabricanteId]);
+
+  useEffect(() => {
+    const draft: AnunciarDraft = {
+      fabricanteId,
+      padraoId,
+      espessuraMm,
+      espessuraOutra,
+      form: f,
+    };
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  }, [espessuraMm, espessuraOutra, f, fabricanteId, padraoId]);
   const padraoSelected = useMemo(
     () => padroes?.find((p) => p.id === padraoId),
     [padroes, padraoId],
@@ -290,6 +356,7 @@ function Anunciar() {
       const ins = await supabase.from("fotos_materiais").insert(rows as any);
       if (ins.error) throw ins.error;
 
+      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
       toast.success("Anúncio publicado!");
       navigate({ to: "/app/estoque" });
     } catch (err: any) {
@@ -702,7 +769,10 @@ function PadraoPicker({
               />
             </div>
           </div>
-          <div className="max-h-[60vh] overflow-y-auto pb-2">
+          <div
+            className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain pb-2"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
             {filtered.length === 0 && (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 Nenhum padrão encontrado.
@@ -720,12 +790,8 @@ function PadraoPicker({
                       <button
                         key={p.id}
                         type="button"
-                        onPointerUp={commitSelect(select)}
-                        onClick={(e) => {
-                          e.preventDefault();
-                        }}
-                        style={{ touchAction: "manipulation" }}
-                        className={`flex w-full select-none items-center justify-between rounded-xl px-3 py-3 text-left text-sm transition active:bg-secondary ${
+                        onClick={select}
+                        className={`flex w-full touch-pan-y select-none items-center justify-between rounded-xl px-3 py-3 text-left text-sm transition active:bg-secondary ${
                           value === p.id
                             ? "bg-primary/10 font-bold text-primary"
                             : "hover:bg-secondary"
@@ -780,13 +846,16 @@ function FabricantePicker({
           />
         </div>
       </div>
-      <div className="max-h-[60vh] overflow-y-auto pb-2">
+      <div
+        className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain pb-2"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
         {filtered.map((f) => (
           <button
             key={f.id}
             type="button"
             onClick={() => onSelect(f.id)}
-            className="flex min-h-[56px] w-full items-center justify-between px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
+            className="flex min-h-[56px] w-full touch-pan-y select-none items-center justify-between px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
           >
             <span className="font-semibold">{f.nome}</span>
             {selected === f.id && <Check className="h-4 w-4 text-primary" />}
@@ -847,6 +916,7 @@ function PhotoSlot({
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [showSourcePicker, setShowSourcePicker] = useState(false);
+  const [openingMedia, setOpeningMedia] = useState(false);
   const isMain = index === 0;
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -854,6 +924,82 @@ function PhotoSlot({
     e.target.value = "";
     setShowSourcePicker(false);
   };
+
+  const takeNativePhoto = async () => {
+    setOpeningMedia(true);
+    try {
+      const permission = await NativeCamera.requestPermissions({ permissions: ["camera"] });
+      if (permission.camera === "denied" || permission.camera === "restricted") {
+        toast.error("Permita o acesso a camera nos Ajustes do iPhone para tirar fotos.");
+        return;
+      }
+
+      const result = await NativeCamera.takePhoto({
+        quality: 90,
+        targetWidth: 2048,
+        targetHeight: 2048,
+        correctOrientation: true,
+        encodingType: EncodingType.JPEG,
+        saveToGallery: false,
+        cameraDirection: CameraDirection.Rear,
+        presentationStyle: "fullscreen",
+        includeMetadata: true,
+      });
+      onAdd(await mediaResultToFile(result, "camera"));
+    } catch (error) {
+      if (!cameraActionWasCancelled(error)) {
+        console.error("Falha ao capturar foto", error);
+        toast.error("Nao foi possivel usar a camera. Verifique a permissao e tente novamente.");
+      }
+    } finally {
+      setOpeningMedia(false);
+    }
+  };
+
+  const chooseNativePhoto = async () => {
+    setOpeningMedia(true);
+    try {
+      const { results } = await NativeCamera.chooseFromGallery({
+        mediaType: MediaTypeSelection.Photo,
+        allowMultipleSelection: false,
+        limit: 1,
+        quality: 90,
+        targetWidth: 2048,
+        targetHeight: 2048,
+        correctOrientation: true,
+        presentationStyle: "fullscreen",
+        includeMetadata: true,
+      });
+      const result = results[0];
+      if (result) onAdd(await mediaResultToFile(result, "galeria"));
+    } catch (error) {
+      if (!cameraActionWasCancelled(error)) {
+        console.error("Falha ao escolher foto", error);
+        toast.error("Nao foi possivel abrir a galeria. Verifique a permissao e tente novamente.");
+      }
+    } finally {
+      setOpeningMedia(false);
+    }
+  };
+
+  const openCamera = () => {
+    setShowSourcePicker(false);
+    if (Capacitor.isNativePlatform()) {
+      void takeNativePhoto();
+      return;
+    }
+    cameraInputRef.current?.click();
+  };
+
+  const openGallery = () => {
+    setShowSourcePicker(false);
+    if (Capacitor.isNativePlatform()) {
+      void chooseNativePhoto();
+      return;
+    }
+    galleryInputRef.current?.click();
+  };
+
   return (
     <div className="flex flex-col gap-1.5">
       <div
@@ -890,10 +1036,17 @@ function PhotoSlot({
         ) : (
           <button
             type="button"
-            onClick={() => setShowSourcePicker(true)}
+            onClick={() => !openingMedia && setShowSourcePicker(true)}
+            disabled={openingMedia}
             className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground"
           >
-            {isMain ? <Camera className="h-6 w-6" /> : <ImagePlus className="h-6 w-6" />}
+            {openingMedia ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : isMain ? (
+              <Camera className="h-6 w-6" />
+            ) : (
+              <ImagePlus className="h-6 w-6" />
+            )}
             <span className="text-[10px] font-bold uppercase tracking-wider">
               {isMain ? "Adicionar" : "Opcional"}
             </span>
@@ -919,14 +1072,14 @@ function PhotoSlot({
             <div className="grid w-full gap-2">
               <button
                 type="button"
-                onClick={() => cameraInputRef.current?.click()}
+                onClick={openCamera}
                 className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary text-xs font-bold text-primary-foreground"
               >
                 <Camera className="h-4 w-4" /> Camera
               </button>
               <button
                 type="button"
-                onClick={() => galleryInputRef.current?.click()}
+                onClick={openGallery}
                 className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-secondary text-xs font-bold text-foreground"
               >
                 <ImagePlus className="h-4 w-4" /> Galeria
