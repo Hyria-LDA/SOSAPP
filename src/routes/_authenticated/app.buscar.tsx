@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { ArrowLeft, Search, X, MapPin, Check, ChevronDown } from "lucide-react";
-import { Sheet } from "@/components/sheet";
+import { Sheet, SheetOptionButton } from "@/components/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { haversineKm, formatDistance } from "@/lib/distance";
@@ -733,24 +733,22 @@ function FabricantePicker({
         className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain pb-2"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
-        <button
-          type="button"
-          onClick={() => onSelect("")}
+        <SheetOptionButton
+          onSelect={() => onSelect("")}
           className="flex min-h-[56px] w-full touch-pan-y select-none items-center justify-between px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
         >
           <span className="font-semibold text-muted-foreground">Todos os fabricantes</span>
           {!selected && <Check className="h-4 w-4 text-primary" />}
-        </button>
+        </SheetOptionButton>
         {fabricantes.map((f) => (
-          <button
+          <SheetOptionButton
             key={f.id}
-            type="button"
-            onClick={() => onSelect(f.id)}
+            onSelect={() => onSelect(f.id)}
             className="flex min-h-[56px] w-full touch-pan-y select-none items-center justify-between px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
           >
             <span className="font-semibold">{f.nome}</span>
             {selected === f.id && <Check className="h-4 w-4 text-primary" />}
-          </button>
+          </SheetOptionButton>
         ))}
       </div>
       <div className="border-t border-border p-3">
@@ -801,18 +799,16 @@ function PadraoPicker({
         className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain pb-2"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
-        <button
-          type="button"
-          onClick={() => onSelect(null)}
+        <SheetOptionButton
+          onSelect={() => onSelect(null)}
           className="flex min-h-[56px] w-full touch-pan-y select-none items-center justify-between px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
         >
           <span className="font-semibold text-muted-foreground">Qualquer padrão</span>
-        </button>
+        </SheetOptionButton>
         {(data ?? []).map((item) => (
-          <button
+          <SheetOptionButton
             key={item.id}
-            type="button"
-            onClick={() => {
+            onSelect={() => {
               onSelect(item);
               toast.success(`Padrão selecionado: ${item.nome}`, { duration: 1000 });
             }}
@@ -820,7 +816,7 @@ function PadraoPicker({
           >
             <span className="truncate font-semibold">{item.nome}</span>
             <span className="shrink-0 text-xs text-muted-foreground">{item.fabricante}</span>
-          </button>
+          </SheetOptionButton>
         ))}
         {(data?.length ?? 0) === 0 && (
           <div className="px-4 py-8 text-center text-xs text-muted-foreground">

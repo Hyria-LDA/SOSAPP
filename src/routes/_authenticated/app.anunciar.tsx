@@ -10,6 +10,7 @@ import {
   type MediaResult,
 } from "@capacitor/camera";
 import { Capacitor } from "@capacitor/core";
+import { Filesystem } from "@capacitor/filesystem";
 import {
   ArrowLeft,
   Camera,
@@ -25,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { compressImage } from "@/lib/image-compress";
 import { checkPlanLimit, usePlanStatus } from "@/hooks/use-plan-status";
 import { UpgradeModal } from "@/components/upgrade-modal";
-import { Sheet } from "@/components/sheet";
+import { Sheet, SheetOptionButton } from "@/components/sheet";
 import { sortByNome } from "@/lib/sort";
 
 const MAX_PHOTOS = 3;
@@ -49,19 +50,42 @@ const PHOTO_SLOTS: { title: string; hint: string }[] = [
 type PhotoItem = { file: File; preview: string };
 
 async function mediaResultToFile(result: MediaResult, prefix: string) {
-  const source = result.webPath ?? (result.uri ? Capacitor.convertFileSrc(result.uri) : "");
-  if (!source) throw new Error("A imagem capturada nao possui um endereco valido.");
-
-  const response = await fetch(source);
-  if (!response.ok) throw new Error("Nao foi possivel ler a imagem capturada.");
-
-  const blob = await response.blob();
   const rawFormat = result.metadata?.format?.toLowerCase() || "jpg";
   const extension = rawFormat === "jpeg" ? "jpg" : rawFormat;
   const mimeFormat = rawFormat === "jpg" ? "jpeg" : rawFormat;
+  const mime = `image/${mimeFormat}`;
+  let blob: Blob | null = null;
+
+  if (Capacitor.isNativePlatform() && result.uri) {
+    try {
+      const nativeFile = await Filesystem.readFile({ path: result.uri });
+      if (typeof nativeFile.data === "string") {
+        const base64 = nativeFile.data.replace(/^data:[^;]+;base64,/, "");
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) {
+          bytes[index] = binary.charCodeAt(index);
+        }
+        blob = new Blob([bytes], { type: mime });
+      } else {
+        blob = nativeFile.data;
+      }
+    } catch (error) {
+      console.warn("Leitura nativa da foto falhou; tentando endereco web.", error);
+    }
+  }
+
+  if (!blob) {
+    const source = result.webPath ?? (result.uri ? Capacitor.convertFileSrc(result.uri) : "");
+    if (!source) throw new Error("A imagem capturada nao possui um endereco valido.");
+
+    const response = await fetch(source);
+    if (!response.ok) throw new Error("Nao foi possivel ler a imagem capturada.");
+    blob = await response.blob();
+  }
 
   return new File([blob], `${prefix}-${Date.now()}.${extension}`, {
-    type: blob.type || `image/${mimeFormat}`,
+    type: blob.type || mime,
   });
 }
 
@@ -787,10 +811,9 @@ function PadraoPicker({
                       toast.success(`Padrão selecionado: ${p.nome}`, { duration: 1000 });
                     };
                     return (
-                      <button
+                      <SheetOptionButton
                         key={p.id}
-                        type="button"
-                        onClick={select}
+                        onSelect={select}
                         className={`flex w-full touch-pan-y select-none items-center justify-between rounded-xl px-3 py-3 text-left text-sm transition active:bg-secondary ${
                           value === p.id
                             ? "bg-primary/10 font-bold text-primary"
@@ -799,7 +822,7 @@ function PadraoPicker({
                       >
                         <span>{p.nome}</span>
                         {value === p.id && <Check className="h-4 w-4" />}
-                      </button>
+                      </SheetOptionButton>
                     );
               })}
             </div>
@@ -851,15 +874,14 @@ function FabricantePicker({
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         {filtered.map((f) => (
-          <button
+          <SheetOptionButton
             key={f.id}
-            type="button"
-            onClick={() => onSelect(f.id)}
+            onSelect={() => onSelect(f.id)}
             className="flex min-h-[56px] w-full touch-pan-y select-none items-center justify-between px-4 py-3 text-left text-sm hover:bg-secondary active:bg-secondary"
           >
             <span className="font-semibold">{f.nome}</span>
             {selected === f.id && <Check className="h-4 w-4 text-primary" />}
-          </button>
+          </SheetOptionButton>
         ))}
       </div>
       <div className="border-t border-border p-3">

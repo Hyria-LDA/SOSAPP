@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
@@ -51,6 +51,48 @@ if (encryptionResult.status !== 0) {
   }
 }
 
+const privacyManifest = resolve("ios", "App", "PrivacyInfo.xcprivacy");
+const filesystemPrivacyEntry = `
+    <dict>
+      <key>NSPrivacyAccessedAPIType</key>
+      <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+      <key>NSPrivacyAccessedAPITypeReasons</key>
+      <array>
+        <string>C617.1</string>
+      </array>
+    </dict>`;
+
+if (!existsSync(privacyManifest)) {
+  writeFileSync(
+    privacyManifest,
+    `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSPrivacyAccessedAPITypes</key>
+  <array>${filesystemPrivacyEntry}
+  </array>
+</dict>
+</plist>
+`,
+  );
+} else {
+  const currentManifest = readFileSync(privacyManifest, "utf8");
+  if (!currentManifest.includes("NSPrivacyAccessedAPICategoryFileTimestamp")) {
+    const updatedManifest = currentManifest.replace(
+      /(<key>NSPrivacyAccessedAPITypes<\/key>\s*<array>)/,
+      `$1${filesystemPrivacyEntry}`,
+    );
+    if (updatedManifest === currentManifest) {
+      console.error(
+        "PrivacyInfo.xcprivacy existente nao possui NSPrivacyAccessedAPITypes; ajuste manual necessario.",
+      );
+      process.exit(1);
+    }
+    writeFileSync(privacyManifest, updatedManifest);
+  }
+}
+
 console.log(
-  "Permissoes e declaracao de criptografia configuradas no Info.plist do iOS.",
+  "Permissoes, criptografia e manifesto de privacidade configurados no iOS.",
 );

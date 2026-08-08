@@ -1,10 +1,58 @@
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ComponentProps } from "react";
 
 type VisualViewportRect = {
   height: number;
   offsetTop: number;
 };
+
+type SheetOptionButtonProps = Omit<ComponentProps<"button">, "onClick"> & {
+  onSelect: () => void;
+};
+
+export function SheetOptionButton({ onSelect, ...props }: SheetOptionButtonProps) {
+  const pointerStart = useRef<{ id: number; x: number; y: number } | null>(null);
+
+  return (
+    <button
+      {...props}
+      type={props.type ?? "button"}
+      onPointerDown={(event) => {
+        pointerStart.current = {
+          id: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+        };
+        props.onPointerDown?.(event);
+      }}
+      onPointerUp={(event) => {
+        const start = pointerStart.current;
+        pointerStart.current = null;
+        props.onPointerUp?.(event);
+        if (
+          !start ||
+          start.id !== event.pointerId ||
+          Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        onSelect();
+      }}
+      onPointerCancel={(event) => {
+        pointerStart.current = null;
+        props.onPointerCancel?.(event);
+      }}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.detail === 0) onSelect();
+      }}
+    />
+  );
+}
 
 export function Sheet({
   title,
