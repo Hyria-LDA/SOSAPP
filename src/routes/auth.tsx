@@ -214,6 +214,30 @@ function AuthPage() {
     }
   };
 
+  const requestPasswordReset = async () => {
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      toast.error("Digite seu e-mail para recuperar a senha.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${getPublicOrigin()}/auth/redefinir`,
+      });
+      if (error) throw error;
+
+      toast.success("Enviamos um link para você criar uma nova senha. Confira seu e-mail.", {
+        duration: 8000,
+      });
+    } catch (err) {
+      toast.error(authErrorMessage(err), { duration: 8000 });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const google = async () => {
     setLoading(true);
     try {
@@ -336,6 +360,17 @@ function AuthPage() {
                 placeholder="Sua senha"
               />
             </Field>
+
+            {mode === "signin" && (
+              <button
+                type="button"
+                onClick={requestPasswordReset}
+                disabled={loading}
+                className="ml-auto block text-sm font-semibold text-primary disabled:opacity-60"
+              >
+                Esqueci minha senha
+              </button>
+            )}
 
             <button
               disabled={loading}
