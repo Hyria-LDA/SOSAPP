@@ -48,6 +48,14 @@ function authCallbackPathFromDeepLink(url: string) {
   }
 }
 
+function isPasswordRecoveryUrl() {
+  if (typeof window === "undefined") return false;
+
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return search.get("type") === "recovery" || hash.get("type") === "recovery";
+}
+
 function buildNativeIntentUrl(session: {
   access_token: string;
   refresh_token: string;
@@ -314,6 +322,14 @@ function RootComponent() {
   useEffect(() => {
     let removeDeepLinkListener: (() => void) | undefined;
     let cancelled = false;
+
+    if (window.location.pathname !== "/auth/redefinir" && isPasswordRecoveryUrl()) {
+      window.location.replace(
+        `/auth/redefinir${window.location.search}${window.location.hash}`,
+      );
+      return;
+    }
+
     const openAuthCallback = (url: string) => {
       const callbackPath = authCallbackPathFromDeepLink(url);
       if (!callbackPath) return false;
@@ -349,6 +365,12 @@ function RootComponent() {
       });
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        if (window.location.pathname !== "/auth/redefinir") {
+          window.location.replace("/auth/redefinir");
+        }
+        return;
+      }
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
