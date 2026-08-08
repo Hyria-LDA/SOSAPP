@@ -25,6 +25,31 @@ function ResetPasswordPage() {
     let mounted = true;
 
     const checkSession = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const tokenHash = params.get("token_hash");
+      const type = params.get("type");
+
+      if (tokenHash && type === "recovery") {
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: "recovery",
+        });
+
+        if (!mounted) return;
+
+        window.history.replaceState({}, document.title, "/auth/redefinir");
+        if (error) {
+          clearPasswordRecoveryPending();
+          setHasSession(false);
+          setCheckingLink(false);
+          return;
+        }
+
+        setHasSession(!!data.session);
+        setCheckingLink(false);
+        return;
+      }
+
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
       setHasSession(!!data.session);
