@@ -15,7 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RCodigoRouteImport } from './routes/r.$codigo'
-import { Route as AuthRedefinirRouteImport } from './routes/auth.redefinir'
+import { Route as AuthRedefinirRouteImport } from './routes/auth_.redefinir'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
@@ -72,9 +72,9 @@ const RCodigoRoute = RCodigoRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRedefinirRoute = AuthRedefinirRouteImport.update({
-  id: '/redefinir',
-  path: '/redefinir',
-  getParentRoute: () => AuthRoute,
+  id: '/auth_/redefinir',
+  path: '/auth/redefinir',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/callback',
@@ -291,7 +291,7 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/auth/redefinir': typeof AuthRedefinirRoute
+  '/auth_/redefinir': typeof AuthRedefinirRoute
   '/r/$codigo': typeof RCodigoRoute
   '/_authenticated/app/admin': typeof AuthenticatedAppAdminRouteWithChildren
   '/_authenticated/app/alertas': typeof AuthenticatedAppAlertasRoute
@@ -391,7 +391,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/_authenticated/onboarding'
     | '/auth/callback'
-    | '/auth/redefinir'
+    | '/auth_/redefinir'
     | '/r/$codigo'
     | '/_authenticated/app/admin'
     | '/_authenticated/app/alertas'
@@ -423,6 +423,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   PrivacidadeRoute: typeof PrivacidadeRoute
   TermosRoute: typeof TermosRoute
+  AuthRedefinirRoute: typeof AuthRedefinirRoute
   RCodigoRoute: typeof RCodigoRoute
 }
 
@@ -470,12 +471,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RCodigoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/redefinir': {
-      id: '/auth/redefinir'
-      path: '/redefinir'
+    '/auth_/redefinir': {
+      id: '/auth_/redefinir'
+      path: '/auth/redefinir'
       fullPath: '/auth/redefinir'
       preLoaderRoute: typeof AuthRedefinirRouteImport
-      parentRoute: typeof AuthRoute
+      parentRoute: typeof rootRouteImport
     }
     '/auth/callback': {
       id: '/auth/callback'
@@ -739,12 +740,10 @@ const AuthenticatedRouteRouteWithChildren =
 
 interface AuthRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
-  AuthRedefinirRoute: typeof AuthRedefinirRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
-  AuthRedefinirRoute: AuthRedefinirRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -755,6 +754,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   PrivacidadeRoute: PrivacidadeRoute,
   TermosRoute: TermosRoute,
+  AuthRedefinirRoute: AuthRedefinirRoute,
   RCodigoRoute: RCodigoRoute,
 }
 export const routeTree = rootRouteImport

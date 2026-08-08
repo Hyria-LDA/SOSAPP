@@ -8,7 +8,7 @@ import {
   supabase,
 } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/auth/redefinir")({
+export const Route = createFileRoute("/auth_/redefinir")({
   ssr: false,
   component: ResetPasswordPage,
 });
