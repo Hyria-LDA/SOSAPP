@@ -988,11 +988,49 @@ function PhotoSlot({
   const [showSourcePicker, setShowSourcePicker] = useState(false);
   const [openingMedia, setOpeningMedia] = useState(false);
   const isMain = index === 0;
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) onAdd(file);
-    e.target.value = "";
-    setShowSourcePicker(false);
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const selectedFile = input.files?.[0];
+    if (!selectedFile) return;
+
+    setOpeningMedia(true);
+    try {
+      if (!isLikelyImage(selectedFile)) {
+        throw new Error("O arquivo selecionado nao e uma imagem compativel.");
+      }
+      if (selectedFile.size === 0) {
+        throw new Error("A foto ainda nao foi baixada pelo aparelho. Tente selecionar novamente.");
+      }
+      if (selectedFile.size > MAX_FILE_MB * 1024 * 1024) {
+        throw new Error(`Imagem maior que ${MAX_FILE_MB} MB. Escolha outra.`);
+      }
+
+      // Alguns WebViews Android entregam um File ligado temporariamente ao content URI.
+      // Copiar os bytes antes de limpar o input evita previews vazios em certos aparelhos.
+      const bytes = await selectedFile.arrayBuffer();
+      const stableFile = new File([bytes], selectedFile.name || `foto-${Date.now()}.jpg`, {
+        type: selectedFile.type || "image/jpeg",
+        lastModified: selectedFile.lastModified || Date.now(),
+      });
+      const normalized = await compressImage(stableFile, { maxDim: 2048, quality: 0.9 });
+      onAdd(
+        new File([normalized.blob], `foto-${Date.now()}.${normalized.ext}`, {
+          type: normalized.mime,
+          lastModified: Date.now(),
+        }),
+      );
+    } catch (error) {
+      console.error("Falha ao preparar imagem selecionada", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel ler essa foto. Escolha outra imagem.",
+      );
+    } finally {
+      input.value = "";
+      setShowSourcePicker(false);
+      setOpeningMedia(false);
+    }
   };
 
   const takeNativePhoto = async () => {
