@@ -77,12 +77,27 @@ async function mediaResultToFile(result: MediaResult, prefix: string) {
 
   if (!blob) {
     const source = result.webPath ?? (result.uri ? Capacitor.convertFileSrc(result.uri) : "");
-    if (!source) throw new Error("A imagem capturada nao possui um endereco valido.");
-
-    const response = await fetch(source);
-    if (!response.ok) throw new Error("Nao foi possivel ler a imagem capturada.");
-    blob = await response.blob();
+    if (source) {
+      try {
+        const response = await fetch(source);
+        if (response.ok) blob = await response.blob();
+      } catch (error) {
+        console.warn("Leitura web da foto falhou; tentando miniatura nativa.", error);
+      }
+    }
   }
+
+  if (!blob && result.thumbnail) {
+    const base64 = result.thumbnail.replace(/^data:[^;]+;base64,/, "");
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    blob = new Blob([bytes], { type: mime });
+  }
+
+  if (!blob) throw new Error("Nao foi possivel ler a imagem capturada.");
 
   return new File([blob], `${prefix}-${Date.now()}.${extension}`, {
     type: blob.type || mime,
@@ -159,6 +174,7 @@ function loadAnunciarDraft(): AnunciarDraft | null {
       form: {
         ...EMPTY_FORM,
         ...(draft.form && typeof draft.form === "object" ? draft.form : {}),
+        preco: formatPriceInput(typeof draft.form?.preco === "string" ? draft.form.preco : ""),
       },
     };
   } catch {
@@ -183,6 +199,10 @@ function Anunciar() {
   const [showFabPicker, setShowFabPicker] = useState(false);
 
   const [f, setF] = useState(initialDraft?.form ?? EMPTY_FORM);
+  const priceInputRef = useRef<HTMLInputElement>(null);
+  const finalizePrice = () => {
+    setF((current) => ({ ...current, preco: formatPriceInput(current.preco) }));
+  };
   const set =
     (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setF((s) => ({ ...s, [k]: e.target.value }));
@@ -238,7 +258,7 @@ function Anunciar() {
         .eq("ativo", true)
         .order("ordem");
       if (error) throw error;
-      return data as Fab[];
+      return sortByNome(data as Fab[]);
     },
   });
 
@@ -318,16 +338,16 @@ function Anunciar() {
     let materialId: string | null = null;
     const uploadedPaths: string[] = [];
     try {
-    const lim = await checkPlanLimit("anuncios");
-    if (!lim.allowed) {
-      setUpgradeReason(
-        `Você atingiu o limite do plano ${lim.plano} (${lim.atual}/${lim.limite} anúncios ativos). Faça upgrade para publicar mais.`,
-      );
-      setShowUpgrade(true);
-      submittingRef.current = false;
-      return;
-    }
-    setSaving(true);
+      const lim = await checkPlanLimit("anuncios");
+      if (!lim.allowed) {
+        setUpgradeReason(
+          `Você atingiu o limite do plano ${lim.plano} (${lim.atual}/${lim.limite} anúncios ativos). Faça upgrade para publicar mais.`,
+        );
+        setShowUpgrade(true);
+        submittingRef.current = false;
+        return;
+      }
+      setSaving(true);
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Sem sessão");
       const { data: emp } = await supabase
@@ -365,7 +385,14 @@ function Anunciar() {
       // Upload de fotos (comprimidas) → armazena somente o PATH em fotos_materiais.
       // URLs assinadas curtas são geradas sob demanda na leitura (ver src/lib/material-photos.ts).
       // Estrutura: {empresa_id}/{anuncio_id}/foto-{n}.{ext}
-      const rows: { material_id: string; empresa_id: string; url: string; ordem: number; needs_ai_analysis: boolean; ai_status: "pending" }[] = [];
+      const rows: {
+        material_id: string;
+        empresa_id: string;
+        url: string;
+        ordem: number;
+        needs_ai_analysis: boolean;
+        ai_status: "pending";
+      }[] = [];
       for (let i = 0; i < photos.length; i++) {
         const { blob, ext, mime } = await compressImage(photos[i].file);
         const path = `${emp.id}/${mat.id}/foto-${i + 1}-${Date.now()}.${ext}`;
@@ -374,7 +401,14 @@ function Anunciar() {
           .upload(path, blob, { contentType: mime, upsert: false });
         if (up.error) throw up.error;
         uploadedPaths.push(path);
-        rows.push({ material_id: mat.id, empresa_id: emp.id, url: path, ordem: i, needs_ai_analysis: true, ai_status: "pending" });
+        rows.push({
+          material_id: mat.id,
+          empresa_id: emp.id,
+          url: path,
+          ordem: i,
+          needs_ai_analysis: true,
+          ai_status: "pending",
+        });
       }
       if (rows.length === 0) throw new Error("Nenhuma foto foi enviada.");
       const ins = await supabase.from("fotos_materiais").insert(rows as any);
@@ -423,9 +457,8 @@ function Anunciar() {
           <div className="text-4xl">🚫</div>
           <h2 className="mt-2 text-base font-black">Limite de anúncios atingido</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Você atingiu o limite do plano <strong>{planStatus?.plano.nome}</strong> (
-            {usoAnuncios}/{limiteAnuncios} anúncios ativos). Faça upgrade para publicar mais
-            sobras.
+            Você atingiu o limite do plano <strong>{planStatus?.plano.nome}</strong> ({usoAnuncios}/
+            {limiteAnuncios} anúncios ativos). Faça upgrade para publicar mais sobras.
           </p>
           <button
             onClick={() => {
@@ -478,8 +511,19 @@ function Anunciar() {
         reason={upgradeReason}
       />
 
-
-      <form onSubmit={submit} className="mt-5 space-y-5">
+      <form
+        onSubmit={submit}
+        onPointerDownCapture={(event) => {
+          if (
+            priceInputRef.current &&
+            document.activeElement === priceInputRef.current &&
+            event.target !== priceInputRef.current
+          ) {
+            finalizePrice();
+          }
+        }}
+        className="mt-5 space-y-5"
+      >
         {/* ============ BLOCO: MATERIAL ============ */}
         <Section title="Material">
           {/* Fabricante */}
@@ -580,7 +624,6 @@ function Anunciar() {
               )}
             </FieldLabel>
           )}
-
         </Section>
 
         {/* ============ BLOCO: DIMENSÕES ============ */}
@@ -647,18 +690,24 @@ function Anunciar() {
               </FieldLabel>
               <FieldLabel label="Preço total (R$)">
                 <input
+                  ref={priceInputRef}
                   required
                   type="text"
                   inputMode="decimal"
+                  enterKeyHint="done"
                   placeholder="0,00"
                   className={inputCls}
                   value={f.preco}
                   onChange={(e) =>
                     setF((s) => ({ ...s, preco: normalizePriceInput(e.target.value) }))
                   }
-                  onBlur={(e) =>
-                    setF((s) => ({ ...s, preco: formatPriceInput(e.target.value) }))
-                  }
+                  onBlur={finalizePrice}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      event.currentTarget.blur();
+                    }
+                  }}
                 />
               </FieldLabel>
             </div>
@@ -804,26 +853,24 @@ function PadraoPicker({
             )}
             <div className="space-y-1 px-4">
               {filtered.map((p) => {
-                    const select = () => {
-                      onChange(p.id);
-                      setQ("");
-                      setOpen(false);
-                      toast.success(`Padrão selecionado: ${p.nome}`, { duration: 1000 });
-                    };
-                    return (
-                      <SheetOptionButton
-                        key={p.id}
-                        onSelect={select}
-                        className={`flex w-full touch-pan-y select-none items-center justify-between rounded-xl px-3 py-3 text-left text-sm transition active:bg-secondary ${
-                          value === p.id
-                            ? "bg-primary/10 font-bold text-primary"
-                            : "hover:bg-secondary"
-                        }`}
-                      >
-                        <span>{p.nome}</span>
-                        {value === p.id && <Check className="h-4 w-4" />}
-                      </SheetOptionButton>
-                    );
+                const select = () => {
+                  onChange(p.id);
+                  setQ("");
+                  setOpen(false);
+                  toast.success(`Padrão selecionado: ${p.nome}`, { duration: 1000 });
+                };
+                return (
+                  <SheetOptionButton
+                    key={p.id}
+                    onSelect={select}
+                    className={`flex w-full touch-pan-y select-none items-center justify-between rounded-xl px-3 py-3 text-left text-sm transition active:bg-secondary ${
+                      value === p.id ? "bg-primary/10 font-bold text-primary" : "hover:bg-secondary"
+                    }`}
+                  >
+                    <span>{p.nome}</span>
+                    {value === p.id && <Check className="h-4 w-4" />}
+                  </SheetOptionButton>
+                );
               })}
             </div>
           </div>
@@ -854,14 +901,15 @@ function FabricantePicker({
   onSelect: (id: string) => void;
 }) {
   const [q, setQ] = useState("");
-  const filtered = fabricantes.filter((f) => f.nome.toLowerCase().includes(q.toLowerCase()));
+  const filtered = sortByNome(
+    fabricantes.filter((f) => f.nome.toLowerCase().includes(q.toLowerCase())),
+  );
   return (
     <Sheet title="Selecionar Fabricante" onClose={onClose}>
       <div className="px-4 pb-2">
         <div className="flex h-11 items-center gap-2 rounded-xl border border-border bg-card px-3">
           <Search className="h-4 w-4 text-muted-foreground" />
           <input
-            
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar fabricante…"
@@ -1006,7 +1054,7 @@ function PhotoSlot({
 
   const openCamera = () => {
     setShowSourcePicker(false);
-    if (Capacitor.isNativePlatform()) {
+    if (Capacitor.getPlatform() === "ios") {
       void takeNativePhoto();
       return;
     }

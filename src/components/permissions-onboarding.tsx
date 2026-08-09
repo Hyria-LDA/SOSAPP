@@ -1,9 +1,16 @@
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
+import { Camera as NativeCamera } from "@capacitor/camera";
+import { PushNotifications, type Token } from "@capacitor/push-notifications";
 import {
-  PushNotifications,
-  type Token,
-} from "@capacitor/push-notifications";
-import { Bell, Camera, CheckCircle2, Image, Loader2, MapPin, ShieldCheck, XCircle } from "lucide-react";
+  Bell,
+  Camera,
+  CheckCircle2,
+  Image,
+  Loader2,
+  MapPin,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -275,6 +282,30 @@ export function PermissionsOnboarding() {
   };
 
   const requestCamera = async () => {
+    if (Capacitor.getPlatform() === "android") {
+      setCameraStatus("granted");
+      toast.success("Camera pronta. Ela sera aberta pelo sistema ao tirar a foto.");
+      return;
+    }
+
+    if (Capacitor.getPlatform() === "ios") {
+      setCameraStatus("loading");
+      try {
+        const permission = await NativeCamera.requestPermissions({ permissions: ["camera"] });
+        if (permission.camera === "granted") {
+          setCameraStatus("granted");
+          toast.success("Camera ativada.");
+          return;
+        }
+        setCameraStatus("blocked");
+        toast.error("Permissao da camera negada.");
+      } catch {
+        setCameraStatus("blocked");
+        toast.error("Nao foi possivel solicitar a camera.");
+      }
+      return;
+    }
+
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraStatus("unavailable");
       toast.info("A camera sera solicitada quando voce tirar a foto no anuncio.");
@@ -304,7 +335,9 @@ export function PermissionsOnboarding() {
             <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
               <ShieldCheck className="h-5 w-5" />
             </div>
-            <DialogTitle className="text-xl leading-tight">Permissoes do SOS Marceneiros</DialogTitle>
+            <DialogTitle className="text-xl leading-tight">
+              Permissoes do SOS Marceneiros
+            </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed">
               Libere agora os acessos usados para receber avisos, encontrar sobras perto de voce e
               tirar fotos nos anuncios.

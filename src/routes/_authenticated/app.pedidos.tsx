@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { checkPlanLimit } from "@/hooks/use-plan-status";
+import { sortByNome } from "@/lib/sort";
 
 const schema = z.object({
   novo: z.coerce.number().optional().default(0),
@@ -266,7 +267,7 @@ function NovoPedidoForm({
         .eq("ativo", true)
         .order("ordem");
       if (error) throw error;
-      return data as Fab[];
+      return sortByNome(data as Fab[]);
     },
   });
   const { data: padroes } = useQuery({
@@ -280,7 +281,7 @@ function NovoPedidoForm({
         .eq("ativo", true)
         .order("ordem");
       if (error) throw error;
-      return data as Pad[];
+      return sortByNome(data as Pad[]);
     },
   });
   const { data: espessuras } = useQuery({

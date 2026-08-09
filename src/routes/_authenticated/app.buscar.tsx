@@ -113,7 +113,7 @@ function Buscar() {
         .eq("ativo", true)
         .order("ordem");
       if (error) throw error;
-      return data as { id: string; nome: string }[];
+      return sortByNome(data as { id: string; nome: string }[]);
     },
   });
   const { data: espessuras } = useQuery({
@@ -784,12 +784,14 @@ function PadraoPicker({
       if (fabricanteId) query = query.eq("fabricante_id", fabricanteId);
       const { data, error } = await query;
       if (error) throw error;
-      return sortByNome((data ?? []).map((p: any) => ({
-        id: p.id,
-        nome: p.nome,
-        fabricante_id: p.fabricante_id,
-        fabricante: p.fabricantes?.nome ?? "",
-      })) as AutoItem[]);
+      return sortByNome(
+        (data ?? []).map((p: any) => ({
+          id: p.id,
+          nome: p.nome,
+          fabricante_id: p.fabricante_id,
+          fabricante: p.fabricantes?.nome ?? "",
+        })) as AutoItem[],
+      );
     },
   });
 
