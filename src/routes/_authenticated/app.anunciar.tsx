@@ -207,15 +207,23 @@ function Anunciar() {
     (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setF((s) => ({ ...s, [k]: e.target.value }));
 
-  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [photoSlots, setPhotoSlots] = useState<Array<PhotoItem | null>>(() =>
+    Array.from({ length: MAX_PHOTOS }, () => null),
+  );
+  const photos = photoSlots.filter((photo): photo is PhotoItem => photo !== null);
+  const photoSlotsRef = useRef(photoSlots);
+  useEffect(() => {
+    photoSlotsRef.current = photoSlots;
+  }, [photoSlots]);
   useEffect(() => {
     return () => {
-      photos.forEach((p) => URL.revokeObjectURL(p.preview));
+      photoSlotsRef.current.forEach((photo) => {
+        if (photo) URL.revokeObjectURL(photo.preview);
+      });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const addPhoto = (file: File) => {
+  const addPhoto = (index: number, file: File) => {
     if (!isLikelyImage(file)) {
       toast.error("Selecione um arquivo de imagem.");
       return;
@@ -224,28 +232,45 @@ function Anunciar() {
       toast.error(`Imagem maior que ${MAX_FILE_MB} MB. Escolha outra.`);
       return;
     }
-    setPhotos((prev) => {
-      if (prev.length >= MAX_PHOTOS) {
+    setPhotoSlots((previousSlots) => {
+      const selectedCount = previousSlots.filter(Boolean).length;
+      if (!previousSlots[index] && selectedCount >= MAX_PHOTOS) {
         toast.error(`Máximo de ${MAX_PHOTOS} fotos por anúncio.`);
-        return prev;
+        return previousSlots;
       }
-      return [...prev, { file, preview: URL.createObjectURL(file) }];
+
+      const nextSlots = [...previousSlots];
+      const targetIndex = selectedCount === 0 ? 0 : index;
+      const previousPhoto = nextSlots[targetIndex];
+      if (previousPhoto) URL.revokeObjectURL(previousPhoto.preview);
+      nextSlots[targetIndex] = { file, preview: URL.createObjectURL(file) };
+      return nextSlots;
     });
   };
   const removePhoto = (idx: number) => {
-    setPhotos((prev) => {
-      const p = prev[idx];
-      if (p) URL.revokeObjectURL(p.preview);
-      return prev.filter((_, i) => i !== idx);
+    setPhotoSlots((previousSlots) => {
+      const nextSlots = [...previousSlots];
+      const photo = nextSlots[idx];
+      if (photo) URL.revokeObjectURL(photo.preview);
+      nextSlots[idx] = null;
+
+      if (idx === 0) {
+        const nextPhotoIndex = nextSlots.findIndex((item, itemIndex) => itemIndex > 0 && item);
+        if (nextPhotoIndex > 0) {
+          nextSlots[0] = nextSlots[nextPhotoIndex];
+          nextSlots[nextPhotoIndex] = null;
+        }
+      }
+
+      return nextSlots;
     });
   };
   const makeMain = (idx: number) => {
-    setPhotos((prev) => {
-      if (idx <= 0 || idx >= prev.length) return prev;
-      const next = [...prev];
-      const [item] = next.splice(idx, 1);
-      next.unshift(item);
-      return next;
+    setPhotoSlots((previousSlots) => {
+      if (idx <= 0 || !previousSlots[idx]) return previousSlots;
+      const nextSlots = [...previousSlots];
+      [nextSlots[0], nextSlots[idx]] = [nextSlots[idx], nextSlots[0]];
+      return nextSlots;
     });
   };
 
@@ -733,9 +758,9 @@ function Anunciar() {
                 <PhotoSlot
                   key={i}
                   index={i}
-                  item={photos[i]}
+                  item={photoSlots[i] ?? undefined}
                   meta={PHOTO_SLOTS[i]}
-                  onAdd={addPhoto}
+                  onAdd={(file) => addPhoto(i, file)}
                   onRemove={() => removePhoto(i)}
                   onMakeMain={() => makeMain(i)}
                 />
