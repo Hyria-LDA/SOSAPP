@@ -7,6 +7,7 @@ import { useGeolocation } from "@/hooks/use-geolocation";
 import { Logo } from "@/components/logo";
 import { SplashBannerGate } from "@/components/splash-banner";
 import { BrilhanteSelo } from "@/components/premium-badge";
+import { formatDimensions } from "@/lib/material-dimensions";
 import {
   Carousel,
   CarouselContent,
@@ -36,7 +37,6 @@ function Home() {
   const lng = Number(coords?.lng);
   const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
   const geoKey = hasValidCoords ? `${lat.toFixed(4)},${lng.toFixed(4)}` : "no-geo";
-
 
   const { data: userPlanSlug } = useQuery({
     queryKey: ["user-plan-slug"],
@@ -83,7 +83,6 @@ function Home() {
     staleTime: 50 * 60 * 1000,
   });
 
-
   const { data: popularesRaw } = useQuery({
     queryKey: ["sobras-perto", geoKey, rotationSeedRef.current],
     queryFn: async () => {
@@ -98,19 +97,24 @@ function Home() {
       if (error) throw error;
       const ids = (data ?? []).map((m: any) => m.id);
       if (ids.length === 0) return [];
-      const { data: fotos } = await supabase
-        .from("fotos_materiais")
-        .select("material_id, url, ordem")
-        .in("material_id", ids)
-        .order("ordem", { ascending: true });
+      const [{ data: fotos }, { data: medidas }] = await Promise.all([
+        supabase
+          .from("fotos_materiais")
+          .select("material_id, url, ordem")
+          .in("material_id", ids)
+          .order("ordem", { ascending: true }),
+        supabase.from("materiais").select("id, comprimento_cm, largura_cm").in("id", ids),
+      ]);
       const byMat = new Map<string, any[]>();
       (fotos ?? []).forEach((f: any) => {
         const arr = byMat.get(f.material_id) ?? [];
         arr.push(f);
         byMat.set(f.material_id, arr);
       });
+      const medidasByMat = new Map((medidas ?? []).map((material: any) => [material.id, material]));
       const enriched = (data ?? []).map((m: any) => ({
         ...m,
+        ...medidasByMat.get(m.id),
         fotos_materiais: byMat.get(m.id) ?? [],
       }));
       const { attachFirstFoto } = await import("@/lib/material-photos");
@@ -208,14 +212,15 @@ function Home() {
                 <div className="truncate font-semibold">{m.padrao}</div>
                 <div className="mt-0.5 truncate text-xs text-muted-foreground">
                   {m.fabricante ?? "—"} · {m.cidade ?? ""}/{m.estado ?? ""}
-                  {typeof m.distancia_km === "number" && (
-                    <> · {m.distancia_km.toFixed(1)} km</>
-                  )}
+                  {typeof m.distancia_km === "number" && <> · {m.distancia_km.toFixed(1)} km</>}
                 </div>
               </div>
               <div className="relative shrink-0 text-right">
                 <div className="text-sm font-bold text-primary">
                   R$ {Number(m.preco).toFixed(2)}
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  {formatDimensions(m.comprimento_cm, m.largura_cm)}
                 </div>
                 <BrilhanteSelo
                   plano_slug={m.plano_slug}
@@ -230,7 +235,6 @@ function Home() {
               Nenhuma sobra encontrada por perto ainda.
             </div>
           )}
-
         </div>
       </div>
     </div>
@@ -267,7 +271,6 @@ function BannersCarousel({ banners }: { banners: Banner[] }) {
     schedule();
     return () => clearTimeout(timeoutId);
   }, [api, banners]);
-
 
   // View tracking — registra 1x por banner por sessão
   useEffect(() => {
