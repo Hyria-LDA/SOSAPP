@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { checkPlanLimit, usePlanStatus } from "@/hooks/use-plan-status";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { sortByNome } from "@/lib/sort";
+import { Sheet, SheetOptionButton } from "@/components/sheet";
 
 export const Route = createFileRoute("/_authenticated/app/alertas")({
   component: Alertas,
@@ -523,42 +524,43 @@ function Picker({
     [items, q],
   );
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60">
-      <div className="max-h-[80vh] w-full max-w-md overflow-hidden rounded-t-3xl bg-background">
-        <div className="flex items-center justify-between p-4">
-          <h3 className="text-base font-black">{title}</h3>
-          <button
-            onClick={onClose}
-            className="grid h-9 w-9 place-items-center rounded-xl bg-secondary"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="px-4 pb-2">
-          <input
-            autoFocus
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar…"
-            className={inputCls}
-          />
-        </div>
-        <div className="max-h-[55vh] overflow-y-auto p-2">
-          {filtered.map((it) => (
-            <button
-              key={it.id}
-              onClick={() => onSelect(it)}
-              className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-semibold hover:bg-secondary"
-            >
-              {it.nome}
-            </button>
-          ))}
-          {filtered.length === 0 && (
-            <div className="p-6 text-center text-sm text-muted-foreground">Nenhum resultado</div>
-          )}
-        </div>
+    <Sheet title={title} onClose={onClose}>
+      <div className="px-4 pb-2">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Buscar…"
+          className={inputCls}
+        />
       </div>
-    </div>
+      <div
+        data-sheet-scroll
+        className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain p-2"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
+        {filtered.map((it) => (
+          <SheetOptionButton
+            key={it.id}
+            onSelect={() => onSelect(it)}
+            className="flex min-h-[56px] w-full touch-pan-y select-none items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-semibold hover:bg-secondary active:bg-secondary"
+          >
+            {it.nome}
+          </SheetOptionButton>
+        ))}
+        {filtered.length === 0 && (
+          <div className="p-6 text-center text-sm text-muted-foreground">Nenhum resultado</div>
+        )}
+      </div>
+      <div className="border-t border-border p-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-12 w-full rounded-xl bg-secondary text-sm font-bold"
+        >
+          Cancelar
+        </button>
+      </div>
+    </Sheet>
   );
 }
 

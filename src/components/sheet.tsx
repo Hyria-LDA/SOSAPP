@@ -11,28 +11,54 @@ type SheetOptionButtonProps = Omit<ComponentProps<"button">, "onClick"> & {
 };
 
 export function SheetOptionButton({ onSelect, ...props }: SheetOptionButtonProps) {
-  const pointerStart = useRef<{ id: number; x: number; y: number } | null>(null);
+  const pointerStart = useRef<{
+    id: number;
+    x: number;
+    y: number;
+    moved: boolean;
+    scrollElement: HTMLElement | null;
+    scrollTop: number;
+  } | null>(null);
 
   return (
     <button
       {...props}
       type={props.type ?? "button"}
       onPointerDown={(event) => {
+        const scrollElement = event.currentTarget.closest<HTMLElement>("[data-sheet-scroll]");
         pointerStart.current = {
           id: event.pointerId,
           x: event.clientX,
           y: event.clientY,
+          moved: false,
+          scrollElement,
+          scrollTop: scrollElement?.scrollTop ?? 0,
         };
         props.onPointerDown?.(event);
+      }}
+      onPointerMove={(event) => {
+        const start = pointerStart.current;
+        if (
+          start &&
+          start.id === event.pointerId &&
+          Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8
+        ) {
+          start.moved = true;
+        }
+        props.onPointerMove?.(event);
       }}
       onPointerUp={(event) => {
         const start = pointerStart.current;
         pointerStart.current = null;
         props.onPointerUp?.(event);
+        const listWasScrolled =
+          !!start?.scrollElement && Math.abs(start.scrollElement.scrollTop - start.scrollTop) > 2;
         if (
           !start ||
           start.id !== event.pointerId ||
-          Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10
+          start.moved ||
+          listWasScrolled ||
+          Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8
         ) {
           return;
         }
@@ -44,6 +70,10 @@ export function SheetOptionButton({ onSelect, ...props }: SheetOptionButtonProps
       onPointerCancel={(event) => {
         pointerStart.current = null;
         props.onPointerCancel?.(event);
+      }}
+      onLostPointerCapture={(event) => {
+        pointerStart.current = null;
+        props.onLostPointerCapture?.(event);
       }}
       onClick={(event) => {
         event.preventDefault();
@@ -94,9 +124,7 @@ export function Sheet({
     <div
       className="fixed inset-x-0 z-50 flex flex-col justify-end bg-foreground/40"
       style={
-        viewport
-          ? { top: viewport.offsetTop, height: viewport.height }
-          : { top: 0, bottom: 0 }
+        viewport ? { top: viewport.offsetTop, height: viewport.height } : { top: 0, bottom: 0 }
       }
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose();

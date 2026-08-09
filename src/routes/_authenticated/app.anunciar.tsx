@@ -868,6 +868,7 @@ function PadraoPicker({
             </div>
           </div>
           <div
+            data-sheet-scroll
             className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain pb-2"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
@@ -943,6 +944,7 @@ function FabricantePicker({
         </div>
       </div>
       <div
+        data-sheet-scroll
         className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain pb-2"
         style={{ WebkitOverflowScrolling: "touch" }}
       >

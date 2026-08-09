@@ -31,10 +31,33 @@ type Banner = {
 };
 
 function Home() {
-  const { coords } = useGeolocation();
+  const { coords: gpsCoords } = useGeolocation();
+  const { data: companyLocation } = useQuery({
+    queryKey: ["home-company-location"],
+    queryFn: async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) return null;
+
+      const { data, error } = await supabase
+        .from("empresas")
+        .select("latitude, longitude")
+        .eq("owner_id", authData.user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
   const rotationSeedRef = useRef<string>(Math.random().toString(36).slice(2));
-  const lat = Number(coords?.lat);
-  const lng = Number(coords?.lng);
+  const companyLat = Number(companyLocation?.latitude);
+  const companyLng = Number(companyLocation?.longitude);
+  const hasCompanyCoords =
+    companyLocation?.latitude != null &&
+    companyLocation?.longitude != null &&
+    Number.isFinite(companyLat) &&
+    Number.isFinite(companyLng);
+  const lat = hasCompanyCoords ? companyLat : Number(gpsCoords?.lat);
+  const lng = hasCompanyCoords ? companyLng : Number(gpsCoords?.lng);
   const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
   const geoKey = hasValidCoords ? `${lat.toFixed(4)},${lng.toFixed(4)}` : "no-geo";
 
@@ -87,14 +110,27 @@ function Home() {
     queryKey: ["sobras-perto", geoKey, rotationSeedRef.current],
     queryFn: async () => {
       const hasGeo = hasValidCoords;
-      const { data, error } = await supabase.rpc("materiais_perto_de_voce", {
+      let response = await supabase.rpc("materiais_perto_de_voce", {
         _lat: hasGeo ? lat : undefined,
         _lon: hasGeo ? lng : undefined,
         _limit: 12,
-        _raio_km: hasGeo ? 5 : 999999,
+        _raio_km: hasGeo ? 50 : 999999,
         _seed: rotationSeedRef.current,
       });
-      if (error) throw error;
+      if (response.error) throw response.error;
+
+      if (hasGeo && (response.data ?? []).length === 0) {
+        response = await supabase.rpc("materiais_perto_de_voce", {
+          _lat: lat,
+          _lon: lng,
+          _limit: 12,
+          _raio_km: 999999,
+          _seed: rotationSeedRef.current,
+        });
+        if (response.error) throw response.error;
+      }
+
+      const data = response.data ?? [];
       const ids = (data ?? []).map((m: any) => m.id);
       if (ids.length === 0) return [];
       const [{ data: fotos }, { data: medidas }] = await Promise.all([
