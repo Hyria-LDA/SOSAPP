@@ -69,7 +69,6 @@ export function SheetOptionButton({ onSelect, ...props }: SheetOptionButtonProps
       }}
       onLostPointerCapture={(event) => {
         pointerStart.current = null;
-        ignoreNextClick.current = true;
         props.onLostPointerCapture?.(event);
       }}
       onClick={(event) => {
