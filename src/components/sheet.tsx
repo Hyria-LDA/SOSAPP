@@ -19,12 +19,14 @@ export function SheetOptionButton({ onSelect, ...props }: SheetOptionButtonProps
     scrollElement: HTMLElement | null;
     scrollTop: number;
   } | null>(null);
+  const ignoreNextClick = useRef(false);
 
   return (
     <button
       {...props}
       type={props.type ?? "button"}
       onPointerDown={(event) => {
+        ignoreNextClick.current = false;
         const scrollElement = event.currentTarget.closest<HTMLElement>("[data-sheet-scroll]");
         pointerStart.current = {
           id: event.pointerId,
@@ -53,32 +55,30 @@ export function SheetOptionButton({ onSelect, ...props }: SheetOptionButtonProps
         props.onPointerUp?.(event);
         const listWasScrolled =
           !!start?.scrollElement && Math.abs(start.scrollElement.scrollTop - start.scrollTop) > 2;
-        if (
+        ignoreNextClick.current =
           !start ||
           start.id !== event.pointerId ||
           start.moved ||
           listWasScrolled ||
-          Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8
-        ) {
-          return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-        onSelect();
+          Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8;
       }}
       onPointerCancel={(event) => {
         pointerStart.current = null;
+        ignoreNextClick.current = true;
         props.onPointerCancel?.(event);
       }}
       onLostPointerCapture={(event) => {
         pointerStart.current = null;
+        ignoreNextClick.current = true;
         props.onLostPointerCapture?.(event);
       }}
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (event.detail === 0) onSelect();
+        const isKeyboardActivation = event.detail === 0;
+        const shouldSelect = isKeyboardActivation || !ignoreNextClick.current;
+        ignoreNextClick.current = false;
+        if (shouldSelect) onSelect();
       }}
     />
   );
@@ -126,7 +126,7 @@ export function Sheet({
       style={
         viewport ? { top: viewport.offsetTop, height: viewport.height } : { top: 0, bottom: 0 }
       }
-      onPointerDown={(event) => {
+      onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
