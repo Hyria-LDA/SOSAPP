@@ -11,6 +11,67 @@ if (!existsSync(infoPlist)) {
   process.exit(0);
 }
 
+const appDelegate = resolve("ios", "App", "App", "AppDelegate.swift");
+if (existsSync(appDelegate)) {
+  let appDelegateSource = readFileSync(appDelegate, "utf8");
+  const remoteNotificationMethods = [
+    {
+      marker: "didRegisterForRemoteNotificationsWithDeviceToken",
+      source: `
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
+`,
+    },
+    {
+      marker: "didFailToRegisterForRemoteNotificationsWithError",
+      source: `
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+`,
+    },
+    {
+      marker: "didReceiveRemoteNotification userInfo",
+      source: `
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        NotificationCenter.default.post(
+            name: Notification.Name("didReceiveRemoteNotification"),
+            object: completionHandler,
+            userInfo: userInfo
+        )
+    }
+`,
+    },
+  ];
+
+  const missingMethods = remoteNotificationMethods
+    .filter(({ marker }) => !appDelegateSource.includes(marker))
+    .map(({ source }) => source)
+    .join("");
+
+  if (missingMethods) {
+    const classClosingBrace = appDelegateSource.lastIndexOf("\n}");
+    if (classClosingBrace < 0) {
+      console.error("Nao foi possivel localizar o fim da classe AppDelegate.");
+      process.exit(1);
+    }
+    appDelegateSource = `${appDelegateSource.slice(0, classClosingBrace)}${missingMethods}${appDelegateSource.slice(classClosingBrace)}`;
+    writeFileSync(appDelegate, appDelegateSource);
+  }
+}
+
+const firebasePlist = resolve("ios", "App", "App", "GoogleService-Info.plist");
+if (!existsSync(firebasePlist)) {
+  console.warn(
+    "ATENCAO: adicione o GoogleService-Info.plist do app iOS em ios/App/App antes de gerar a versao.",
+  );
+}
+
 const plistBuddy = "/usr/libexec/PlistBuddy";
 const permissions = {
   NSCameraUsageDescription: "Permite tirar fotos das sobras de materiais anunciadas.",
@@ -24,21 +85,17 @@ for (const [key, value] of Object.entries(permissions)) {
   });
 
   if (setResult.status !== 0) {
-    const addResult = spawnSync(
-      plistBuddy,
-      ["-c", `Add :${key} string ${value}`, infoPlist],
-      { stdio: "inherit" },
-    );
+    const addResult = spawnSync(plistBuddy, ["-c", `Add :${key} string ${value}`, infoPlist], {
+      stdio: "inherit",
+    });
     if (addResult.status !== 0) process.exit(addResult.status ?? 1);
   }
 }
 
 const encryptionKey = "ITSAppUsesNonExemptEncryption";
-const encryptionResult = spawnSync(
-  plistBuddy,
-  ["-c", `Set :${encryptionKey} false`, infoPlist],
-  { stdio: "ignore" },
-);
+const encryptionResult = spawnSync(plistBuddy, ["-c", `Set :${encryptionKey} false`, infoPlist], {
+  stdio: "ignore",
+});
 
 if (encryptionResult.status !== 0) {
   const addEncryptionResult = spawnSync(
@@ -94,5 +151,5 @@ if (!existsSync(privacyManifest)) {
 }
 
 console.log(
-  "Permissoes, criptografia e manifesto de privacidade configurados no iOS.",
+  "Permissoes, notificacoes, criptografia e manifesto de privacidade configurados no iOS.",
 );

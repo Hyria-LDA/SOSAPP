@@ -6,6 +6,13 @@ export const corsHeaders = {
 
 let cachedAccessToken: { token: string; expiresAt: number } | null = null;
 
+type FirebaseErrorResponse = {
+  error?: {
+    details?: Array<{ errorCode?: string }>;
+    status?: string;
+  };
+};
+
 export function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -20,8 +27,7 @@ export function getEnv(name: string) {
 }
 
 function base64Url(input: string | ArrayBuffer) {
-  const bytes =
-    typeof input === "string" ? new TextEncoder().encode(input) : new Uint8Array(input);
+  const bytes = typeof input === "string" ? new TextEncoder().encode(input) : new Uint8Array(input);
   let binary = "";
   bytes.forEach((byte) => {
     binary += String.fromCharCode(byte);
@@ -99,6 +105,7 @@ async function getFirebaseAccessToken() {
 
 export async function sendFirebasePush(params: {
   token: string;
+  platform?: string | null;
   title: string;
   body: string;
   imageUrl?: string | null;
@@ -113,6 +120,38 @@ export async function sendFirebasePush(params: {
     image_url: params.imageUrl ?? "",
     sos_native_notification: "1",
   };
+  const isIos = params.platform === "ios";
+  const message = isIos
+    ? {
+        token: params.token,
+        notification: {
+          title: params.title,
+          body: params.body,
+          ...(params.imageUrl ? { image: params.imageUrl } : {}),
+        },
+        data: dataPayload,
+        apns: {
+          headers: {
+            "apns-priority": "10",
+            "apns-push-type": "alert",
+          },
+          payload: {
+            aps: {
+              sound: "default",
+              badge: 1,
+              ...(params.imageUrl ? { "mutable-content": 1 } : {}),
+            },
+          },
+          ...(params.imageUrl ? { fcm_options: { image: params.imageUrl } } : {}),
+        },
+      }
+    : {
+        token: params.token,
+        data: dataPayload,
+        android: {
+          priority: "HIGH",
+        },
+      };
 
   const response = await fetch(
     `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
@@ -123,26 +162,19 @@ export async function sendFirebasePush(params: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message: {
-          token: params.token,
-          data: dataPayload,
-          android: {
-            priority: "HIGH",
-          },
-        },
+        message,
       }),
     },
   );
 
-  const data = await response.json().catch(() => null);
+  const data = (await response.json().catch(() => null)) as FirebaseErrorResponse | null;
   return { ok: response.ok, status: response.status, data };
 }
 
-export function shouldDeactivateToken(result: { status: number; data: any }) {
+export function shouldDeactivateToken(result: {
+  status: number;
+  data: FirebaseErrorResponse | null;
+}) {
   const errorCode = result.data?.error?.details?.[0]?.errorCode ?? result.data?.error?.status;
-  return (
-    result.status === 404 ||
-    errorCode === "UNREGISTERED" ||
-    errorCode === "INVALID_ARGUMENT"
-  );
+  return result.status === 404 || errorCode === "UNREGISTERED" || errorCode === "INVALID_ARGUMENT";
 }

@@ -20,10 +20,17 @@ type NotificationRecord = {
 type PushToken = {
   id: string;
   token: string;
+  platform: string | null;
 };
 
-function getNotificationRecord(payload: any): NotificationRecord | null {
-  return payload?.record ?? payload?.new ?? payload?.data?.record ?? null;
+function getNotificationRecord(payload: unknown): NotificationRecord | null {
+  if (!payload || typeof payload !== "object") return null;
+  const candidate = payload as {
+    record?: NotificationRecord;
+    new?: NotificationRecord;
+    data?: { record?: NotificationRecord };
+  };
+  return candidate.record ?? candidate.new ?? candidate.data?.record ?? null;
 }
 
 function isAuthorizedWebhook(request: Request, serviceRoleKey: string) {
@@ -57,7 +64,12 @@ Deno.serve(async (request) => {
     const payload = await request.json();
     const notification = getNotificationRecord(payload);
 
-    if (!notification?.id || !notification.user_id || !notification.titulo || !notification.mensagem) {
+    if (
+      !notification?.id ||
+      !notification.user_id ||
+      !notification.titulo ||
+      !notification.mensagem
+    ) {
       console.error("[push-notification-created] invalid payload", payload);
       return json({ error: "invalid_notification_payload" }, 400);
     }
@@ -71,7 +83,7 @@ Deno.serve(async (request) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: tokens, error: tokenError } = await adminClient
       .from("push_tokens")
-      .select("id, token")
+      .select("id, token, platform")
       .eq("user_id", notification.user_id)
       .eq("active", true);
     if (tokenError) throw tokenError;
@@ -90,6 +102,7 @@ Deno.serve(async (request) => {
     for (const pushToken of (tokens ?? []) as PushToken[]) {
       const result = await sendFirebasePush({
         token: pushToken.token,
+        platform: pushToken.platform,
         title: notification.titulo,
         body: notification.mensagem,
         data: {

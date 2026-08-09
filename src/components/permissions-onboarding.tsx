@@ -1,4 +1,5 @@
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
+import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { Camera as NativeCamera } from "@capacitor/camera";
 import { PushNotifications, type Token } from "@capacitor/push-notifications";
 import {
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { getIosFcmToken } from "@/lib/ios-push";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "sos_permissions_intro_seen_v1";
@@ -150,7 +152,12 @@ export function PermissionsOnboarding() {
       return;
     }
 
-    PushNotifications.checkPermissions()
+    const permissionRequest =
+      Capacitor.getPlatform() === "ios"
+        ? FirebaseMessaging.checkPermissions()
+        : PushNotifications.checkPermissions();
+
+    permissionRequest
       .then((permission) => {
         if (permission.receive === "granted") setPushStatus("granted");
       })
@@ -179,6 +186,31 @@ export function PermissionsOnboarding() {
     setPushStatus("loading");
 
     try {
+      if (Capacitor.getPlatform() === "ios") {
+        if (!Capacitor.isPluginAvailable("FirebaseMessaging")) {
+          setPushStatus("unavailable");
+          toast.error("Atualize o app para ativar as notificacoes no iPhone.");
+          return;
+        }
+
+        let permission = await FirebaseMessaging.checkPermissions();
+        if (permission.receive !== "granted") {
+          permission = await FirebaseMessaging.requestPermissions();
+        }
+        if (permission.receive !== "granted") {
+          setPushStatus("blocked");
+          toast.error("Permissao de notificacao negada no iPhone.");
+          return;
+        }
+
+        const token = await getIosFcmToken();
+
+        await savePushToken(token);
+        setPushStatus("granted");
+        toast.success("Notificacoes ativadas.");
+        return;
+      }
+
       const { data } = await supabase.auth.getSession();
       const accessToken = data.session?.access_token;
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;

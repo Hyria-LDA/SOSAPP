@@ -10,6 +10,7 @@ import {
 type PushToken = {
   id: string;
   token: string;
+  platform: string | null;
 };
 
 type PushRequest = {
@@ -20,12 +21,7 @@ type PushRequest = {
   target?: "all";
 };
 
-const ALLOWED_PATHS = new Set([
-  "/app",
-  "/app/anunciar",
-  "/app/buscar",
-  "/app/perfil?upgrade=1",
-]);
+const ALLOWED_PATHS = new Set(["/app", "/app/anunciar", "/app/buscar", "/app/perfil?upgrade=1"]);
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -65,7 +61,7 @@ Deno.serve(async (request) => {
 
     const { data: tokens, error: tokenError } = await adminClient
       .from("push_tokens")
-      .select("id, token")
+      .select("id, token, platform")
       .eq("active", true);
     if (tokenError) throw tokenError;
 
@@ -76,6 +72,7 @@ Deno.serve(async (request) => {
     for (const pushToken of (tokens ?? []) as PushToken[]) {
       const result = await sendFirebasePush({
         token: pushToken.token,
+        platform: pushToken.platform,
         title,
         body,
         imageUrl,

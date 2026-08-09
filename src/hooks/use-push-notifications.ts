@@ -1,4 +1,5 @@
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
+import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { App } from "@capacitor/app";
 import {
   PushNotifications,
@@ -12,8 +13,17 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { getIosFcmToken } from "@/lib/ios-push";
 
 type PushData = Record<string, unknown>;
+
+const ALLOWED_NOTIFICATION_PATHS = new Set([
+  "/app",
+  "/app/anunciar",
+  "/app/buscar",
+  "/app/notificacoes",
+  "/app/perfil?upgrade=1",
+]);
 
 type SOSPushResult = {
   ok?: boolean;
@@ -47,8 +57,9 @@ function sleep(ms: number) {
 }
 
 async function waitForPushPlugin() {
+  const pluginName = Capacitor.getPlatform() === "ios" ? "FirebaseMessaging" : "PushNotifications";
   for (let attempt = 0; attempt < 12; attempt += 1) {
-    if (Capacitor.isPluginAvailable("PushNotifications")) return true;
+    if (Capacitor.isPluginAvailable(pluginName)) return true;
     await sleep(500);
   }
   return false;
@@ -78,11 +89,70 @@ export function usePushNotifications() {
         router.navigate({ to: "/app/material/$id", params: { id: materialId } });
         return;
       }
+
+      const path = asString(data?.path);
+      if (ALLOWED_NOTIFICATION_PATHS.has(path)) {
+        window.location.assign(path);
+        return;
+      }
       router.navigate({ to: "/app/notificacoes" });
     };
 
     const registerDevice = async () => {
       try {
+        if (Capacitor.getPlatform() === "ios") {
+          const hasPushPlugin = await waitForPushPlugin();
+          if (cancelled) return;
+          if (!hasPushPlugin) {
+            toast.error("Atualize o app para ativar as notificacoes no iPhone.");
+            return;
+          }
+
+          handles.push(
+            await FirebaseMessaging.addListener("tokenReceived", async ({ token }) => {
+              if (!token || cancelled) return;
+              const { error } = await supabase.rpc("register_push_token", {
+                p_platform: "ios",
+                p_token: token,
+              });
+              if (error) {
+                console.warn("[push] erro ao atualizar token do iPhone", error);
+                return;
+              }
+              registeredForUserRef.current = user.id;
+            }),
+          );
+
+          handles.push(
+            await FirebaseMessaging.addListener(
+              "notificationActionPerformed",
+              ({ notification }) => {
+                openNotificationTarget((notification.data ?? {}) as PushData);
+              },
+            ),
+          );
+
+          let permission = await FirebaseMessaging.checkPermissions();
+          if (permission.receive === "prompt" || permission.receive === "prompt-with-rationale") {
+            permission = await FirebaseMessaging.requestPermissions();
+          }
+          if (permission.receive !== "granted") {
+            toast.error("Permissao de notificacao negada neste iPhone.");
+            return;
+          }
+
+          const token = await getIosFcmToken();
+
+          const { error } = await supabase.rpc("register_push_token", {
+            p_platform: "ios",
+            p_token: token,
+          });
+          if (error) throw error;
+
+          registeredForUserRef.current = user.id;
+          return;
+        }
+
         if (hasSOSPushBridge()) {
           const { data } = await supabase.auth.getSession();
           const accessToken = data.session?.access_token;

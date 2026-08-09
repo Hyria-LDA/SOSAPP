@@ -1,5 +1,13 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
+const sharedNativePlugins = [
+  "@capacitor/app",
+  "@capacitor/browser",
+  "@capacitor/camera",
+  "@capacitor/filesystem",
+  "@capgo/capacitor-social-login",
+];
+
 /**
  * Capacitor — modo Wrapper.
  *
@@ -33,14 +41,19 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: false,
+    includePlugins: [...sharedNativePlugins, "@capacitor/push-notifications"],
   },
   ios: {
     scheme: "sosmarceneiros",
     contentInset: "always",
+    includePlugins: [...sharedNativePlugins, "@capacitor-firebase/messaging"],
   },
   plugins: {
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert", "banner", "list"],
+    },
+    FirebaseMessaging: {
+      presentationOptions: ["badge", "sound", "alert"],
     },
     SocialLogin: {
       providers: {
@@ -50,6 +63,17 @@ const config: CapacitorConfig = {
         twitter: false,
       },
       logLevel: 1,
+    },
+  },
+  experimental: {
+    ios: {
+      spm: {
+        packageOptions: {
+          "@capacitor-firebase/messaging": {
+            symlink: true,
+          },
+        },
+      },
     },
   },
 };
