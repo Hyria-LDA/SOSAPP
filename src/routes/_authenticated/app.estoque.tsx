@@ -13,13 +13,12 @@ import {
   Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDimensions } from "@/lib/material-dimensions";
 import { formatBRL } from "@/lib/whatsapp";
 
 export const Route = createFileRoute("/_authenticated/app/estoque")({
   validateSearch: (s) =>
-    z
-      .object({ tab: z.enum(["ativo", "vendido", "expirado"]).optional() })
-      .parse(s),
+    z.object({ tab: z.enum(["ativo", "vendido", "expirado"]).optional() }).parse(s),
   component: Estoque,
 });
 
@@ -50,7 +49,7 @@ function Estoque() {
       const { data, error } = await supabase
         .from("materiais")
         .select(
-          "id, padrao, fabricante, espessura_mm, preco, area_m2, status, views, contatos, valor_vendido, created_at, fotos_materiais(url, ordem)",
+          "id, padrao, fabricante, espessura_mm, comprimento_cm, largura_cm, preco, area_m2, status, views, contatos, valor_vendido, created_at, fotos_materiais(url, ordem)",
         )
         .eq("empresa_id", emp.id)
         .eq("status", statusFilter)
@@ -138,7 +137,6 @@ function Estoque() {
         ))}
       </div>
 
-
       <div className="mt-4 space-y-2 pb-10">
         {(data ?? []).length === 0 && (
           <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
@@ -158,12 +156,21 @@ function Estoque() {
                     {foto && <img src={foto} className="h-full w-full object-cover" />}
                   </div>
                   <div className="min-w-0 flex-1 py-2">
-                    <div className="truncate font-bold">{m.padrao}</div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      {m.fabricante} · {Number(m.espessura_mm)}mm
-                    </div>
-                    <div className="mt-1 text-sm font-bold text-primary">
-                      {formatBRL(Number(m.preco))}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate font-bold">{m.padrao}</div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {m.fabricante} · {Number(m.espessura_mm)}mm
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-sm font-bold text-primary">
+                          {formatBRL(Number(m.preco))}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {formatDimensions(m.comprimento_cm, m.largura_cm)}
+                        </div>
+                      </div>
                     </div>
                     <div className="mt-1 flex gap-3 text-[10px] text-muted-foreground">
                       <span className="flex items-center gap-1">
