@@ -373,7 +373,7 @@ export function PermissionsOnboarding() {
             <PermissionRow
               icon={<Image className="h-5 w-5" />}
               title="Galeria de fotos"
-              description="O Android vai pedir acesso quando voce escolher uma imagem da galeria."
+              description="O Android abre o seletor de fotos do sistema sem exigir acesso completo a galeria."
               status="unavailable"
               actionLabel="Quando usar"
             />

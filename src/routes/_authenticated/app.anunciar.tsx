@@ -1063,7 +1063,7 @@ function PhotoSlot({
 
   const openGallery = () => {
     setShowSourcePicker(false);
-    if (Capacitor.isNativePlatform()) {
+    if (Capacitor.getPlatform() === "ios") {
       void chooseNativePhoto();
       return;
     }
