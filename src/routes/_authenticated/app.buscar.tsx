@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
-import { ArrowLeft, Search, X, MapPin, Check, ChevronDown } from "lucide-react";
+import { ArrowLeft, Search, X, MapPin, Check, ChevronDown, RotateCw } from "lucide-react";
 import { Sheet, SheetOptionButton } from "@/components/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/use-geolocation";
@@ -36,6 +36,7 @@ const searchSchema = z.object({
   ordem: z.string().optional().default(""),
   comp_min: z.coerce.number().optional().default(0),
   larg_min: z.coerce.number().optional().default(0),
+  aceitar_giro: z.coerce.number().optional().default(0),
 });
 
 function clampDimensionInput(value: string, max: number) {
@@ -209,11 +210,17 @@ function Buscar() {
     if (raioBusca > 0) {
       list = list.filter((m) => m.distancia == null || m.distancia <= raioBusca);
     }
-    if (effectiveCompMin > 0) {
-      list = list.filter((m) => Number(m.comprimento_cm) >= effectiveCompMin);
-    }
-    if (effectiveLargMin > 0) {
-      list = list.filter((m) => Number(m.largura_cm) >= effectiveLargMin);
+    if (effectiveCompMin > 0 || effectiveLargMin > 0) {
+      list = list.filter((m) => {
+        const comprimento = Number(m.comprimento_cm);
+        const largura = Number(m.largura_cm);
+        const encaixaNormal = comprimento >= effectiveCompMin && largura >= effectiveLargMin;
+        const encaixaGirado =
+          params.aceitar_giro === 1 &&
+          comprimento >= effectiveLargMin &&
+          largura >= effectiveCompMin;
+        return encaixaNormal || encaixaGirado;
+      });
     }
     const hasSel = !!(params.fabricante_id || params.padrao_id);
     const planRank = (m: any) => {
@@ -494,16 +501,56 @@ function Buscar() {
                 </FieldLabel>
               </div>
               {(effectiveCompMin > 0 || effectiveLargMin > 0) && (
-                <button
-                  onClick={() => {
-                    setCompMinInput("");
-                    setLargMinInput("");
-                    update({ comp_min: 0, larg_min: 0 });
-                  }}
-                  className="mt-2 text-xs font-semibold text-primary"
-                >
-                  Limpar medidas
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => update({ aceitar_giro: params.aceitar_giro === 1 ? 0 : 1 })}
+                    aria-pressed={params.aceitar_giro === 1}
+                    className={`mt-3 flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left transition ${
+                      params.aceitar_giro === 1
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-card"
+                    }`}
+                  >
+                    <span
+                      className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
+                        params.aceitar_giro === 1
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      <RotateCw className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold">Aceitar peça girada</span>
+                      <span className="block text-xs leading-relaxed text-muted-foreground">
+                        200x50cm também aceita 50x200cm. Ideal para chapas sem sentido de veio.
+                      </span>
+                    </span>
+                    <span
+                      className={`h-5 w-9 shrink-0 rounded-full p-0.5 transition ${
+                        params.aceitar_giro === 1 ? "bg-primary" : "bg-border"
+                      }`}
+                    >
+                      <span
+                        className={`block h-4 w-4 rounded-full bg-white transition-transform ${
+                          params.aceitar_giro === 1 ? "translate-x-4" : "translate-x-0"
+                        }`}
+                      />
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCompMinInput("");
+                      setLargMinInput("");
+                      update({ comp_min: 0, larg_min: 0, aceitar_giro: 0 });
+                    }}
+                    className="mt-2 text-xs font-semibold text-primary"
+                  >
+                    Limpar medidas
+                  </button>
+                </>
               )}
             </div>
 
@@ -570,6 +617,7 @@ function Buscar() {
                   espessura: espessurasSel[0]?.toString() || undefined,
                   comprimento_cm: effectiveCompMin || undefined,
                   largura_cm: effectiveLargMin || undefined,
+                  aceitar_giro: params.aceitar_giro,
                   raio: params.raio,
                 }}
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground shadow-pop active:scale-[0.98]"

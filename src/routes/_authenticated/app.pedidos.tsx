@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { ArrowLeft, Plus, Search, Trash2, CheckCircle2, X } from "lucide-react";
+import { ArrowLeft, Plus, Search, Trash2, CheckCircle2, X, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/use-geolocation";
@@ -16,6 +16,7 @@ const schema = z.object({
   espessura: z.string().optional().default(""),
   comprimento_cm: z.coerce.number().optional().default(0),
   largura_cm: z.coerce.number().optional().default(0),
+  aceitar_giro: z.coerce.number().optional().default(0),
   raio: z.coerce.number().optional().default(50),
 });
 
@@ -43,6 +44,7 @@ type Pedido = {
   espessura_mm: number;
   comprimento_min_cm: number;
   largura_min_cm: number;
+  medidas_invertiveis: boolean;
   quantidade: number;
   raio_km: number;
   observacoes: string | null;
@@ -107,6 +109,7 @@ function PedidosPage() {
             espessura: params.espessura,
             comprimento_cm: params.comprimento_cm,
             largura_cm: params.largura_cm,
+            aceitar_giro: params.aceitar_giro,
             raio: params.raio,
           }}
           onDone={() => {
@@ -158,6 +161,11 @@ function PedidosPage() {
                 <Cell label="Mín. largura" value={`${Number(p.largura_min_cm)}cm`} />
                 <Cell label="Raio" value={`${p.raio_km}km`} />
               </div>
+              {p.medidas_invertiveis && (
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
+                  <RotateCw className="h-3.5 w-3.5" /> Aceita peça girada
+                </div>
+              )}
               {p.observacoes && (
                 <p className="mt-3 whitespace-pre-wrap text-xs text-muted-foreground">
                   {p.observacoes}
@@ -237,6 +245,7 @@ function NovoPedidoForm({
     espessura: string;
     comprimento_cm: number;
     largura_cm: number;
+    aceitar_giro: number;
     raio: number;
   };
   onDone: () => void;
@@ -247,6 +256,7 @@ function NovoPedidoForm({
   const [fabricanteId, setFabricanteId] = useState(defaults.fabricante_id);
   const [padraoId, setPadraoId] = useState(defaults.padrao_id);
   const [espessura, setEspessura] = useState(defaults.espessura);
+  const [aceitarGiro, setAceitarGiro] = useState(defaults.aceitar_giro === 1);
   const [f, setF] = useState({
     comprimento_min_cm: defaults.comprimento_cm > 0 ? String(defaults.comprimento_cm) : "",
     largura_min_cm: defaults.largura_cm > 0 ? String(defaults.largura_cm) : "",
@@ -340,6 +350,7 @@ function NovoPedidoForm({
         espessura_mm: Number(espessura),
         comprimento_min_cm: Number(f.comprimento_min_cm) || 0,
         largura_min_cm: Number(f.largura_min_cm) || 0,
+        medidas_invertiveis: aceitarGiro,
         quantidade: Number(f.quantidade) || 1,
         raio_km: Number(f.raio_km) || 50,
         observacoes: f.observacoes || null,
@@ -454,6 +465,43 @@ function NovoPedidoForm({
             placeholder={`ex: ${MAX_LARGURA_CM}`}
           />
         </Field>
+        {(Number(f.comprimento_min_cm) > 0 || Number(f.largura_min_cm) > 0) && (
+          <button
+            type="button"
+            onClick={() => setAceitarGiro((current) => !current)}
+            aria-pressed={aceitarGiro}
+            className={`col-span-2 flex items-center gap-3 rounded-2xl border-2 p-3 text-left transition ${
+              aceitarGiro ? "border-primary bg-primary/10" : "border-border bg-card"
+            }`}
+          >
+            <span
+              className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
+                aceitarGiro
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground"
+              }`}
+            >
+              <RotateCw className="h-5 w-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold">Aceitar peça girada</span>
+              <span className="block text-xs leading-relaxed text-muted-foreground">
+                200x50cm também aceita 50x200cm. Ideal para chapas sem sentido de veio.
+              </span>
+            </span>
+            <span
+              className={`h-5 w-9 shrink-0 rounded-full p-0.5 transition ${
+                aceitarGiro ? "bg-primary" : "bg-border"
+              }`}
+            >
+              <span
+                className={`block h-4 w-4 rounded-full bg-white transition-transform ${
+                  aceitarGiro ? "translate-x-4" : "translate-x-0"
+                }`}
+              />
+            </span>
+          </button>
+        )}
         <Field label="Quantidade">
           <input
             type="number"

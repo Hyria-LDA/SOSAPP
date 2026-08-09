@@ -964,6 +964,7 @@ export type Database = {
           largura_min_cm: number
           latitude: number | null
           longitude: number | null
+          medidas_invertiveis: boolean
           observacoes: string | null
           padrao: string
           padrao_id: string | null
@@ -985,6 +986,7 @@ export type Database = {
           largura_min_cm?: number
           latitude?: number | null
           longitude?: number | null
+          medidas_invertiveis?: boolean
           observacoes?: string | null
           padrao: string
           padrao_id?: string | null
@@ -1006,6 +1008,7 @@ export type Database = {
           largura_min_cm?: number
           latitude?: number | null
           longitude?: number | null
+          medidas_invertiveis?: boolean
           observacoes?: string | null
           padrao?: string
           padrao_id?: string | null
