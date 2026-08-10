@@ -14,11 +14,30 @@ if (!existsSync(infoPlist)) {
 const appDelegate = resolve("ios", "App", "App", "AppDelegate.swift");
 if (existsSync(appDelegate)) {
   let appDelegateSource = readFileSync(appDelegate, "utf8");
+
+  for (const firebaseImport of ["import FirebaseCore", "import FirebaseMessaging"]) {
+    if (!appDelegateSource.includes(firebaseImport)) {
+      const importAnchor = "import Capacitor";
+      if (!appDelegateSource.includes(importAnchor)) {
+        console.error("Nao foi possivel localizar os imports do AppDelegate.swift.");
+        process.exit(1);
+      }
+      appDelegateSource = appDelegateSource.replace(
+        importAnchor,
+        `${importAnchor}\n${firebaseImport}`,
+      );
+    }
+  }
+
   const remoteNotificationMethods = [
     {
       marker: "didRegisterForRemoteNotificationsWithDeviceToken",
       source: `
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+        }
+        Messaging.messaging().apnsToken = deviceToken
         NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
     }
 `,
@@ -61,8 +80,22 @@ if (existsSync(appDelegate)) {
       process.exit(1);
     }
     appDelegateSource = `${appDelegateSource.slice(0, classClosingBrace)}${missingMethods}${appDelegateSource.slice(classClosingBrace)}`;
-    writeFileSync(appDelegate, appDelegateSource);
   }
+
+  const registerMethod =
+    "func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {";
+  const directApnsAssignment = "Messaging.messaging().apnsToken = deviceToken";
+  if (
+    appDelegateSource.includes(registerMethod) &&
+    !appDelegateSource.includes(directApnsAssignment)
+  ) {
+    appDelegateSource = appDelegateSource.replace(
+      registerMethod,
+      `${registerMethod}\n        if FirebaseApp.app() == nil {\n            FirebaseApp.configure()\n        }\n        ${directApnsAssignment}`,
+    );
+  }
+
+  writeFileSync(appDelegate, appDelegateSource);
 }
 
 const firebasePlist = resolve("ios", "App", "App", "GoogleService-Info.plist");

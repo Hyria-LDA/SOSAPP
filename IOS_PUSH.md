@@ -10,7 +10,8 @@ versao:
 4. No Xcode, abra o target **App > Signing & Capabilities** e adicione **Push Notifications**.
 5. Em **Background Modes**, marque **Remote notifications**.
 6. Rode `npm install`, `npm run build` e `npx cap sync ios` antes de criar o Archive. O ultimo
-   comando tambem configura os callbacks APNs obrigatorios no `AppDelegate.swift`.
+   comando tambem configura o Firebase e os callbacks APNs obrigatorios no
+   `AppDelegate.swift`. Nao pule esse comando ao gerar uma nova versao.
 
 Teste em um iPhone fisico. Depois de entrar na conta e permitir notificacoes, deve existir uma
 linha ativa com plataforma `ios` na tabela `public.push_tokens`.
