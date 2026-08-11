@@ -51,7 +51,7 @@ const PLANOS: Plano[] = [
   {
     id: "premium",
     slug: "premium",
-    storeProductId: "premium_monthly",
+    storeProductId: "premium",
     nome: "Brilhante",
     preco: 39.9,
     cor: "yellow",
@@ -91,9 +91,6 @@ export function UpgradeModal({
     try {
       const result = await startInAppPurchase(planId);
       if (result.status === "success") {
-        // TODO: enviar result.receipt / result.token ao backend para validação
-        // (iOS: App Store / Android: Google Play Developer API) antes de
-        // considerar a assinatura ativa.
         await refreshUserSubscription(queryClient);
         toast.success("Assinatura ativada!");
         onClose();
@@ -102,7 +99,7 @@ export function UpgradeModal({
       } else if (result.status === "unsupported") {
         toast(result.message);
       } else {
-        toast.error("Não foi possível iniciar a compra. Tente novamente.");
+        toast.error(result.message);
       }
     } catch {
       toast.error("Não foi possível iniciar a compra. Tente novamente.");

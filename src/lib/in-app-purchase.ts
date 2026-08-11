@@ -1,92 +1,179 @@
-/**
- * In-App Purchase (IAP) — placeholder para integração nativa futura.
- *
- * Fluxo esperado em produção (apps nativos):
- *   1. Usuário toca em "Assinar" na tela de planos.
- *   2. App chama startInAppPurchase(planId).
- *   3. A loja (Apple/Google) abre o sheet de pagamento nativo.
- *   4. Loja retorna recibo (iOS) ou purchase token (Android).
- *   5. Frontend envia esse recibo/token ao backend.
- *      - iOS: backend valida com a App Store (verifyReceipt / App Store Server API).
- *      - Android: backend valida com Google Play Developer API (purchases.subscriptions.get).
- *   6. Backend atualiza o plano do usuário no banco.
- *   7. Frontend chama refreshUserSubscription() para recarregar o estado.
- *
- * Não usar Stripe, PayPal, Mercado Pago, checkout web ou WhatsApp para pagamento.
- */
-
 import type { QueryClient } from "@tanstack/react-query";
+import { Capacitor } from "@capacitor/core";
+import { supabase } from "@/integrations/supabase/client";
 
-// IDs internos dos planos — devem bater com os productIds configurados
-// na App Store Connect e no Google Play Console no futuro.
-export type PlanId =
-  | "premium_monthly"
-  | "premium_yearly"
-  | "tx"
-  | "ultra"
-  | "premium";
+export type PlanId = "tx" | "ultra" | "premium";
 
 export type PurchaseResult =
-  | { status: "success"; planId: PlanId; receipt?: string; token?: string }
+  | { status: "success"; planId: PlanId }
   | { status: "cancelled" }
   | { status: "error"; message: string }
   | { status: "unsupported"; message: string };
 
-function isNativeApp(): boolean {
-  if (typeof window === "undefined") return false;
-  // Quando empacotado por Capacitor / outro wrapper nativo, expomos essas globals.
-  const w = window as any;
-  return Boolean(w?.Capacitor?.isNativePlatform?.() || w?.cordova || w?.ReactNativeWebView);
+const PRODUCT_IDS: Record<PlanId, string> = {
+  tx: "br.com.sosmarceneiros.tx.monthly",
+  ultra: "br.com.sosmarceneiros.ultra.monthly",
+  premium: "br.com.sosmarceneiros.brilhante.monthly",
+};
+
+let configuredUserId: string | null = null;
+
+function isNativeApp() {
+  return Capacitor.isNativePlatform();
 }
 
-/**
- * Placeholder do fluxo de compra in-app.
- * Será conectado a Apple IAP (StoreKit 2) e Google Play Billing futuramente.
- */
+function publicApiKey() {
+  const platform = Capacitor.getPlatform();
+  if (platform === "ios") return import.meta.env.VITE_REVENUECAT_IOS_API_KEY?.trim();
+  if (platform === "android") return import.meta.env.VITE_REVENUECAT_ANDROID_API_KEY?.trim();
+  return undefined;
+}
+
+function friendlyError(error: unknown) {
+  const candidate = error as {
+    message?: string;
+    underlyingErrorMessage?: string;
+    userCancelled?: boolean | null;
+  };
+
+  return {
+    cancelled: candidate?.userCancelled === true,
+    message:
+      candidate?.underlyingErrorMessage ||
+      candidate?.message ||
+      "Nao foi possivel concluir a compra. Tente novamente.",
+  };
+}
+
+async function requireAuthenticatedUser() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) throw new Error("Entre na sua conta antes de assinar um plano.");
+  return data.user;
+}
+
+async function configureRevenueCat() {
+  if (!isNativeApp()) return null;
+
+  const apiKey = publicApiKey();
+  if (!apiKey) {
+    throw new Error(
+      `RevenueCat nao configurado para ${Capacitor.getPlatform()}. Adicione a chave publica da loja.`,
+    );
+  }
+
+  const user = await requireAuthenticatedUser();
+  const { Purchases, LOG_LEVEL } = await import("@revenuecat/purchases-capacitor");
+  const { isConfigured } = await Purchases.isConfigured();
+
+  if (!isConfigured) {
+    if (import.meta.env.DEV) await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
+    await Purchases.configure({ apiKey, appUserID: user.id });
+  } else {
+    const { appUserID } = await Purchases.getAppUserID();
+    if (appUserID !== user.id) await Purchases.logIn({ appUserID: user.id });
+  }
+
+  configuredUserId = user.id;
+  return { Purchases, user };
+}
+
+async function syncValidatedSubscription() {
+  const { data, error } = await supabase.functions.invoke("sync-revenuecat-subscription", {
+    method: "POST",
+  });
+
+  if (error) throw new Error(error.message || "Falha ao validar a assinatura.");
+  if (!data?.ok) throw new Error(data?.error || "Falha ao validar a assinatura.");
+  return data as { ok: true; active: boolean; plan: PlanId | "free" };
+}
+
 export async function startInAppPurchase(planId: PlanId): Promise<PurchaseResult> {
   if (!isNativeApp()) {
     return {
       status: "unsupported",
-      message:
-        "As compras dentro do app estarão disponíveis na versão instalada pela App Store ou Google Play.",
+      message: "As assinaturas estao disponiveis no aplicativo instalado pela loja.",
     };
   }
 
-  // TODO (nativo): integrar com plugin de IAP (ex.: @capacitor-community/in-app-purchases
-  // ou RevenueCat) — chamar purchase(planId), aguardar recibo/token e enviar ao backend
-  // para validação antes de marcar a assinatura como ativa.
-  return {
-    status: "error",
-    message: "Integração de compra in-app ainda não está disponível.",
-  };
+  try {
+    const context = await configureRevenueCat();
+    if (!context) throw new Error("Loja indisponivel neste dispositivo.");
+
+    const offerings = await context.Purchases.getOfferings();
+    const offering = offerings.current ?? offerings.all.planos ?? Object.values(offerings.all)[0];
+    if (!offering) throw new Error("Os planos ainda nao estao disponiveis na App Store.");
+
+    const productId = PRODUCT_IDS[planId];
+    const selectedPackage = offering.availablePackages.find(
+      (item) => item.identifier === planId || item.product.identifier === productId,
+    );
+    if (!selectedPackage) {
+      throw new Error(`O plano ${planId} nao foi encontrado na oferta atual do RevenueCat.`);
+    }
+
+    const { customerInfo } = await context.Purchases.purchasePackage({
+      aPackage: selectedPackage,
+    });
+    if (!customerInfo.entitlements.active[planId]) {
+      throw new Error("A loja concluiu a compra, mas o acesso ainda nao foi confirmado.");
+    }
+
+    const synced = await syncValidatedSubscription();
+    if (!synced.active || synced.plan !== planId) {
+      throw new Error("A compra foi recebida, mas o plano ainda nao foi validado pelo servidor.");
+    }
+
+    return { status: "success", planId };
+  } catch (error) {
+    const parsed = friendlyError(error);
+    if (parsed.cancelled) return { status: "cancelled" };
+    console.error("[RevenueCat] purchase failed", error);
+    return { status: "error", message: parsed.message };
+  }
 }
 
-/**
- * Restaurar compras anteriores — obrigatório para a App Store.
- */
 export async function restorePurchases(): Promise<PurchaseResult> {
   if (!isNativeApp()) {
     return {
       status: "unsupported",
-      message:
-        "Restaurar compras está disponível apenas na versão instalada pela App Store ou Google Play.",
+      message: "Restaurar compras esta disponivel apenas no aplicativo instalado pela loja.",
     };
   }
-  // TODO (nativo): chamar restorePurchases() do plugin de IAP, reenviar recibo
-  // ao backend para revalidação e então chamar refreshUserSubscription().
-  return {
-    status: "error",
-    message: "Restauração de compras ainda não está disponível.",
-  };
+
+  try {
+    const context = await configureRevenueCat();
+    if (!context) throw new Error("Loja indisponivel neste dispositivo.");
+
+    const { customerInfo } = await context.Purchases.restorePurchases();
+    const activePlan = (["premium", "ultra", "tx"] as const).find(
+      (plan) => customerInfo.entitlements.active[plan],
+    );
+    const synced = await syncValidatedSubscription();
+
+    if (!activePlan || !synced.active) {
+      return { status: "error", message: "Nenhuma assinatura ativa foi encontrada nesta conta." };
+    }
+
+    return { status: "success", planId: activePlan };
+  } catch (error) {
+    const parsed = friendlyError(error);
+    if (parsed.cancelled) return { status: "cancelled" };
+    console.error("[RevenueCat] restore failed", error);
+    return { status: "error", message: parsed.message };
+  }
 }
 
-/**
- * Recarrega plano/assinatura do usuário a partir do backend.
- */
+export async function syncInAppPurchaseState(): Promise<void> {
+  if (!isNativeApp()) return;
+
+  const context = await configureRevenueCat();
+  if (!context || configuredUserId !== context.user.id) return;
+
+  await context.Purchases.getCustomerInfo();
+  await syncValidatedSubscription();
+}
+
 export async function refreshUserSubscription(queryClient?: QueryClient): Promise<void> {
-  try {
-    await queryClient?.invalidateQueries();
-  } catch {
-    // ignore
-  }
+  await queryClient?.invalidateQueries({ queryKey: ["plan-status"] });
+  await queryClient?.invalidateQueries({ queryKey: ["empresa"] });
 }

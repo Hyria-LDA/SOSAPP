@@ -11,11 +11,9 @@ import { toast } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportAppError } from "../lib/app-error-reporting";
+import { syncInAppPurchaseState } from "../lib/in-app-purchase";
 import { Toaster } from "@/components/ui/sonner";
-import {
-  isPasswordRecoveryPending,
-  supabase,
-} from "@/integrations/supabase/client";
+import { isPasswordRecoveryPending, supabase } from "@/integrations/supabase/client";
 
 type AppNotification = {
   id: string;
@@ -322,6 +320,45 @@ function InAppNotificationListener({ queryClient }: { queryClient: QueryClient }
   return null;
 }
 
+function InAppPurchaseSync({ queryClient }: { queryClient: QueryClient }) {
+  useEffect(() => {
+    let cancelled = false;
+    const sixHours = 6 * 60 * 60 * 1000;
+
+    const syncForUser = async (userId: string, force = false) => {
+      const storageKey = `sos:revenuecat-sync:${userId}`;
+      const lastSync = Number(window.localStorage.getItem(storageKey) ?? 0);
+      if (!force && Date.now() - lastSync < sixHours) return;
+
+      try {
+        await syncInAppPurchaseState();
+        if (cancelled) return;
+        window.localStorage.setItem(storageKey, String(Date.now()));
+        await queryClient.invalidateQueries({ queryKey: ["plan-status"] });
+      } catch (error) {
+        console.warn("[RevenueCat] automatic sync skipped", error);
+      }
+    };
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!cancelled && data.session?.user) void syncForUser(data.session.user.id);
+    });
+
+    const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        void syncForUser(session.user.id, true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      authSub.subscription.unsubscribe();
+    };
+  }, [queryClient]);
+
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
@@ -331,9 +368,7 @@ function RootComponent() {
     let cancelled = false;
 
     if (window.location.pathname !== "/auth/redefinir" && isPasswordRecoveryUrl()) {
-      window.location.replace(
-        `/auth/redefinir${window.location.search}${window.location.hash}`,
-      );
+      window.location.replace(`/auth/redefinir${window.location.search}${window.location.hash}`);
       return;
     }
 
@@ -420,6 +455,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <Outlet />
       <InAppNotificationListener queryClient={queryClient} />
+      <InAppPurchaseSync queryClient={queryClient} />
       <OpenAppBridgePrompt />
       <Toaster position="top-center" richColors />
     </QueryClientProvider>

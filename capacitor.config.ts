@@ -6,6 +6,7 @@ const sharedNativePlugins = [
   "@capacitor/camera",
   "@capacitor/filesystem",
   "@capgo/capacitor-social-login",
+  "@revenuecat/purchases-capacitor",
 ];
 
 /**
