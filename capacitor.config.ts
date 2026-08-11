@@ -5,6 +5,7 @@ const sharedNativePlugins = [
   "@capacitor/browser",
   "@capacitor/camera",
   "@capacitor/filesystem",
+  "@capawesome/capacitor-badge",
   "@capgo/capacitor-social-login",
   "@revenuecat/purchases-capacitor",
 ];
@@ -50,6 +51,10 @@ const config: CapacitorConfig = {
     includePlugins: [...sharedNativePlugins, "@capacitor-firebase/messaging"],
   },
   plugins: {
+    Badge: {
+      persist: false,
+      autoClear: true,
+    },
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert", "banner", "list"],
     },

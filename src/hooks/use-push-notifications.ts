@@ -1,6 +1,7 @@
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { App } from "@capacitor/app";
+import { Badge } from "@capawesome/capacitor-badge";
 import {
   PushNotifications,
   type ActionPerformed,
@@ -71,6 +72,16 @@ function hasSOSPushBridge() {
   return typeof window.SOSPush?.register === "function";
 }
 
+async function clearNativeNotificationBadge() {
+  if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable("Badge")) return;
+
+  try {
+    await Badge.clear();
+  } catch (error) {
+    console.warn("[push] nao foi possivel limpar o contador do icone", error);
+  }
+}
+
 export function usePushNotifications() {
   const { user } = useAuth();
   const router = useRouter();
@@ -84,6 +95,8 @@ export function usePushNotifications() {
     const handles: PluginListenerHandle[] = [];
 
     const openNotificationTarget = (data?: PushData) => {
+      void clearNativeNotificationBadge();
+
       const materialId = asString(data?.material_id);
       if (materialId) {
         router.navigate({ to: "/app/material/$id", params: { id: materialId } });
@@ -100,6 +113,13 @@ export function usePushNotifications() {
 
     const registerDevice = async () => {
       try {
+        handles.push(
+          await App.addListener("appStateChange", ({ isActive }) => {
+            if (isActive) void clearNativeNotificationBadge();
+          }),
+        );
+        await clearNativeNotificationBadge();
+
         if (Capacitor.getPlatform() === "ios") {
           const hasPushPlugin = await waitForPushPlugin();
           if (cancelled) return;
