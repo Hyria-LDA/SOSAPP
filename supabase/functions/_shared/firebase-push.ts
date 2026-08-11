@@ -9,6 +9,7 @@ let cachedAccessToken: { token: string; expiresAt: number } | null = null;
 type FirebaseErrorResponse = {
   error?: {
     details?: Array<{ errorCode?: string }>;
+    message?: string;
     status?: string;
   };
 };

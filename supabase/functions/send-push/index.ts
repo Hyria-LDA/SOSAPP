@@ -21,6 +21,13 @@ type PushRequest = {
   target?: "all";
 };
 
+type PushFailure = {
+  platform: string;
+  status: number;
+  code: string;
+  message: string;
+};
+
 const ALLOWED_PATHS = new Set(["/app", "/app/anunciar", "/app/buscar", "/app/perfil?upgrade=1"]);
 
 Deno.serve(async (request) => {
@@ -68,6 +75,7 @@ Deno.serve(async (request) => {
     let sent = 0;
     let failed = 0;
     const inactiveIds: string[] = [];
+    const failures: PushFailure[] = [];
 
     for (const pushToken of (tokens ?? []) as PushToken[]) {
       const result = await sendFirebasePush({
@@ -89,6 +97,22 @@ Deno.serve(async (request) => {
       }
 
       failed += 1;
+      const firebaseError = result.data?.error;
+      const code =
+        firebaseError?.details?.find((detail) => detail.errorCode)?.errorCode ??
+        firebaseError?.status ??
+        "firebase_send_failed";
+      const failure = {
+        platform: pushToken.platform ?? "unknown",
+        status: result.status,
+        code,
+        message: firebaseError?.message ?? "O Firebase recusou a notificacao.",
+      };
+      failures.push(failure);
+      console.error("[send-push] firebase send failed", {
+        token_id: pushToken.id,
+        ...failure,
+      });
       if (shouldDeactivateToken(result)) inactiveIds.push(pushToken.id);
     }
 
@@ -107,7 +131,7 @@ Deno.serve(async (request) => {
       failure_count: failed,
     });
 
-    return json({ total: tokens?.length ?? 0, sent, failed });
+    return json({ total: tokens?.length ?? 0, sent, failed, failures: failures.slice(0, 5) });
   } catch (error) {
     console.error("[send-push]", error);
     return json({ error: error instanceof Error ? error.message : "send_push_failed" }, 500);

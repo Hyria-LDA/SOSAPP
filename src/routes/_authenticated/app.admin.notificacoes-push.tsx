@@ -2,7 +2,17 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { ArrowLeft, BellRing, Home, ImagePlus, Plus, Search, Send, Sparkles, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  BellRing,
+  Home,
+  ImagePlus,
+  Plus,
+  Search,
+  Send,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -25,6 +35,12 @@ type PushResponse = {
   total: number;
   sent: number;
   failed: number;
+  failures?: Array<{
+    platform: string;
+    status: number;
+    code: string;
+    message: string;
+  }>;
 };
 
 type SelectedImage = {
@@ -165,16 +181,13 @@ function AdminPushNotifications() {
   const { data: appDiagnostics } = useQuery({
     queryKey: ["admin-push-app-diagnostics"],
     queryFn: async () => {
-      const appInfo = Capacitor.isNativePlatform()
-        ? await App.getInfo().catch(() => null)
-        : null;
+      const appInfo = Capacitor.isNativePlatform() ? await App.getInfo().catch(() => null) : null;
 
       return {
         platform: Capacitor.getPlatform(),
         native: Capacitor.isNativePlatform(),
         nativeBridge:
-          typeof window !== "undefined" &&
-          typeof window.SOSPush?.register === "function",
+          typeof window !== "undefined" && typeof window.SOSPush?.register === "function",
         pushAvailable: Capacitor.isPluginAvailable("PushNotifications"),
         appVersion: appInfo?.version ?? null,
         appBuild: appInfo?.build ?? null,
@@ -201,7 +214,9 @@ function AdminPushNotifications() {
       if (!cleanTitle) throw new Error("Digite o titulo da notificacao.");
       if (!cleanBody) throw new Error("Digite a mensagem da notificacao.");
       if (!tokenCount) {
-        throw new Error("Nenhum celular registrou notificacoes ainda. Abra o app 1.0.8, faca login e aceite a permissao.");
+        throw new Error(
+          "Nenhum celular registrou notificacoes ainda. Abra o app 1.0.8, faca login e aceite a permissao.",
+        );
       }
 
       const { data: sessionData } = await supabase.auth.getSession();
@@ -214,7 +229,13 @@ function AdminPushNotifications() {
     onSuccess: (result) => {
       toast.success(`Notificacao enviada para ${result.sent} celular(es).`);
       if (result.failed > 0) {
-        toast.warning(`${result.failed} token(s) falharam e podem estar antigos.`);
+        const firstFailure = result.failures?.[0];
+        const failureDetail = firstFailure
+          ? ` ${firstFailure.platform}: ${firstFailure.code} (HTTP ${firstFailure.status}).`
+          : "";
+        toast.warning(`${result.failed} token(s) falharam.${failureDetail}`, {
+          duration: 12_000,
+        });
       }
       setTitle("");
       setBody("");
@@ -228,10 +249,7 @@ function AdminPushNotifications() {
   return (
     <div className="safe-top px-5 pt-4 pb-10">
       <header className="flex items-center gap-2">
-        <Link
-          to="/app/admin"
-          className="grid h-10 w-10 place-items-center rounded-xl bg-secondary"
-        >
+        <Link to="/app/admin" className="grid h-10 w-10 place-items-center rounded-xl bg-secondary">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
