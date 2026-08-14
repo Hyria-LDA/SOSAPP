@@ -113,11 +113,14 @@ export function usePushNotifications() {
 
     const registerDevice = async () => {
       try {
-        handles.push(
-          await App.addListener("appStateChange", ({ isActive }) => {
-            if (isActive) void clearNativeNotificationBadge();
-          }),
-        );
+        const hasAppPlugin = Capacitor.isPluginAvailable("App");
+        if (hasAppPlugin) {
+          handles.push(
+            await App.addListener("appStateChange", ({ isActive }) => {
+              if (isActive) void clearNativeNotificationBadge();
+            }),
+          );
+        }
         await clearNativeNotificationBadge();
 
         if (Capacitor.getPlatform() === "ios") {
@@ -202,10 +205,10 @@ export function usePushNotifications() {
         const hasPushPlugin = await waitForPushPlugin();
         if (cancelled) return;
         if (!hasPushPlugin) {
-          const appInfo = await App.getInfo().catch(() => null);
+          const appInfo = hasAppPlugin ? await App.getInfo().catch(() => null) : null;
           const versionText = appInfo?.version ? ` Versao instalada: ${appInfo.version}.` : "";
           toast.error(
-            `Notificacoes nativas indisponiveis.${versionText} Reinstale o APK 1.0.8 e limpe os dados do app se continuar.`,
+            `Notificacoes nativas indisponiveis.${versionText} Atualize o aplicativo pela Google Play.`,
           );
           return;
         }
