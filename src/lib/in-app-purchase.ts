@@ -16,6 +16,21 @@ const PRODUCT_IDS: Record<PlanId, string> = {
   premium: "br.com.sosmarceneiros.brilhante.monthly",
 };
 
+function matchesPlanPackage(
+  item: { identifier: string; product: { identifier: string } },
+  planId: PlanId,
+) {
+  const packageId = item.identifier.trim().toLowerCase();
+  const storeProductId = item.product.identifier.trim().toLowerCase();
+  const expectedProductId = PRODUCT_IDS[planId].toLowerCase();
+
+  return (
+    packageId === planId ||
+    storeProductId === expectedProductId ||
+    storeProductId.startsWith(`${expectedProductId}:`)
+  );
+}
+
 let configuredUserId: string | null = null;
 
 function isNativeApp() {
@@ -103,9 +118,8 @@ export async function startInAppPurchase(planId: PlanId): Promise<PurchaseResult
     const offering = offerings.current ?? offerings.all.planos ?? Object.values(offerings.all)[0];
     if (!offering) throw new Error("Os planos ainda nao estao disponiveis na App Store.");
 
-    const productId = PRODUCT_IDS[planId];
-    const selectedPackage = offering.availablePackages.find(
-      (item) => item.identifier === planId || item.product.identifier === productId,
+    const selectedPackage = offering.availablePackages.find((item) =>
+      matchesPlanPackage(item, planId),
     );
     if (!selectedPackage) {
       throw new Error(`O plano ${planId} nao foi encontrado na oferta atual do RevenueCat.`);
