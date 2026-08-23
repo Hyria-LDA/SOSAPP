@@ -79,9 +79,7 @@ async function signInWithNativeGoogleOnIos() {
   const webClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID?.trim();
 
   if (!iosClientId || !webClientId) {
-    throw new Error(
-      "Configure VITE_GOOGLE_IOS_CLIENT_ID e VITE_GOOGLE_WEB_CLIENT_ID no Vercel.",
-    );
+    throw new Error("Configure VITE_GOOGLE_IOS_CLIENT_ID e VITE_GOOGLE_WEB_CLIENT_ID no Vercel.");
   }
 
   const { SocialLogin } = await import("@capgo/capacitor-social-login");
@@ -123,6 +121,51 @@ async function signInWithNativeGoogleOnIos() {
   if (error) throw error;
 }
 
+async function signInWithNativeAppleOnIos() {
+  const { SocialLogin } = await import("@capgo/capacitor-social-login");
+
+  await SocialLogin.initialize({
+    apple: {
+      clientId: "br.com.sosmarceneiros.app",
+      redirectUrl: "",
+    },
+  });
+
+  const rawNonce = createAuthNonce();
+  const hashedNonce = await sha256(rawNonce);
+  const login = await SocialLogin.login({
+    provider: "apple",
+    options: {
+      scopes: ["name", "email"],
+      nonce: hashedNonce,
+    },
+  });
+
+  if (login.provider !== "apple" || !login.result.idToken) {
+    throw new Error("A Apple nao retornou um token de identificacao valido.");
+  }
+
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: "apple",
+    token: login.result.idToken,
+    nonce: rawNonce,
+  });
+
+  if (error) throw error;
+
+  const fullName = [login.result.profile.givenName, login.result.profile.familyName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  if (fullName && !data.user?.user_metadata?.full_name) {
+    const { error: updateError } = await supabase.auth.updateUser({
+      data: { full_name: fullName },
+    });
+    if (updateError) console.warn("[auth/apple] nome nao foi salvo", updateError);
+  }
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
   component: AuthPage,
@@ -138,6 +181,18 @@ function AuthPage() {
   // Quando o Google OAuth esta indisponivel no backend, escondemos o botao e
   // forcamos o fluxo apenas por e-mail/senha.
   const [googleUnavailable, setGoogleUnavailable] = useState(false);
+  const [appleUnavailable, setAppleUnavailable] = useState(false);
+  const [showAppleLogin, setShowAppleLogin] = useState(false);
+
+  useEffect(() => {
+    const w = window as CapacitorWindow;
+    const platform = w.Capacitor?.getPlatform?.();
+    const isNative = !!w.Capacitor?.isNativePlatform?.();
+
+    // O fluxo implementado usa o login nativo da Apple e deve aparecer apenas
+    // dentro do aplicativo iOS. O site continua com Google e e-mail/senha.
+    setShowAppleLogin(isNative && platform === "ios");
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -310,6 +365,45 @@ function AuthPage() {
     }
   };
 
+  const apple = async () => {
+    setLoading(true);
+    try {
+      const w = window as CapacitorWindow;
+      const platform = w.Capacitor?.getPlatform?.();
+      const isCapacitor =
+        !!w.Capacitor?.isNativePlatform?.() ||
+        (!!platform && ["android", "ios"].includes(platform));
+
+      if (isCapacitor && platform === "ios") {
+        await signInWithNativeAppleOnIos();
+        toast.success("Login realizado com Apple!");
+        navigate({ to: "/app", replace: true });
+        return;
+      }
+
+      throw new Error("O login com Apple esta disponivel somente no aplicativo para iPhone.");
+    } catch (err) {
+      console.error("[auth/apple] excecao", err);
+      const msg = err instanceof Error ? err.message : String(err ?? "");
+      if (
+        msg.toLowerCase().includes("provider is not enabled") ||
+        msg.toLowerCase().includes("unsupported provider")
+      ) {
+        setAppleUnavailable(true);
+        toast.error(
+          "O login Apple ainda nao esta habilitado no Supabase. Use Google, e-mail e senha enquanto conclui a configuracao.",
+          { duration: 8000 },
+        );
+      } else {
+        toast.error(authErrorMessage(err) || "Falha inesperada no login com Apple", {
+          duration: 8000,
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="safe-top safe-bottom flex min-h-screen flex-col bg-secondary px-6 py-10">
       <div className="mx-auto w-full max-w-sm">
@@ -386,26 +480,48 @@ function AuthPage() {
             </button>
           </form>
 
-          {!googleUnavailable && (
+          {(!googleUnavailable || (showAppleLogin && !appleUnavailable)) && (
             <>
               <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
                 <div className="h-px flex-1 bg-border" /> ou{" "}
                 <div className="h-px flex-1 bg-border" />
               </div>
 
-              <button
-                onClick={google}
-                disabled={loading}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card font-medium transition active:scale-[0.98] disabled:opacity-60"
-              >
-                <GoogleIcon /> Continuar com Google
-              </button>
+              <div className="space-y-3">
+                {!googleUnavailable && (
+                  <button
+                    type="button"
+                    onClick={google}
+                    disabled={loading}
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card font-medium transition active:scale-[0.98] disabled:opacity-60"
+                  >
+                    <GoogleIcon /> Continuar com Google
+                  </button>
+                )}
+
+                {showAppleLogin && !appleUnavailable && (
+                  <button
+                    type="button"
+                    onClick={apple}
+                    disabled={loading}
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-black font-semibold text-white transition active:scale-[0.98] disabled:opacity-60"
+                  >
+                    <AppleIcon /> Continuar com Apple
+                  </button>
+                )}
+              </div>
             </>
           )}
 
           {googleUnavailable && (
             <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
               Login com Google temporariamente indisponível. Use e-mail e senha acima.
+            </p>
+          )}
+
+          {appleUnavailable && showAppleLogin && (
+            <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Login com Apple temporariamente indisponível. Use Google, e-mail e senha.
             </p>
           )}
 
@@ -460,6 +576,14 @@ function GoogleIcon() {
         fill="#EA4335"
         d="M12 5.38c1.62 0 3.06.56 4.21 1.65l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"
       />
+    </svg>
+  );
+}
+
+function AppleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
+      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.32.03-1.75-.79-3.27-.79-1.53 0-2 .77-3.25.82-1.3.05-2.29-1.31-3.12-2.51-1.7-2.46-3-6.95-1.25-9.98.87-1.51 2.45-2.46 4.14-2.48 1.29-.03 2.5.87 3.27.87.74 0 2.13-1.07 3.59-.91.61.03 2.32.25 3.42 1.85-.09.06-2.04 1.18-2.02 3.57.03 2.86 2.5 3.81 2.53 3.82-.02.07-.4 1.36-1.32 2.71zM14.72 3.66c.7-.84 1.86-1.48 2.83-1.52.12 1.14-.3 2.3-.97 3.13-.66.84-1.75 1.5-2.84 1.42-.14-1.12.39-2.29.98-3.03z" />
     </svg>
   );
 }

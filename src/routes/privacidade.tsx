@@ -20,7 +20,9 @@ function PrivacyPage() {
           </Link>
           <Logo className="h-16 w-auto" />
           <h1 className="mt-6 text-3xl font-black">Política de Privacidade</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Última atualização: 13 de julho de 2026</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Última atualização: 13 de julho de 2026
+          </p>
         </header>
 
         <div className="mt-8 space-y-7 text-sm leading-7 text-[#374151]">
@@ -35,11 +37,12 @@ function PrivacyPage() {
             anúncios, pedidos de busca, alertas automáticos e mensagens relacionadas ao uso do app.
           </Section>
 
-          <Section title="3. Login com Google">
-            Ao entrar com Google, usamos apenas as informações necessárias para autenticar sua conta,
-            como nome, endereço de e-mail e identificador da conta Google. Esses dados são usados para
-            permitir seu acesso ao app, proteger sua conta e associar seu perfil aos anúncios, pedidos
-            e configurações cadastradas por você.
+          <Section title="3. Login com Google e Apple">
+            Ao entrar com Google ou Apple, usamos apenas as informações necessárias para autenticar
+            sua conta, como nome, endereço de e-mail e identificador da conta no provedor escolhido.
+            Se você usar a opção Ocultar Meu E-mail da Apple, receberemos o endereço privado criado
+            pela Apple. Esses dados são usados para permitir seu acesso ao app, proteger sua conta e
+            associar seu perfil aos anúncios, pedidos e configurações cadastradas por você.
           </Section>
 
           <Section title="4. Como usamos os dados">
@@ -50,10 +53,10 @@ function PrivacyPage() {
           </Section>
 
           <Section title="5. Compartilhamento">
-            Dados públicos do perfil comercial, como nome da empresa, cidade, estado, logo e materiais
-            anunciados, podem aparecer para outros usuários do app. Não vendemos seus dados pessoais.
-            Podemos usar provedores de tecnologia, como hospedagem, banco de dados, autenticação e
-            notificações, apenas para operar o serviço.
+            Dados públicos do perfil comercial, como nome da empresa, cidade, estado, logo e
+            materiais anunciados, podem aparecer para outros usuários do app. Não vendemos seus
+            dados pessoais. Podemos usar provedores de tecnologia, como hospedagem, banco de dados,
+            autenticação e notificações, apenas para operar o serviço.
           </Section>
 
           <Section title="6. Fotos, localização e notificações">
@@ -65,20 +68,23 @@ function PrivacyPage() {
 
           <Section title="7. Armazenamento e segurança">
             Mantemos os dados pelo tempo necessário para operar a conta e cumprir obrigações legais.
-            Aplicamos medidas técnicas e controles de acesso para proteger as informações, mas nenhum
-            sistema é completamente imune a falhas.
+            Aplicamos medidas técnicas e controles de acesso para proteger as informações, mas
+            nenhum sistema é completamente imune a falhas.
           </Section>
 
           <Section title="8. Seus direitos">
-            Você pode solicitar acesso, correção ou exclusão dos seus dados, bem como pedir a remoção
-            da sua conta, quando aplicável. Algumas informações podem ser mantidas quando necessário
-            para segurança, prevenção de fraude ou obrigações legais.
+            Você pode solicitar acesso, correção ou exclusão dos seus dados, bem como pedir a
+            remoção da sua conta, quando aplicável. Algumas informações podem ser mantidas quando
+            necessário para segurança, prevenção de fraude ou obrigações legais.
           </Section>
 
           <Section title="9. Contato">
-            Para dúvidas sobre privacidade ou solicitação relacionada aos seus dados, entre em contato
-            pelo e-mail{" "}
-            <a className="font-bold text-primary underline" href="mailto:sosmarceneiroapp@gmail.com">
+            Para dúvidas sobre privacidade ou solicitação relacionada aos seus dados, entre em
+            contato pelo e-mail{" "}
+            <a
+              className="font-bold text-primary underline"
+              href="mailto:sosmarceneiroapp@gmail.com"
+            >
               sosmarceneiroapp@gmail.com
             </a>
             .

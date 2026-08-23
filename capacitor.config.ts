@@ -13,13 +13,13 @@ const sharedNativePlugins = [
 /**
  * Capacitor — modo Wrapper.
  *
- * O app web vive em https://sosmarceneiros.com.br (TanStack Start + Nitro SSR),
+ * O app web vive em https://www.sosmarceneiros.com.br (TanStack Start + Nitro SSR),
  * portanto NÃO empacotamos arquivos estáticos. O Capacitor exige um `webDir`
  * apenas como pasta de fallback — usamos `capacitor-shell/` que contém um
  * index.html mínimo de redirecionamento. Em runtime, `server.url` faz o
  * WebView carregar o site online diretamente.
  *
- * Deep Links / OAuth Google:
+ * Deep Links / OAuth Google e Apple:
  *  - `appId` (br.com.sosmarceneiros.app) é usado para Android App Links e
  *    iOS Universal Links posteriormente.
  *  - `scheme: "sosmarceneiros"` registra o esquema customizado consumido por
@@ -30,7 +30,9 @@ const config: CapacitorConfig = {
   appName: "SOS Marceneiros",
   webDir: "capacitor-shell",
   server: {
-    url: "https://sosmarceneiros.com.br",
+    // Use the canonical origin. Capacitor injects native plugins only into this
+    // exact origin, and production redirects the bare domain to www.
+    url: "https://www.sosmarceneiros.com.br",
     cleartext: false,
     allowNavigation: [
       "sosmarceneiros.com.br",
@@ -65,7 +67,7 @@ const config: CapacitorConfig = {
       providers: {
         google: true,
         facebook: false,
-        apple: false,
+        apple: true,
         twitter: false,
       },
       logLevel: 1,
