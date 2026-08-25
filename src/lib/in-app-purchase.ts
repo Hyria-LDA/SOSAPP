@@ -10,11 +10,23 @@ export type PurchaseResult =
   | { status: "error"; message: string }
   | { status: "unsupported"; message: string };
 
-const PRODUCT_IDS: Record<PlanId, string> = {
+const ANDROID_PRODUCT_IDS: Record<PlanId, string> = {
   tx: "br.com.sosmarceneiros.tx.monthly",
   ultra: "br.com.sosmarceneiros.ultra.monthly",
   premium: "br.com.sosmarceneiros.brilhante.monthly",
 };
+
+const IOS_PRODUCT_IDS: Record<PlanId, string> = {
+  tx: "br.com.sosmarceneiros.tx.monthly.v2",
+  ultra: "br.com.sosmarceneiros.ultra.monthly.v2",
+  premium: "br.com.sosmarceneiros.brilhante.monthly.v2",
+};
+
+function expectedProductId(planId: PlanId) {
+  return Capacitor.getPlatform() === "ios"
+    ? IOS_PRODUCT_IDS[planId]
+    : ANDROID_PRODUCT_IDS[planId];
+}
 
 function matchesPlanPackage(
   item: { identifier: string; product: { identifier: string } },
@@ -22,12 +34,12 @@ function matchesPlanPackage(
 ) {
   const packageId = item.identifier.trim().toLowerCase();
   const storeProductId = item.product.identifier.trim().toLowerCase();
-  const expectedProductId = PRODUCT_IDS[planId].toLowerCase();
+  const productId = expectedProductId(planId).toLowerCase();
 
   return (
     packageId === planId ||
-    storeProductId === expectedProductId ||
-    storeProductId.startsWith(`${expectedProductId}:`)
+    storeProductId === productId ||
+    storeProductId.startsWith(`${productId}:`)
   );
 }
 

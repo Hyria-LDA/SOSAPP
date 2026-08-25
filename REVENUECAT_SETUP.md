@@ -2,14 +2,22 @@
 
 ## Produtos e acessos
 
-| Plano | Product ID da App Store | Entitlement | Package da oferta |
-| --- | --- | --- | --- |
-| TX | `br.com.sosmarceneiros.tx.monthly` | `tx` | `tx` |
-| Ultra | `br.com.sosmarceneiros.ultra.monthly` | `ultra` | `ultra` |
-| Brilhante | `br.com.sosmarceneiros.brilhante.monthly` | `premium` | `premium` |
+| Plano | Product ID da App Store | Assinatura Google Play | Plano basico | Entitlement | Package da oferta |
+| --- | --- | --- | --- | --- | --- |
+| TX | `br.com.sosmarceneiros.tx.monthly.v2` | `br.com.sosmarceneiros.tx.monthly` | `mensal` | `tx` | `tx` |
+| Ultra | `br.com.sosmarceneiros.ultra.monthly.v2` | `br.com.sosmarceneiros.ultra.monthly` | `mensal` | `ultra` | `ultra` |
+| Brilhante | `br.com.sosmarceneiros.brilhante.monthly.v2` | `br.com.sosmarceneiros.brilhante.monthly` | `mensal` | `premium` | `premium` |
 
 A oferta atual do RevenueCat deve conter os tres packages acima. O identificador
 da oferta pode ser `planos`; ela precisa estar marcada como **Current**.
+
+Cada package deve conter os dois produtos do mesmo plano:
+
+- o produto novo da App Store, terminado em `.v2`;
+- o produto do Google Play, exibido pelo RevenueCat com o sufixo `:mensal`.
+
+Os produtos antigos da App Store sem `.v2` nao devem permanecer anexados aos
+packages. Os produtos Android nao mudaram.
 
 ## Vercel
 
