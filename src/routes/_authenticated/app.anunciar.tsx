@@ -1064,7 +1064,7 @@ function PhotoSlot({
     setOpeningMedia(true);
     try {
       const permission = await NativeCamera.requestPermissions({ permissions: ["camera"] });
-      if (permission.camera === "denied" || permission.camera === "restricted") {
+      if (permission.camera === "denied") {
         toast.error("Permita o acesso a camera nos Ajustes do iPhone para tirar fotos.");
         return;
       }

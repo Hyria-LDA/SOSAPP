@@ -115,12 +115,30 @@ function PedidosPage() {
           onDone={() => {
             qc.invalidateQueries({ queryKey: ["pedidos_material"] });
             navigate({
-              search: { novo: 0, fabricante_id: "", padrao_id: "", espessura: "", raio: 50 },
+              search: {
+                novo: 0,
+                fabricante_id: "",
+                padrao_id: "",
+                espessura: "",
+                comprimento_cm: 0,
+                largura_cm: 0,
+                aceitar_giro: 0,
+                raio: 50,
+              },
             });
           }}
           onCancel={() =>
             navigate({
-              search: { novo: 0, fabricante_id: "", padrao_id: "", espessura: "", raio: 50 },
+              search: {
+                novo: 0,
+                fabricante_id: "",
+                padrao_id: "",
+                espessura: "",
+                comprimento_cm: 0,
+                largura_cm: 0,
+                aceitar_giro: 0,
+                raio: 50,
+              },
             })
           }
         />

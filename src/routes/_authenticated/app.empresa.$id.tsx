@@ -30,7 +30,9 @@ function EmpresaPublica() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("materiais")
-        .select("id, padrao, fabricante, espessura_mm, preco, area_m2, created_at, fotos_materiais(url, ordem)")
+        .select(
+          "id, padrao, fabricante, espessura_mm, preco, area_m2, created_at, fotos_materiais(url, ordem)",
+        )
         .eq("empresa_id", id)
         .eq("status", "ativo")
         .order("created_at", { ascending: false });
@@ -65,7 +67,30 @@ function EmpresaPublica() {
     <div className="pb-32">
       <header className="safe-top sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
         <button
-          onClick={() => navigate({ to: "/app/buscar" })}
+          onClick={() =>
+            navigate({
+              to: "/app/buscar",
+              search: {
+                q: "",
+                fabricante_id: "",
+                padrao_id: "",
+                espessuras: "",
+                cidade: "",
+                estado: "",
+                raio: 50,
+                area_min: 0,
+                area_max: 0,
+                preco_min: 0,
+                preco_max: 0,
+                qtd_min: 0,
+                grain: "",
+                ordem: "",
+                comp_min: 0,
+                larg_min: 0,
+                aceitar_giro: 0,
+              },
+            })
+          }
           className="grid h-10 w-10 place-items-center rounded-xl bg-secondary"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -127,7 +152,6 @@ function EmpresaPublica() {
             label="cadastro"
           />
         </div>
-
       </section>
 
       <section className="px-5 pt-6">

@@ -613,11 +613,11 @@ function Buscar() {
                 to="/app/pedidos"
                 search={{
                   novo: 1,
-                  fabricante_id: params.fabricante_id || undefined,
-                  padrao_id: params.padrao_id || undefined,
-                  espessura: espessurasSel[0]?.toString() || undefined,
-                  comprimento_cm: effectiveCompMin || undefined,
-                  largura_cm: effectiveLargMin || undefined,
+                  fabricante_id: params.fabricante_id || "",
+                  padrao_id: params.padrao_id || "",
+                  espessura: espessurasSel[0]?.toString() || "",
+                  comprimento_cm: effectiveCompMin || 0,
+                  largura_cm: effectiveLargMin || 0,
                   aceitar_giro: params.aceitar_giro,
                   raio: params.raio,
                 }}

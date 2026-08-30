@@ -12,7 +12,12 @@ import { grainArrow, grainLabel } from "@/lib/grain";
 import { useAuth } from "@/hooks/use-auth";
 import { DenunciaButton } from "@/components/denuncia-modal";
 import { CrownBadge } from "@/components/premium-badge";
-import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  type CarouselApi,
+} from "@/components/ui/carousel";
 
 export const Route = createFileRoute("/_authenticated/app/material/$id")({
   component: Detalhe,
@@ -143,7 +148,30 @@ Obrigado!`;
           </CarouselContent>
         </Carousel>
         <button
-          onClick={() => navigate({ to: "/app/buscar" })}
+          onClick={() =>
+            navigate({
+              to: "/app/buscar",
+              search: {
+                q: "",
+                fabricante_id: "",
+                padrao_id: "",
+                espessuras: "",
+                cidade: "",
+                estado: "",
+                raio: 50,
+                area_min: 0,
+                area_max: 0,
+                preco_min: 0,
+                preco_max: 0,
+                qtd_min: 0,
+                grain: "",
+                ordem: "",
+                comp_min: 0,
+                larg_min: 0,
+                aceitar_giro: 0,
+              },
+            })
+          }
           className="safe-top absolute left-4 top-3 grid h-10 w-10 place-items-center rounded-xl bg-card/90 backdrop-blur shadow-card"
         >
           <ArrowLeft className="h-5 w-5" />

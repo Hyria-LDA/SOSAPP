@@ -188,6 +188,25 @@ function Home() {
       <div className="mt-3 grid grid-cols-2 gap-3">
         <Link
           to="/app/buscar"
+          search={{
+            q: "",
+            fabricante_id: "",
+            padrao_id: "",
+            espessuras: "",
+            cidade: "",
+            estado: "",
+            raio: 50,
+            area_min: 0,
+            area_max: 0,
+            preco_min: 0,
+            preco_max: 0,
+            qtd_min: 0,
+            grain: "",
+            ordem: "",
+            comp_min: 0,
+            larg_min: 0,
+            aceitar_giro: 0,
+          }}
           className="flex h-20 flex-col items-start justify-between rounded-2xl bg-primary p-3 text-primary-foreground shadow-card transition active:scale-[0.98]"
         >
           <Search className="h-5 w-5" />
@@ -210,6 +229,16 @@ function Home() {
         </Link>
         <Link
           to="/app/pedidos"
+          search={{
+            novo: 0,
+            fabricante_id: "",
+            padrao_id: "",
+            espessura: "",
+            comprimento_cm: 0,
+            largura_cm: 0,
+            aceitar_giro: 0,
+            raio: 50,
+          }}
           className="col-span-2 flex items-center gap-3 rounded-[20px] bg-black p-3 text-white shadow-[0_10px_24px_-10px_rgba(0,0,0,0.65)] transition active:scale-[0.98]"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff2e8]">
@@ -235,7 +264,29 @@ function Home() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Sobras Perto de Você
           </h2>
-          <Link to="/app/buscar" className="text-xs font-semibold text-primary">
+          <Link
+            to="/app/buscar"
+            search={{
+              q: "",
+              fabricante_id: "",
+              padrao_id: "",
+              espessuras: "",
+              cidade: "",
+              estado: "",
+              raio: 50,
+              area_min: 0,
+              area_max: 0,
+              preco_min: 0,
+              preco_max: 0,
+              qtd_min: 0,
+              grain: "",
+              ordem: "",
+              comp_min: 0,
+              larg_min: 0,
+              aceitar_giro: 0,
+            }}
+            className="text-xs font-semibold text-primary"
+          >
             Ver todos
           </Link>
         </div>

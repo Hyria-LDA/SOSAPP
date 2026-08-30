@@ -41,6 +41,7 @@ type NativePushResult = {
 declare global {
   interface Window {
     SOSPush?: {
+      isAvailable?: () => boolean;
       register?: (accessToken: string, supabaseUrl: string, anonKey: string) => void;
     };
   }

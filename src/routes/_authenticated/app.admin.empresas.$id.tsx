@@ -335,6 +335,7 @@ function EmpresaDetail() {
         )}
         <Link
           to="/app/perfil"
+          search={{ upgrade: 0 }}
           className="flex items-center justify-center gap-1 rounded-xl bg-secondary px-3 py-2 text-xs font-bold"
         >
           <Edit3 className="h-4 w-4" /> Cadastro

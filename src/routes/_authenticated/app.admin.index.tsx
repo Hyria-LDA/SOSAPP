@@ -65,6 +65,7 @@ function Admin() {
       <header className="flex items-center gap-2">
         <Link
           to="/app/perfil"
+          search={{ upgrade: 0 }}
           className="grid h-10 w-10 place-items-center rounded-xl bg-secondary"
         >
           <ArrowLeft className="h-5 w-5" />

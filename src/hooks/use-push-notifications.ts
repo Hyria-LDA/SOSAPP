@@ -31,15 +31,6 @@ type SOSPushResult = {
   message?: string;
 };
 
-declare global {
-  interface Window {
-    SOSPush?: {
-      isAvailable?: () => boolean;
-      register?: (accessToken: string, supabaseUrl: string, anonKey: string) => void;
-    };
-  }
-}
-
 function asString(value: unknown) {
   return typeof value === "string" ? value : "";
 }
