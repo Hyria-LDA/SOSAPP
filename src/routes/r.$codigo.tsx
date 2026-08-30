@@ -15,10 +15,11 @@ function RefLanding() {
     (async () => {
       try {
         localStorage.setItem("ref_codigo", codigo);
-        await supabase.rpc("registrar_clique_vendedor" as any, {
-          _codigo: codigo,
-          _referer: document.referrer || null,
-          _user_agent: navigator.userAgent,
+        await supabase.functions.invoke("track-partner-click", {
+          body: {
+            codigo,
+            referer: document.referrer || null,
+          },
         });
       } catch {
         // ignora — não bloqueia o usuário

@@ -77,7 +77,14 @@ function Estoque() {
       action: "vender" | "excluir" | "renovar";
       valor?: number;
     }) => {
-      if (action === "excluir") return supabase.from("materiais").delete().eq("id", id);
+      if (action === "excluir") {
+        const { data, error } = await supabase.functions.invoke("delete-material", {
+          body: { material_id: id },
+        });
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || "Não foi possível excluir o anúncio");
+        return { data, error: null };
+      }
       if (action === "vender") {
         return supabase
           .from("materiais")

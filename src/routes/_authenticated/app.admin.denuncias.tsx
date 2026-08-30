@@ -120,6 +120,14 @@ function AdminDenuncias() {
       materialId: string;
       acao: "reativar" | "suspender" | "excluir";
     }) => {
+      if (args.acao === "excluir") {
+        const { data, error } = await supabase.functions.invoke("delete-material", {
+          body: { material_id: args.materialId },
+        });
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || "erro");
+        return;
+      }
       const { data, error } = await (supabase as any).rpc("admin_acao_anuncio", {
         _material_id: args.materialId,
         _acao: args.acao,
