@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, Flag } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Flag, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -44,7 +44,9 @@ function AdminDenuncias() {
     queryKey: ["admin-denuncias", filter],
     queryFn: async () => {
       let q = (supabase.from as any)("denuncias")
-        .select("*, materiais(id, padrao, fabricante, status), empresas(id, nome_empresa, status, pontos_penalidade, advertencias)")
+        .select(
+          "*, materiais(id, padrao, fabricante, status), empresas(id, nome_empresa, status, pontos_penalidade, advertencias)",
+        )
         .order("created_at", { ascending: false })
         .limit(200);
       if (filter !== "todas") q = q.eq("status", filter);
@@ -59,10 +61,19 @@ function AdminDenuncias() {
     queryFn: async () => {
       const [tot, pend, conf, empSusp, empAdv] = await Promise.all([
         (supabase.from as any)("denuncias").select("id", { count: "exact", head: true }),
-        (supabase.from as any)("denuncias").select("id", { count: "exact", head: true }).eq("status", "pendente"),
-        (supabase.from as any)("denuncias").select("id", { count: "exact", head: true }).eq("status", "confirmada"),
-        supabase.from("empresas").select("id", { count: "exact", head: true }).eq("status", "suspensa"),
-        (supabase.from as any)("empresas").select("id", { count: "exact", head: true }).gt("advertencias", 0),
+        (supabase.from as any)("denuncias")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pendente"),
+        (supabase.from as any)("denuncias")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "confirmada"),
+        supabase
+          .from("empresas")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "suspensa"),
+        (supabase.from as any)("empresas")
+          .select("id", { count: "exact", head: true })
+          .gt("advertencias", 0),
       ]);
       const matSusp = await supabase
         .from("materiais")
@@ -80,7 +91,10 @@ function AdminDenuncias() {
   });
 
   const julgar = useMutation({
-    mutationFn: async (args: { id: string; decisao: "confirmada" | "rejeitada" | "descartada" }) => {
+    mutationFn: async (args: {
+      id: string;
+      decisao: "confirmada" | "rejeitada" | "descartada";
+    }) => {
       const { data, error } = await (supabase as any).rpc("admin_julgar_denuncia", {
         _denuncia_id: args.id,
         _decisao: args.decisao,
@@ -102,7 +116,10 @@ function AdminDenuncias() {
   });
 
   const acaoAnuncio = useMutation({
-    mutationFn: async (args: { materialId: string; acao: "reativar" | "suspender" | "excluir" }) => {
+    mutationFn: async (args: {
+      materialId: string;
+      acao: "reativar" | "suspender" | "excluir";
+    }) => {
       const { data, error } = await (supabase as any).rpc("admin_acao_anuncio", {
         _material_id: args.materialId,
         _acao: args.acao,
@@ -110,8 +127,10 @@ function AdminDenuncias() {
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || "erro");
     },
-    onSuccess: () => {
-      toast.success("Anúncio atualizado");
+    onSuccess: (_data, variables) => {
+      toast.success(
+        variables.acao === "excluir" ? "Anúncio excluído definitivamente" : "Anúncio atualizado",
+      );
       qc.invalidateQueries({ queryKey: ["admin-denuncias"] });
       qc.invalidateQueries({ queryKey: ["admin-denuncias-stats"] });
     },
@@ -119,7 +138,10 @@ function AdminDenuncias() {
   });
 
   const acaoEmpresa = useMutation({
-    mutationFn: async (args: { empresaId: string; acao: "advertir" | "suspender" | "bloquear" | "reativar" }) => {
+    mutationFn: async (args: {
+      empresaId: string;
+      acao: "advertir" | "suspender" | "bloquear" | "reativar";
+    }) => {
       const { data, error } = await (supabase as any).rpc("admin_acao_empresa", {
         _empresa_id: args.empresaId,
         _acao: args.acao,
@@ -211,48 +233,100 @@ function AdminDenuncias() {
             </div>
 
             {d.status === "pendente" && (
-              <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
-                <Btn onClick={() => julgar.mutate({ id: d.id, decisao: "confirmada" })}>
-                  ✅ Confirmar (+1 pt)
-                </Btn>
-                <Btn onClick={() => julgar.mutate({ id: d.id, decisao: "rejeitada" })}>
-                  ✖️ Rejeitar
-                </Btn>
-                <Btn onClick={() => julgar.mutate({ id: d.id, decisao: "descartada" })}>
-                  Descartar
-                </Btn>
+              <div className="mt-3 rounded-xl border border-border bg-secondary/50 p-3">
+                <div className="text-xs font-bold">Decisão sobre a denúncia</div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Confirmar registra 1 ponto para a empresa, mas não exclui o anúncio.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                  <Btn onClick={() => julgar.mutate({ id: d.id, decisao: "confirmada" })}>
+                    ✅ Confirmar denúncia
+                  </Btn>
+                  <Btn onClick={() => julgar.mutate({ id: d.id, decisao: "rejeitada" })}>
+                    ✖️ Rejeitar
+                  </Btn>
+                  <Btn onClick={() => julgar.mutate({ id: d.id, decisao: "descartada" })}>
+                    Descartar
+                  </Btn>
+                </div>
+              </div>
+            )}
+
+            {d.material_id && d.materiais && (
+              <div className="mt-3 rounded-xl border-2 border-destructive/40 bg-destructive/5 p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                  <div>
+                    <div className="text-xs font-bold text-destructive">
+                      Excluir o anúncio reportado
+                    </div>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      Esta ação apaga o anúncio definitivamente. Ela é separada do sistema de
+                      pontos.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={acaoAnuncio.isPending}
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `Excluir definitivamente o anúncio "${d.materiais.padrao}"? Esta ação não pode ser desfeita.`,
+                      )
+                    ) {
+                      acaoAnuncio.mutate({ materialId: d.material_id, acao: "excluir" });
+                    }
+                  }}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-destructive px-4 py-2.5 text-sm font-black text-destructive-foreground disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {acaoAnuncio.isPending ? "Excluindo…" : "Excluir anúncio definitivamente"}
+                </button>
               </div>
             )}
 
             <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border pt-2 text-[11px]">
               {d.material_id && (
                 <>
-                  <Btn onClick={() => acaoAnuncio.mutate({ materialId: d.material_id, acao: "reativar" })}>
+                  <Btn
+                    onClick={() =>
+                      acaoAnuncio.mutate({ materialId: d.material_id, acao: "reativar" })
+                    }
+                  >
                     ↻ Reativar anúncio
                   </Btn>
-                  <Btn onClick={() => acaoAnuncio.mutate({ materialId: d.material_id, acao: "suspender" })}>
-                    ⛔ Suspender
-                  </Btn>
                   <Btn
-                    danger
-                    onClick={() => {
-                      if (confirm("Excluir anúncio definitivamente?"))
-                        acaoAnuncio.mutate({ materialId: d.material_id, acao: "excluir" });
-                    }}
+                    onClick={() =>
+                      acaoAnuncio.mutate({ materialId: d.material_id, acao: "suspender" })
+                    }
                   >
-                    🗑️ Excluir
+                    ⛔ Suspender
                   </Btn>
                 </>
               )}
               {d.empresa_id && (
                 <>
-                  <Btn onClick={() => acaoEmpresa.mutate({ empresaId: d.empresa_id, acao: "advertir" })}>
+                  <Btn
+                    onClick={() =>
+                      acaoEmpresa.mutate({ empresaId: d.empresa_id, acao: "advertir" })
+                    }
+                  >
                     ⚠️ Advertir
                   </Btn>
-                  <Btn onClick={() => acaoEmpresa.mutate({ empresaId: d.empresa_id, acao: "suspender" })}>
+                  <Btn
+                    onClick={() =>
+                      acaoEmpresa.mutate({ empresaId: d.empresa_id, acao: "suspender" })
+                    }
+                  >
                     ⛔ Suspender empresa
                   </Btn>
-                  <Btn danger onClick={() => acaoEmpresa.mutate({ empresaId: d.empresa_id, acao: "bloquear" })}>
+                  <Btn
+                    danger
+                    onClick={() =>
+                      acaoEmpresa.mutate({ empresaId: d.empresa_id, acao: "bloquear" })
+                    }
+                  >
                     🚫 Bloquear
                   </Btn>
                 </>
