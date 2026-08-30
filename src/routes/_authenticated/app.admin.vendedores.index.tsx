@@ -41,7 +41,10 @@ function AdminVendedores() {
 
   const toggle = useMutation({
     mutationFn: async ({ id, ativo }: { id: string; ativo: boolean }) => {
-      await supabase.from("vendedores_parceiros" as any).update({ ativo }).eq("id", id);
+      await supabase
+        .from("vendedores_parceiros" as any)
+        .update({ ativo })
+        .eq("id", id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-vendedores"] });
@@ -90,10 +93,13 @@ function AdminVendedores() {
               </button>
             </div>
             <div className="mt-3 grid grid-cols-4 gap-2 text-center text-[11px]">
-              <Mini value={v.metrics?.cliques ?? 0} label="Cliques" />
+              <Mini value={v.metrics?.acessos ?? v.metrics?.cliques ?? 0} label="Acessos" />
               <Mini value={v.metrics?.cadastros ?? 0} label="Cadastros" />
-              <Mini value={v.metrics?.aprovados ?? 0} label="Aprovados" />
-              <Mini value={`R$ ${Number(v.metrics?.valor_pendente ?? 0).toFixed(0)}`} label="A pagar" />
+              <Mini value={v.metrics?.pagantes ?? v.metrics?.aprovados ?? 0} label="Pagantes" />
+              <Mini
+                value={`R$ ${Number(v.metrics?.valor_pendente ?? 0).toFixed(0)}`}
+                label="A pagar"
+              />
             </div>
           </Link>
         ))}
@@ -172,19 +178,42 @@ function NovoVendedorModal({ onClose, qc }: { onClose: () => void; qc: any }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/40" onClick={onClose}>
-      <div className="rounded-t-3xl bg-background p-5 shadow-pop" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/40"
+      onClick={onClose}
+    >
+      <div
+        className="rounded-t-3xl bg-background p-5 shadow-pop"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-black">Novo vendedor parceiro</h2>
-          <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-xl bg-secondary">
+          <button
+            onClick={onClose}
+            className="grid h-9 w-9 place-items-center rounded-xl bg-secondary"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
         <form onSubmit={submit} className="space-y-3">
           <Input label="Nome *" value={form.nome} onChange={(v) => setForm({ ...form, nome: v })} />
-          <Input label="E-mail *" value={form.email} onChange={(v) => setForm({ ...form, email: v })} type="email" />
-          <Input label="Senha *" value={form.senha} onChange={(v) => setForm({ ...form, senha: v })} type="password" />
-          <Input label="Telefone" value={form.telefone} onChange={(v) => setForm({ ...form, telefone: v })} />
+          <Input
+            label="E-mail *"
+            value={form.email}
+            onChange={(v) => setForm({ ...form, email: v })}
+            type="email"
+          />
+          <Input
+            label="Senha *"
+            value={form.senha}
+            onChange={(v) => setForm({ ...form, senha: v })}
+            type="password"
+          />
+          <Input
+            label="Telefone"
+            value={form.telefone}
+            onChange={(v) => setForm({ ...form, telefone: v })}
+          />
           <Input
             label="Código do link *"
             value={form.codigo}
@@ -235,4 +264,3 @@ function Input({
     </label>
   );
 }
-

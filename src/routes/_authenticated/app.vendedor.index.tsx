@@ -58,7 +58,10 @@ function VendedorDash() {
   return (
     <div className="safe-top px-5 pt-4 pb-10">
       <header className="flex items-center gap-2">
-        <Link to="/app/perfil" className="grid h-10 w-10 place-items-center rounded-xl bg-secondary">
+        <Link
+          to="/app/perfil"
+          className="grid h-10 w-10 place-items-center rounded-xl bg-secondary"
+        >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
@@ -81,10 +84,14 @@ function VendedorDash() {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <Stat icon={Users} label="Cliques" value={m.cliques ?? 0} />
+        <Stat icon={Users} label="Acessos ao link" value={m.acessos ?? m.cliques ?? 0} />
         <Stat icon={FileText} label="Cadastros" value={m.cadastros ?? 0} />
-        <Stat icon={CheckCircle2} label="Aprovados" value={m.aprovados ?? 0} accent />
-        <Stat icon={Sparkles} label="Premiums ativos" value={m.premiums_ativos ?? 0} />
+        <Stat icon={CheckCircle2} label="Pagantes" value={m.pagantes ?? m.aprovados ?? 0} accent />
+        <Stat
+          icon={Sparkles}
+          label="Planos pagos ativos"
+          value={m.planos_pagos_ativos ?? m.premiums_ativos ?? 0}
+        />
       </div>
 
       <div className="mt-4 rounded-2xl bg-card p-4 shadow-card">
@@ -124,7 +131,9 @@ function VendedorDash() {
                   {new Date(i.created_at).toLocaleDateString("pt-BR")}
                 </div>
               </div>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${statusBadge(i.status)}`}>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${statusBadge(i.status)}`}
+              >
                 {statusLabel(i.status)}
               </span>
             </div>
@@ -166,10 +175,19 @@ function Stat({
 }
 
 function fmt(n: any) {
-  return Number(n ?? 0).toFixed(2).replace(".", ",");
+  return Number(n ?? 0)
+    .toFixed(2)
+    .replace(".", ",");
 }
 function statusLabel(s: string) {
-  return { cadastrada: "🟡 Cadastrada", aprovada: "🟢 Aprovada", cancelada: "🔴 Cancelada", expirada: "⚫ Expirada" }[s] || s;
+  return (
+    {
+      cadastrada: "🟡 Cadastrada",
+      aprovada: "🟢 Pagante",
+      cancelada: "🔴 Cancelada",
+      expirada: "⚫ Expirada",
+    }[s] || s
+  );
 }
 function statusBadge(s: string) {
   switch (s) {

@@ -40,7 +40,7 @@ function VendedorDetail() {
           .order("created_at", { ascending: false }),
       ]);
       // count anúncios por empresa
-      const empresaIds = (inds.data as any[] ?? []).map((i: any) => i.empresa_id);
+      const empresaIds = ((inds.data as any[]) ?? []).map((i: any) => i.empresa_id);
       const counts: Record<string, number> = {};
       if (empresaIds.length) {
         const { data: mats } = await supabase
@@ -52,7 +52,12 @@ function VendedorDetail() {
           counts[r.empresa_id] = (counts[r.empresa_id] ?? 0) + 1;
         });
       }
-      return { vendedor: v as any, metrics: m.data as any, indicacoes: (inds.data as any[]) ?? [], counts };
+      return {
+        vendedor: v as any,
+        metrics: m.data as any,
+        indicacoes: (inds.data as any[]) ?? [],
+        counts,
+      };
     },
   });
 
@@ -84,7 +89,19 @@ function VendedorDetail() {
 
   const updateStatus = useMutation({
     mutationFn: async ({ indId, status }: { indId: string; status: string }) => {
-      await supabase.from("indicacoes" as any).update({ status }).eq("id", indId);
+      await supabase
+        .from("indicacoes" as any)
+        .update(
+          status === "aprovada"
+            ? {
+                status,
+                aprovada_em: new Date().toISOString(),
+                primeira_conversao_em: new Date().toISOString(),
+                plano_pago_slug: "manual",
+              }
+            : { status },
+        )
+        .eq("id", indId);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-vendedor", id] }),
   });
@@ -107,7 +124,9 @@ function VendedorDetail() {
         i.paga ? "Sim" : "Não",
       ]),
     ];
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = rows
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -191,10 +210,13 @@ function VendedorDetail() {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 text-center">
-        <MiniBig label="Cliques" value={m.cliques ?? 0} />
+        <MiniBig label="Acessos ao link" value={m.acessos ?? m.cliques ?? 0} />
         <MiniBig label="Cadastros" value={m.cadastros ?? 0} />
-        <MiniBig label="Aprovados" value={m.aprovados ?? 0} />
-        <MiniBig label="Premiums ativos" value={m.premiums_ativos ?? 0} />
+        <MiniBig label="Pagantes" value={m.pagantes ?? m.aprovados ?? 0} />
+        <MiniBig
+          label="Planos pagos ativos"
+          value={m.planos_pagos_ativos ?? m.premiums_ativos ?? 0}
+        />
         <MiniBig label="Total devido" value={`R$ ${fmt(m.valor_total)}`} />
         <MiniBig label="A pagar" value={`R$ ${fmt(m.valor_pendente)}`} accent />
       </div>
@@ -227,7 +249,7 @@ function VendedorDetail() {
                 className="shrink-0 rounded-lg bg-secondary px-2 py-1 text-[11px] font-bold"
               >
                 <option value="cadastrada">🟡 Cadastrada</option>
-                <option value="aprovada">🟢 Aprovada</option>
+                <option value="aprovada">🟢 Pagante</option>
                 <option value="cancelada">🔴 Cancelada</option>
                 <option value="expirada">⚫ Expirada</option>
               </select>
@@ -289,7 +311,9 @@ function Row({
 
 function MiniBig({ label, value, accent }: { label: string; value: any; accent?: boolean }) {
   return (
-    <div className={`rounded-2xl p-3 shadow-card ${accent ? "bg-accent text-accent-foreground" : "bg-card"}`}>
+    <div
+      className={`rounded-2xl p-3 shadow-card ${accent ? "bg-accent text-accent-foreground" : "bg-card"}`}
+    >
       <div className="text-lg font-black">{value}</div>
       <div className="text-[10px] opacity-80">{label}</div>
     </div>
@@ -297,5 +321,7 @@ function MiniBig({ label, value, accent }: { label: string; value: any; accent?:
 }
 
 function fmt(n: any) {
-  return Number(n ?? 0).toFixed(2).replace(".", ",");
+  return Number(n ?? 0)
+    .toFixed(2)
+    .replace(".", ",");
 }

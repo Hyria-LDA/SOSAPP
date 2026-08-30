@@ -43,9 +43,8 @@ function Onboarding() {
     try {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Sem sessão");
-      const { error } = await supabase
-        .from("empresas")
-        .upsert({
+      const { error } = await supabase.from("empresas").upsert(
+        {
           owner_id: u.user.id,
           email: u.user.email,
           ...form,
@@ -61,7 +60,9 @@ function Onboarding() {
           onboarded: true,
           plano: "free",
           plano_inicio: new Date().toISOString(),
-        }, { onConflict: "owner_id" });
+        },
+        { onConflict: "owner_id" },
+      );
       if (error) throw error;
 
       // Aplica código de referência do vendedor parceiro, se houver
@@ -70,9 +71,7 @@ function Onboarding() {
         const { data: refRes } = await supabase.rpc("aplicar_ref_codigo" as any, {
           _codigo: refCodigo,
         });
-        if ((refRes as any)?.ok) {
-          toast.success("🟣 Premium ativado por 90 dias via indicação!");
-        }
+        if ((refRes as any)?.ok) toast.success("Cadastro vinculado ao parceiro!");
         localStorage.removeItem("ref_codigo");
       }
 
