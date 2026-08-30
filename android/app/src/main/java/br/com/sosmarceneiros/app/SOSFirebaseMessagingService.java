@@ -43,10 +43,9 @@ public class SOSFirebaseMessagingService extends FirebaseMessagingService {
         Map<String, String> data = remoteMessage.getData();
         String title = firstNonBlank(data.get("title"), remoteMessage.getNotification() != null ? remoteMessage.getNotification().getTitle() : null, "Eba!");
         String body = firstNonBlank(data.get("body"), remoteMessage.getNotification() != null ? remoteMessage.getNotification().getBody() : null, "Voce recebeu uma nova notificacao.");
-        String imageUrl = firstNonBlank(data.get("image_url"), data.get("imageUrl"), null);
         String path = firstNonBlank(data.get("path"), DEFAULT_PATH);
 
-        showNotification(title, body, imageUrl, path);
+        showNotification(title, body, path);
     }
 
     @Override
@@ -55,7 +54,7 @@ public class SOSFirebaseMessagingService extends FirebaseMessagingService {
         PushNotificationsPlugin.onNewToken(token);
     }
 
-    private void showNotification(String title, String body, String imageUrl, String path) {
+    private void showNotification(String title, String body, String path) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             return;
@@ -63,11 +62,8 @@ public class SOSFirebaseMessagingService extends FirebaseMessagingService {
 
         ensureChannel();
 
-        RemoteViews compactView = buildCompactNotificationView(title, body, imageUrl);
-
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setLargeIcon(defaultLargeIcon())
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)
@@ -75,9 +71,7 @@ public class SOSFirebaseMessagingService extends FirebaseMessagingService {
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
             .setContentIntent(openAppIntent(path))
-            .setCustomContentView(compactView)
-            .setCustomBigContentView(compactView)
-            .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(body));
 
         NotificationManagerCompat.from(this).notify((int) (System.currentTimeMillis() % Integer.MAX_VALUE), builder.build());
     }

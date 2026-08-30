@@ -80,6 +80,12 @@ Deno.serve(async (request) => {
       tipo: notification.tipo,
     });
 
+    // Broadcasts administrativos já são enviados diretamente por send-push.
+    // O registro em notificacoes existe somente para alimentar a caixa interna.
+    if (notification.tipo === "admin_broadcast") {
+      return json({ ignored: true, reason: "admin_broadcast_sent_directly" });
+    }
+
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: tokens, error: tokenError } = await adminClient
       .from("push_tokens")

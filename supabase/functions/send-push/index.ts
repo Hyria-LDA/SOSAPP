@@ -11,12 +11,12 @@ type PushToken = {
   id: string;
   token: string;
   platform: string | null;
+  user_id: string;
 };
 
 type PushRequest = {
   title?: string;
   body?: string;
-  imageUrl?: string;
   path?: string;
   target?: "all";
 };
@@ -57,20 +57,29 @@ Deno.serve(async (request) => {
     const payload = (await request.json()) as PushRequest;
     const title = payload.title?.trim().slice(0, 80);
     const body = payload.body?.trim().slice(0, 180);
-    const imageUrl = payload.imageUrl?.trim();
     const path = payload.path?.trim() || "/app";
     if (!title || !body) return json({ error: "missing_title_or_body" }, 400);
     if (!ALLOWED_PATHS.has(path)) return json({ error: "invalid_path" }, 400);
-    if (imageUrl) {
-      const url = new URL(imageUrl);
-      if (url.protocol !== "https:") return json({ error: "invalid_image_url" }, 400);
-    }
-
     const { data: tokens, error: tokenError } = await adminClient
       .from("push_tokens")
-      .select("id, token, platform")
+      .select("id, token, platform, user_id")
       .eq("active", true);
     if (tokenError) throw tokenError;
+
+    const recipientIds = [
+      ...new Set(((tokens ?? []) as PushToken[]).map((token) => token.user_id)),
+    ];
+    if (recipientIds.length > 0) {
+      const { error: notificationError } = await adminClient.from("notificacoes").insert(
+        recipientIds.map((userId) => ({
+          user_id: userId,
+          tipo: "admin_broadcast",
+          titulo: title,
+          mensagem: body,
+        })),
+      );
+      if (notificationError) throw notificationError;
+    }
 
     let sent = 0;
     let failed = 0;
@@ -83,11 +92,9 @@ Deno.serve(async (request) => {
         platform: pushToken.platform,
         title,
         body,
-        imageUrl,
         data: {
           type: "admin_broadcast",
           path,
-          image_url: imageUrl ?? "",
         },
       });
 
@@ -125,7 +132,7 @@ Deno.serve(async (request) => {
       body,
       target: payload.target ?? "all",
       sent_by: userData.user.id,
-      image_url: imageUrl ?? null,
+      image_url: null,
       total_tokens: tokens?.length ?? 0,
       success_count: sent,
       failure_count: failed,

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { ArrowLeft, Mail, Package, ShoppingBag } from "lucide-react";
+import { ArrowLeft, BellRing, Mail, Package, ShoppingBag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -98,7 +98,8 @@ function NotificacoesPage() {
 
         {data?.map((n) => {
           const isComprador = n.tipo === "match_comprador";
-          const Icon = isComprador ? ShoppingBag : Package;
+          const isAdminBroadcast = n.tipo === "admin_broadcast";
+          const Icon = isAdminBroadcast ? BellRing : isComprador ? ShoppingBag : Package;
           return (
             <article
               key={n.id}

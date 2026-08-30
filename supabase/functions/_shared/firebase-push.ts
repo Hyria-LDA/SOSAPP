@@ -122,37 +122,38 @@ export async function sendFirebasePush(params: {
     sos_native_notification: "1",
   };
   const isIos = params.platform === "ios";
-  const message = isIos
-    ? {
-        token: params.token,
-        notification: {
-          title: params.title,
-          body: params.body,
-          ...(params.imageUrl ? { image: params.imageUrl } : {}),
-        },
-        data: dataPayload,
-        apns: {
-          headers: {
-            "apns-priority": "10",
-            "apns-push-type": "alert",
-          },
-          payload: {
-            aps: {
-              sound: "default",
-              badge: 1,
-              ...(params.imageUrl ? { "mutable-content": 1 } : {}),
+  const message = {
+    token: params.token,
+    notification: {
+      title: params.title,
+      body: params.body,
+    },
+    data: dataPayload,
+    ...(isIos
+      ? {
+          apns: {
+            headers: {
+              "apns-priority": "10",
+              "apns-push-type": "alert",
+            },
+            payload: {
+              aps: {
+                sound: "default",
+                badge: 1,
+              },
             },
           },
-          ...(params.imageUrl ? { fcm_options: { image: params.imageUrl } } : {}),
-        },
-      }
-    : {
-        token: params.token,
-        data: dataPayload,
-        android: {
-          priority: "HIGH",
-        },
-      };
+        }
+      : {
+          android: {
+            priority: "HIGH",
+            notification: {
+              sound: "default",
+              channel_id: "matches",
+            },
+          },
+        }),
+  };
 
   const response = await fetch(
     `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
