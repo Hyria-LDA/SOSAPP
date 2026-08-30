@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { ArrowLeft, BellRing, Mail, Package, ShoppingBag } from "lucide-react";
+import { ArrowLeft, BellRing, Mail, Package, ShoppingBag, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -36,6 +37,24 @@ function NotificacoesPage() {
         .limit(100);
       if (error) throw error;
       return (data ?? []) as Notif[];
+    },
+  });
+
+  const removeNotifications = useMutation({
+    mutationFn: async (notificationId: string | null) => {
+      if (!user) throw new Error("Usuário não autenticado");
+      let query = supabase.from("notificacoes").delete().eq("user_id", user.id);
+      if (notificationId) query = query.eq("id", notificationId);
+      const { error } = await query;
+      if (error) throw error;
+    },
+    onSuccess: (_, notificationId) => {
+      qc.invalidateQueries({ queryKey: ["notificacoes", user?.id] });
+      qc.invalidateQueries({ queryKey: ["notificacoes-unread", user?.id] });
+      toast.success(notificationId ? "Notificação excluída" : "Notificações excluídas");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir");
     },
   });
 
@@ -80,6 +99,18 @@ function NotificacoesPage() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <h1 className="flex-1 text-lg font-black">📬 Notificações</h1>
+        {(data?.length ?? 0) > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm("Excluir todas as notificações?")) removeNotifications.mutate(null);
+            }}
+            disabled={removeNotifications.isPending}
+            className="rounded-xl bg-destructive/10 px-3 py-2 text-xs font-bold text-destructive disabled:opacity-50"
+          >
+            Limpar todas
+          </button>
+        )}
       </header>
 
       <div className="space-y-3 px-4 py-4">
@@ -112,7 +143,18 @@ function NotificacoesPage() {
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold">{n.titulo}</div>
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1 text-sm font-bold">{n.titulo}</div>
+                    <button
+                      type="button"
+                      onClick={() => removeNotifications.mutate(n.id)}
+                      disabled={removeNotifications.isPending}
+                      aria-label="Excluir notificação"
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                   <div className="mt-1 text-xs text-muted-foreground">{n.mensagem}</div>
                   <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">
                     {new Date(n.created_at).toLocaleString("pt-BR")}
