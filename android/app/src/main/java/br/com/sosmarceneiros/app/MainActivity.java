@@ -8,11 +8,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
-import com.capacitorjs.plugins.pushnotifications.PushNotificationsPlugin;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebViewClient;
 import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
-import ee.forgr.capacitor.social.login.SocialLoginPlugin;
 
 public class MainActivity extends BridgeActivity implements ModifiedMainActivityForSocialLoginPlugin {
     private static final int PUSH_PERMISSION_REQUEST_CODE = 4507;
@@ -22,8 +20,6 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(ExternalBrowserPlugin.class);
-        registerPlugin(PushNotificationsPlugin.class);
-        registerPlugin(SocialLoginPlugin.class);
         super.onCreate(savedInstanceState);
         clearWebViewCache();
         installSOSPushBridge();
@@ -225,7 +221,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
 
         if (!isAuthCallback) return;
 
-        Uri.Builder callback = Uri.parse("https://sosmarceneiros.com.br/auth/callback").buildUpon();
+        Uri.Builder callback = Uri.parse("https://www.sosmarceneiros.com.br/auth/callback").buildUpon();
         String query = data.getEncodedQuery();
         String fragment = data.getEncodedFragment();
 
@@ -254,12 +250,14 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         if (path == null || path.trim().isEmpty()) path = "/app/notificacoes";
 
         String targetUrl;
-        if (path.startsWith("https://sosmarceneiros.com.br")) {
+        if (path.startsWith("https://www.sosmarceneiros.com.br")) {
             targetUrl = path;
+        } else if (path.startsWith("https://sosmarceneiros.com.br")) {
+            targetUrl = path.replaceFirst("https://sosmarceneiros.com.br", "https://www.sosmarceneiros.com.br");
         } else if (path.startsWith("http://") || path.startsWith("https://")) {
-            targetUrl = "https://sosmarceneiros.com.br/app/notificacoes";
+            targetUrl = "https://www.sosmarceneiros.com.br/app/notificacoes";
         } else {
-            targetUrl = "https://sosmarceneiros.com.br" + (path.startsWith("/") ? path : "/" + path);
+            targetUrl = "https://www.sosmarceneiros.com.br" + (path.startsWith("/") ? path : "/" + path);
         }
 
         if (getBridge() == null || getBridge().getWebView() == null) {
@@ -278,7 +276,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         if (intent.getData() != null) return;
         if (intent.hasExtra("sos_push_path")) return;
 
-        String homeUrl = "https://sosmarceneiros.com.br/app";
+        String homeUrl = "https://www.sosmarceneiros.com.br/app";
         if (getBridge() == null || getBridge().getWebView() == null) {
             getWindow()
                 .getDecorView()
