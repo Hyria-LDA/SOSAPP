@@ -164,6 +164,9 @@ export type Database = {
           ordem: number
           planos_alvo: string[]
           subtitulo: string | null
+          target_city: string | null
+          target_scope: string
+          target_uf: string | null
           titulo: string | null
           updated_at: string
           views: number
@@ -185,6 +188,9 @@ export type Database = {
           ordem?: number
           planos_alvo?: string[]
           subtitulo?: string | null
+          target_city?: string | null
+          target_scope?: string
+          target_uf?: string | null
           titulo?: string | null
           updated_at?: string
           views?: number
@@ -206,6 +212,9 @@ export type Database = {
           ordem?: number
           planos_alvo?: string[]
           subtitulo?: string | null
+          target_city?: string | null
+          target_scope?: string
+          target_uf?: string | null
           titulo?: string | null
           updated_at?: string
           views?: number

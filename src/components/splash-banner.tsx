@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { bannerMatchesAudience, getCurrentBannerAudience } from "@/lib/banner-targeting";
 
 type SplashBannerData = {
   id: string;
@@ -52,12 +53,13 @@ export function SplashBannerGate() {
         _user_id: u.user.id,
       });
       const slug = ((status as any)?.plano?.slug as string) ?? "free";
+      const audience = await getCurrentBannerAudience();
 
       const nowIso = new Date().toISOString();
       const { data } = await supabase
         .from("banners" as any)
         .select(
-          "id, titulo, subtitulo, imagem_url, link, botao_texto, duracao_segundos, delay_segundos, intervalo_minutos, planos_alvo, data_inicio, data_fim",
+          "id, titulo, subtitulo, imagem_url, link, botao_texto, duracao_segundos, delay_segundos, intervalo_minutos, planos_alvo, data_inicio, data_fim, target_scope, target_uf, target_city",
         )
         .eq("ativo", true)
         .eq("exibir_abertura", true)
@@ -66,6 +68,7 @@ export function SplashBannerGate() {
       const list = (data ?? []).filter((b: any) => {
         if (b.data_inicio && b.data_inicio > nowIso) return false;
         if (b.data_fim && b.data_fim < nowIso) return false;
+        if (!bannerMatchesAudience(b, audience)) return false;
         const alvo: string[] = Array.isArray(b.planos_alvo) ? b.planos_alvo : [];
         if (alvo.length === 0) return true;
         return alvo.includes(slug);
@@ -126,7 +129,13 @@ export function SplashBannerGate() {
           {image}
         </a>
       ) : (
-        <Link to={banner.link as any} onClick={() => { trackClick(); setOpen(false); }}>
+        <Link
+          to={banner.link as any}
+          onClick={() => {
+            trackClick();
+            setOpen(false);
+          }}
+        >
           {image}
         </Link>
       )
@@ -143,14 +152,13 @@ export function SplashBannerGate() {
         {wrappedImage}
         {(banner.titulo || banner.subtitulo || banner.botao_texto) && (
           <div className="p-4">
-            {banner.titulo && (
-              <div className="text-base font-black">{banner.titulo}</div>
-            )}
+            {banner.titulo && <div className="text-base font-black">{banner.titulo}</div>}
             {banner.subtitulo && (
               <div className="mt-0.5 text-sm text-muted-foreground">{banner.subtitulo}</div>
             )}
-            {banner.botao_texto && banner.link && (
-              isExternal ? (
+            {banner.botao_texto &&
+              banner.link &&
+              (isExternal ? (
                 <a
                   href={banner.link}
                   target="_blank"
@@ -163,13 +171,15 @@ export function SplashBannerGate() {
               ) : (
                 <Link
                   to={banner.link as any}
-                  onClick={() => { trackClick(); setOpen(false); }}
+                  onClick={() => {
+                    trackClick();
+                    setOpen(false);
+                  }}
                   className="mt-3 inline-block rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
                 >
                   {banner.botao_texto}
                 </Link>
-              )
-            )}
+              ))}
           </div>
         )}
       </div>

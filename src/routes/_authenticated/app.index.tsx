@@ -7,6 +7,11 @@ import { useGeolocation } from "@/hooks/use-geolocation";
 import { Logo } from "@/components/logo";
 import { SplashBannerGate } from "@/components/splash-banner";
 import { BrilhanteSelo } from "@/components/premium-badge";
+import {
+  bannerMatchesAudience,
+  getCurrentBannerAudience,
+  type BannerTarget,
+} from "@/lib/banner-targeting";
 import { formatDimensions } from "@/lib/material-dimensions";
 import {
   Carousel,
@@ -19,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/app/")({
   component: Home,
 });
 
-type Banner = {
+type Banner = BannerTarget & {
   id: string;
   titulo: string | null;
   subtitulo: string | null;
@@ -74,15 +79,21 @@ function Home() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: bannerAudience } = useQuery({
+    queryKey: ["banner-audience"],
+    queryFn: getCurrentBannerAudience,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: banners } = useQuery({
-    queryKey: ["home-banners", userPlanSlug ?? "free"],
-    enabled: !!userPlanSlug,
+    queryKey: ["home-banners", userPlanSlug ?? "free", bannerAudience],
+    enabled: !!userPlanSlug && bannerAudience !== undefined,
     queryFn: async () => {
       const nowIso = new Date().toISOString();
       const { data, error } = await supabase
         .from("banners" as any)
         .select(
-          "id, titulo, subtitulo, imagem_url, link, botao_texto, duracao_segundos, planos_alvo, data_inicio, data_fim, exibir_abertura",
+          "id, titulo, subtitulo, imagem_url, link, botao_texto, duracao_segundos, planos_alvo, data_inicio, data_fim, exibir_abertura, target_scope, target_uf, target_city",
         )
         .eq("ativo", true)
         .order("ordem", { ascending: true });
@@ -92,6 +103,7 @@ function Home() {
         if (b.exibir_abertura) return false; // splash apenas
         if (b.data_inicio && b.data_inicio > nowIso) return false;
         if (b.data_fim && b.data_fim < nowIso) return false;
+        if (!bannerMatchesAudience(b, bannerAudience ?? null)) return false;
         const alvo: string[] = Array.isArray(b.planos_alvo) ? b.planos_alvo : [];
         if (alvo.length === 0) return true;
         return alvo.includes(slug);

@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BannerImageCropper } from "@/components/banner-image-cropper";
-
+import type { BannerTargetScope } from "@/lib/banner-targeting";
 
 type Banner = {
   id: string;
@@ -36,7 +36,46 @@ type Banner = {
   delay_segundos: number;
   intervalo_minutos: number;
   planos_alvo: string[] | null;
+  target_scope: BannerTargetScope;
+  target_uf: string | null;
+  target_city: string | null;
 };
+
+const UFS = [
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+];
+
+function targetLabel(banner: Banner) {
+  if (banner.target_scope === "city") return `${banner.target_city}/${banner.target_uf}`;
+  if (banner.target_scope === "state") return `Estado: ${banner.target_uf}`;
+  return "Todo o Brasil";
+}
 
 const PLANOS_DISPONIVEIS: { slug: string; nome: string }[] = [
   { slug: "free", nome: "Free" },
@@ -44,7 +83,6 @@ const PLANOS_DISPONIVEIS: { slug: string; nome: string }[] = [
   { slug: "ultra", nome: "Ultra" },
   { slug: "premium", nome: "Brilhante" },
 ];
-
 
 export const Route = createFileRoute("/_authenticated/app/admin/banners")({
   beforeLoad: async () => {
@@ -168,9 +206,7 @@ function AdminBanners() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      {b.titulo && (
-                        <div className="truncate font-bold">{b.titulo}</div>
-                      )}
+                      {b.titulo && <div className="truncate font-bold">{b.titulo}</div>}
                       {b.subtitulo && (
                         <div className="truncate text-xs text-muted-foreground">{b.subtitulo}</div>
                       )}
@@ -193,6 +229,7 @@ function AdminBanners() {
                     </span>
                     <span>CTR {ctr}</span>
                     <span>Ordem {b.ordem}</span>
+                    <span>📍 {targetLabel(b)}</span>
                   </div>
                   {(b.data_inicio || b.data_fim) && (
                     <div className="mt-1 text-[11px] text-muted-foreground">
@@ -294,6 +331,9 @@ function BannerForm({
   const [planosAlvo, setPlanosAlvo] = useState<string[]>(
     Array.isArray(banner?.planos_alvo) ? (banner!.planos_alvo as string[]) : [],
   );
+  const [targetScope, setTargetScope] = useState<BannerTargetScope>(banner?.target_scope ?? "all");
+  const [targetUf, setTargetUf] = useState(banner?.target_uf ?? "");
+  const [targetCity, setTargetCity] = useState(banner?.target_city ?? "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -346,10 +386,17 @@ function BannerForm({
     setCropFile(file);
   }
 
-
   async function save() {
     if (!imagemUrl) {
       toast.error("Adicione uma imagem");
+      return;
+    }
+    if (targetScope !== "all" && !targetUf) {
+      toast.error("Selecione a UF");
+      return;
+    }
+    if (targetScope === "city" && !targetCity.trim()) {
+      toast.error("Informe a cidade");
       return;
     }
     setSaving(true);
@@ -369,7 +416,9 @@ function BannerForm({
         delay_segundos: Math.max(0, Math.min(600, Number(delaySegundos) || 0)),
         intervalo_minutos: Math.max(0, Math.min(1440, Number(intervaloMinutos) || 0)),
         planos_alvo: planosAlvo,
-
+        target_scope: targetScope,
+        target_uf: targetScope === "all" ? null : targetUf,
+        target_city: targetScope === "city" ? targetCity.trim().replace(/\s+/g, " ") : null,
       };
       if (banner) {
         const { error } = await supabase
@@ -438,7 +487,9 @@ function BannerForm({
                     src={imagemPreview}
                     alt="preview"
                     className="mx-auto max-h-44 rounded-xl object-cover"
-                    onError={() => console.warn("[admin-banners] preview failed", { src: imagemPreview })}
+                    onError={() =>
+                      console.warn("[admin-banners] preview failed", { src: imagemPreview })
+                    }
                   />
                   <p className="mt-2 text-center text-xs text-muted-foreground">
                     Clique para trocar
@@ -619,6 +670,46 @@ function BannerForm({
             </p>
           </Field>
 
+          <Field label="Abrangência regional">
+            <select
+              value={targetScope}
+              onChange={(e) => setTargetScope(e.target.value as BannerTargetScope)}
+              className={inputCls}
+            >
+              <option value="all">Todo o Brasil</option>
+              <option value="state">Estado</option>
+              <option value="city">Cidade</option>
+            </select>
+          </Field>
+
+          {targetScope !== "all" && (
+            <Field label="UF *">
+              <select
+                value={targetUf}
+                onChange={(e) => setTargetUf(e.target.value)}
+                className={inputCls}
+              >
+                <option value="">Selecione</option>
+                {UFS.map((uf) => (
+                  <option key={uf} value={uf}>
+                    {uf}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+
+          {targetScope === "city" && (
+            <Field label="Cidade *">
+              <input
+                value={targetCity}
+                onChange={(e) => setTargetCity(e.target.value)}
+                className={inputCls}
+                placeholder="Ex: Belo Horizonte"
+              />
+            </Field>
+          )}
+
           <div className="rounded-2xl border border-border bg-card p-3">
             <Field label="Banner de abertura (tela cheia)">
               <button
@@ -629,7 +720,9 @@ function BannerForm({
                 {exibirAbertura ? "✅ Exibir na abertura do app" : "❌ Não exibir na abertura"}
               </button>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Quando ativo, aparece em tela cheia ao abrir o app (respeitando a segmentação por plano acima — ideal para banner de upgrade para usuários Free). O usuário não pode fechar antes do tempo de exibição terminar.
+                Quando ativo, aparece em tela cheia ao abrir o app (respeitando a segmentação por
+                plano acima — ideal para banner de upgrade para usuários Free). O usuário não pode
+                fechar antes do tempo de exibição terminar.
               </p>
             </Field>
 
@@ -661,7 +754,8 @@ function BannerForm({
                     />
                   </div>
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    Tempo que o usuário precisa ficar no app antes do banner aparecer. 0 = aparece imediatamente.
+                    Tempo que o usuário precisa ficar no app antes do banner aparecer. 0 = aparece
+                    imediatamente.
                   </p>
                 </Field>
 
@@ -692,14 +786,14 @@ function BannerForm({
                       />
                     </div>
                     <p className="mt-1 text-[11px] text-muted-foreground">
-                      Reexibir o banner enquanto o usuário estiver no app. 0 = aparece apenas uma vez por sessão.
+                      Reexibir o banner enquanto o usuário estiver no app. 0 = aparece apenas uma
+                      vez por sessão.
                     </p>
                   </Field>
                 </div>
               </div>
             )}
           </div>
-
 
           {/* Pré-visualização */}
           {imagemUrl && imagemPreview && (
@@ -713,7 +807,9 @@ function BannerForm({
                   alt=""
                   className="w-full object-cover"
                   style={{ aspectRatio: "16 / 9" }}
-                  onError={() => console.warn("[admin-banners] preview2 failed", { src: imagemPreview })}
+                  onError={() =>
+                    console.warn("[admin-banners] preview2 failed", { src: imagemPreview })
+                  }
                 />
                 <div className="p-4">
                   <div className="font-black">{titulo || "Título"}</div>
@@ -742,7 +838,6 @@ function BannerForm({
           )}
 
           <div className="flex gap-2 pt-2">
-
             <button
               onClick={onClose}
               className="h-12 flex-1 rounded-xl bg-secondary text-sm font-bold"
