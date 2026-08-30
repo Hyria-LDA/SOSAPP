@@ -143,29 +143,18 @@ function NovoVendedorModal({ onClose, qc }: { onClose: () => void; qc: any }) {
     }
     setSaving(true);
     try {
-      // 1. cria usuário via signUp
-      const { data: signUp, error: sErr } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.senha,
-        options: { data: { full_name: form.nome } },
+      const { data, error } = await supabase.functions.invoke("admin-create-partner", {
+        body: {
+          nome: form.nome,
+          email: form.email,
+          telefone: form.telefone,
+          senha: form.senha,
+          codigo: form.codigo,
+          comissao_valor: Number(form.comissao_valor) || 0,
+        },
       });
-      if (sErr) throw sErr;
-      const uid = signUp.user?.id;
-      if (!uid) throw new Error("Falha ao criar usuário");
-
-      // 2. cria registro de vendedor parceiro
-      const { error: vErr } = await supabase.from("vendedores_parceiros" as any).insert({
-        user_id: uid,
-        nome: form.nome,
-        email: form.email,
-        telefone: form.telefone || null,
-        codigo: form.codigo.toUpperCase().replace(/\s/g, ""),
-        comissao_valor: Number(form.comissao_valor) || 0,
-      });
-      if (vErr) throw vErr;
-
-      // 3. atribui role 'vendedor'
-      await supabase.from("user_roles").insert({ user_id: uid, role: "vendedor" as any });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || "Erro ao criar vendedor");
 
       toast.success("Vendedor criado!");
       qc.invalidateQueries({ queryKey: ["admin-vendedores"] });
