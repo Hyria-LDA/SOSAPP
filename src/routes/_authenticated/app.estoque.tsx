@@ -84,11 +84,9 @@ function Estoque() {
           .update({ status: "vendido", valor_vendido: valor ?? null })
           .eq("id", id);
       }
-      // renovar: empurra created_at para agora (resetando os 30 dias)
-      return supabase
-        .from("materiais")
-        .update({ status: "ativo", created_at: new Date().toISOString() })
-        .eq("id", id);
+      const { data, error } = await supabase.rpc("renew_material", { _material_id: id });
+      if (error) throw error;
+      return { data, error: null };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["meu-estoque"] });
@@ -188,15 +186,18 @@ function Estoque() {
                   <MoreVertical className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
+              {tab === "expirado" && (
+                <button
+                  type="button"
+                  onClick={() => mut.mutate({ id: m.id, action: "renovar" })}
+                  disabled={mut.isPending}
+                  className="flex w-full items-center justify-center gap-2 border-t border-border bg-primary/10 py-3 text-xs font-black text-primary disabled:opacity-60"
+                >
+                  <RefreshCw className="h-4 w-4" /> Renovar anúncio
+                </button>
+              )}
               {open === m.id && (
                 <div className="grid grid-cols-3 border-t border-border">
-                  {tab === "expirado" && (
-                    <Action
-                      icon={RefreshCw}
-                      label="Renovar"
-                      onClick={() => mut.mutate({ id: m.id, action: "renovar" })}
-                    />
-                  )}
                   {tab !== "vendido" && (
                     <Action
                       icon={CheckCircle2}

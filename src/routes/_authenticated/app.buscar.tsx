@@ -168,7 +168,8 @@ function Buscar() {
         .select(
           "id, padrao, fabricante, fabricante_id, padrao_id, espessura_mm, comprimento_cm, largura_cm, preco, area_m2, valor_m2, cidade, estado, latitude, longitude, created_at, grain_direction, quantidade, fotos_materiais(url, ordem)",
         )
-        .eq("status", "ativo");
+        .eq("status", "ativo")
+        .gt("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
       if (params.padrao_id) query = query.eq("padrao_id", params.padrao_id);
       if (params.fabricante_id) query = query.eq("fabricante_id", params.fabricante_id);
       if (espessurasSel.length) query = query.in("espessura_mm", espessurasSel);

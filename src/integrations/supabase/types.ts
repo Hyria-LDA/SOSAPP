@@ -1310,6 +1310,10 @@ export type Database = {
               preco: number
             }[]
           }
+      renew_material: {
+        Args: { _material_id: string }
+        Returns: Json
+      }
       materiais_planos: {
         Args: { _ids: string[] }
         Returns: {
