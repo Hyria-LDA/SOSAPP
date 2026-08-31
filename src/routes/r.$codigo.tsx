@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
+import { buildPartnerInstallLink } from "@/lib/partner-branch";
 
 export const Route = createFileRoute("/r/$codigo")({
   component: RefLanding,
@@ -24,6 +26,12 @@ function RefLanding() {
       } catch {
         // ignora — não bloqueia o usuário
       } finally {
+        const isMobileBrowser =
+          /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !Capacitor.isNativePlatform();
+        if (isMobileBrowser) {
+          window.location.replace(buildPartnerInstallLink(codigo));
+          return;
+        }
         navigate({ to: "/auth", replace: true });
       }
     })();

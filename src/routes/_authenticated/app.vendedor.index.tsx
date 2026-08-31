@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Copy, Users, FileText, CheckCircle2, Sparkles, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { buildPartnerInstallLink } from "@/lib/partner-branch";
+import { buildPartnerReferralLink } from "@/lib/partner-branch";
 
 export const Route = createFileRoute("/_authenticated/app/vendedor/")({
   beforeLoad: async () => {
@@ -48,7 +48,7 @@ function VendedorDash() {
 
   if (!data) return <div className="p-6 text-sm text-muted-foreground">Carregando…</div>;
 
-  const link = buildPartnerInstallLink(data.vendedor.codigo);
+  const link = buildPartnerReferralLink(data.vendedor.codigo);
   const m = data.metrics ?? {};
 
   const copyLink = async () => {

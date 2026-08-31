@@ -21,6 +21,11 @@ export function buildPartnerInstallLink(code: string) {
   return url.toString();
 }
 
+export function buildPartnerReferralLink(code: string) {
+  const normalizedCode = code.trim().toUpperCase();
+  return `https://www.sosmarceneiros.com.br/r/${encodeURIComponent(normalizedCode)}`;
+}
+
 function installationId() {
   let value = localStorage.getItem(INSTALLATION_ID_KEY);
   if (!value) {
