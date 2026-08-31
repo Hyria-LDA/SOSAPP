@@ -25,15 +25,15 @@ function RefLanding() {
         });
       } catch {
         // ignora — não bloqueia o usuário
-      } finally {
-        const isMobileBrowser =
-          /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !Capacitor.isNativePlatform();
-        if (isMobileBrowser) {
-          window.location.replace(buildPartnerInstallLink(codigo));
-          return;
-        }
-        navigate({ to: "/auth", replace: true });
       }
+
+      const isMobileBrowser =
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !Capacitor.isNativePlatform();
+      if (isMobileBrowser) {
+        window.location.replace(buildPartnerInstallLink(codigo));
+        return;
+      }
+      navigate({ to: "/auth", replace: true });
     })();
   }, [codigo, navigate]);
 

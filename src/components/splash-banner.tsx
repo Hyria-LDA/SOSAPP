@@ -13,6 +13,7 @@ type SplashBannerData = {
   duracao_segundos: number;
   delay_segundos: number;
   intervalo_minutos: number;
+  banner_format: "horizontal" | "vertical";
 };
 
 const SESSION_KEY = "splash_banner_shown";
@@ -59,7 +60,7 @@ export function SplashBannerGate() {
       const { data } = await supabase
         .from("banners" as any)
         .select(
-          "id, titulo, subtitulo, imagem_url, link, botao_texto, duracao_segundos, delay_segundos, intervalo_minutos, planos_alvo, data_inicio, data_fim, target_scope, target_uf, target_city",
+          "id, titulo, subtitulo, imagem_url, link, botao_texto, duracao_segundos, delay_segundos, intervalo_minutos, planos_alvo, data_inicio, data_fim, target_scope, target_uf, target_city, banner_format",
         )
         .eq("ativo", true)
         .eq("exibir_abertura", true)
@@ -112,13 +113,14 @@ export function SplashBannerGate() {
     supabase.rpc("increment_banner_click" as any, { _banner_id: banner.id }).then(() => {});
   };
   const isExternal = banner.link?.startsWith("http");
+  const isVertical = banner.banner_format === "vertical";
 
   const image = (
     <img
       src={banner.imagem_url}
       alt={banner.titulo ?? ""}
-      className="w-full object-cover"
-      style={{ aspectRatio: "16 / 9" }}
+      className={isVertical ? "h-full w-full object-cover" : "w-full object-cover"}
+      style={{ aspectRatio: isVertical ? "9 / 16" : "16 / 9" }}
     />
   );
 
@@ -144,8 +146,14 @@ export function SplashBannerGate() {
     );
 
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-5 backdrop-blur-sm">
-      <div className="relative w-full max-w-sm overflow-hidden rounded-3xl bg-card shadow-pop">
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/80 p-3 backdrop-blur-sm">
+      <div
+        className={`relative w-full overflow-hidden bg-card shadow-pop ${
+          isVertical
+            ? "max-h-[calc(100dvh-1.5rem)] max-w-[calc((100dvh-1.5rem)*9/16)] rounded-2xl"
+            : "max-w-sm rounded-3xl"
+        }`}
+      >
         <div className="absolute left-3 top-3 z-10 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-bold text-white">
           {remaining}s
         </div>

@@ -1,14 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { X, ZoomIn, ZoomOut, RotateCcw, Smartphone, Monitor } from "lucide-react";
 
-// Proporção alvo do banner: 16:9 (mesma do carrossel da home)
-export const BANNER_ASPECT = 16 / 9;
-// Resolução final exportada (cobre desktop retina)
-export const BANNER_OUT_W = 1600;
-export const BANNER_OUT_H = Math.round(BANNER_OUT_W / BANNER_ASPECT); // 900
-
 type Props = {
   file: File;
+  format?: "horizontal" | "vertical";
   onCancel: () => void;
   onConfirm: (blob: Blob, mime: string, ext: string) => void;
 };
@@ -18,7 +13,10 @@ type Props = {
  * geramos um PNG/WEBP recortado em 1600×900, centralizado, sem distorção.
  * Imagens menores são ampliadas; maiores são reduzidas — sempre `cover`.
  */
-export function BannerImageCropper({ file, onCancel, onConfirm }: Props) {
+export function BannerImageCropper({ file, format = "horizontal", onCancel, onConfirm }: Props) {
+  const bannerAspect = format === "vertical" ? 9 / 16 : 16 / 9;
+  const outputWidth = format === "vertical" ? 900 : 1600;
+  const outputHeight = format === "vertical" ? 1600 : 900;
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [warn, setWarn] = useState<string | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -37,7 +35,7 @@ export function BannerImageCropper({ file, onCancel, onConfirm }: Props) {
     i.onload = () => {
       setImg(i);
       const ratio = i.width / i.height;
-      if (Math.abs(ratio - BANNER_ASPECT) / BANNER_ASPECT > 0.6) {
+      if (Math.abs(ratio - bannerAspect) / bannerAspect > 0.6) {
         setWarn(
           "Esta imagem possui proporções muito diferentes. Ajuste o enquadramento antes de publicar.",
         );
@@ -46,7 +44,7 @@ export function BannerImageCropper({ file, onCancel, onConfirm }: Props) {
     i.onerror = () => setWarn("Não foi possível ler esta imagem.");
     i.src = url;
     return () => URL.revokeObjectURL(url);
-  }, [file]);
+  }, [file, bannerAspect]);
 
   // Mede viewport e calcula minScale (cover)
   useEffect(() => {
@@ -83,7 +81,6 @@ export function BannerImageCropper({ file, onCancel, onConfirm }: Props) {
     };
   }
 
-
   function applyScale(next: number) {
     const c = clamp(next, pos);
     setScale(c.scale);
@@ -114,17 +111,17 @@ export function BannerImageCropper({ file, onCancel, onConfirm }: Props) {
     setSaving(true);
     try {
       const canvas = document.createElement("canvas");
-      canvas.width = BANNER_OUT_W;
-      canvas.height = BANNER_OUT_H;
+      canvas.width = outputWidth;
+      canvas.height = outputHeight;
       const ctx = canvas.getContext("2d")!;
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       // Mapeia a transformação do viewport para a saída
-      const k = BANNER_OUT_W / vp.w; // mesma proporção em y por causa do aspect
+      const k = outputWidth / vp.w;
       const drawW = img.width * scale * k;
       const drawH = img.height * scale * k;
-      const cx = BANNER_OUT_W / 2 + pos.x * k;
-      const cy = BANNER_OUT_H / 2 + pos.y * k;
+      const cx = outputWidth / 2 + pos.x * k;
+      const cy = outputHeight / 2 + pos.y * k;
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
       const blob: Blob | null = await new Promise((res) =>
@@ -167,7 +164,7 @@ export function BannerImageCropper({ file, onCancel, onConfirm }: Props) {
             <strong>região central</strong>.
           </p>
 
-          {/* Viewport de crop 16:9 */}
+          {/* Viewport de recorte conforme o formato escolhido */}
           <div
             ref={viewportRef}
             onPointerDown={onPointerDown}
@@ -176,7 +173,7 @@ export function BannerImageCropper({ file, onCancel, onConfirm }: Props) {
             onPointerCancel={onPointerUp}
             onWheel={onWheel}
             className="relative w-full touch-none select-none overflow-hidden rounded-2xl bg-black"
-            style={{ aspectRatio: "16 / 9", cursor: dragRef.current ? "grabbing" : "grab" }}
+            style={{ aspectRatio: bannerAspect, cursor: dragRef.current ? "grabbing" : "grab" }}
           >
             {img && vp.w > 0 && (
               <img
@@ -272,6 +269,7 @@ export function BannerImageCropper({ file, onCancel, onConfirm }: Props) {
               pos={pos}
               vp={vp}
               maxWidth={device === "mobile" ? 360 : 720}
+              aspectRatio={bannerAspect}
             />
           </div>
 
@@ -302,19 +300,18 @@ function LivePreview({
   pos,
   vp,
   maxWidth,
+  aspectRatio,
 }: {
   img: HTMLImageElement | null;
   scale: number;
   pos: { x: number; y: number };
   vp: { w: number; h: number };
   maxWidth: number;
+  aspectRatio: number;
 }) {
   if (!img || vp.w === 0) {
     return (
-      <div
-        className="rounded-2xl bg-muted"
-        style={{ maxWidth, aspectRatio: "16 / 9", width: "100%" }}
-      />
+      <div className="rounded-2xl bg-muted" style={{ maxWidth, aspectRatio, width: "100%" }} />
     );
   }
   // Escala o crop para o tamanho do preview
@@ -323,7 +320,7 @@ function LivePreview({
     <div className="mx-auto" style={{ maxWidth, width: "100%" }}>
       <div
         className="relative w-full overflow-hidden rounded-2xl bg-black shadow-card"
-        style={{ aspectRatio: "16 / 9" }}
+        style={{ aspectRatio }}
       >
         <img
           src={img.src}

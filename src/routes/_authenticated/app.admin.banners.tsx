@@ -39,6 +39,7 @@ type Banner = {
   target_scope: BannerTargetScope;
   target_uf: string | null;
   target_city: string | null;
+  banner_format: "horizontal" | "vertical";
 };
 
 const UFS = [
@@ -229,6 +230,9 @@ function AdminBanners() {
                     </span>
                     <span>CTR {ctr}</span>
                     <span>Ordem {b.ordem}</span>
+                    <span>
+                      {b.banner_format === "vertical" ? "📱 Vertical 9:16" : "▰ Horizontal"}
+                    </span>
                     <span>📍 {targetLabel(b)}</span>
                   </div>
                   {(b.data_inicio || b.data_fim) && (
@@ -334,6 +338,9 @@ function BannerForm({
   const [targetScope, setTargetScope] = useState<BannerTargetScope>(banner?.target_scope ?? "all");
   const [targetUf, setTargetUf] = useState(banner?.target_uf ?? "");
   const [targetCity, setTargetCity] = useState(banner?.target_city ?? "");
+  const [bannerFormat, setBannerFormat] = useState<"horizontal" | "vertical">(
+    banner?.banner_format ?? "horizontal",
+  );
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -411,7 +418,6 @@ function BannerForm({
         ordem,
         data_inicio: dataInicio ? new Date(dataInicio).toISOString() : null,
         data_fim: dataFim ? new Date(dataFim).toISOString() : null,
-        exibir_abertura: exibirAbertura,
         duracao_segundos: Math.max(1, Math.min(60, Number(duracaoSegundos) || 10)),
         delay_segundos: Math.max(0, Math.min(600, Number(delaySegundos) || 0)),
         intervalo_minutos: Math.max(0, Math.min(1440, Number(intervaloMinutos) || 0)),
@@ -419,6 +425,8 @@ function BannerForm({
         target_scope: targetScope,
         target_uf: targetScope === "all" ? null : targetUf,
         target_city: targetScope === "city" ? targetCity.trim().replace(/\s+/g, " ") : null,
+        banner_format: bannerFormat,
+        exibir_abertura: bannerFormat === "vertical" ? true : exibirAbertura,
       };
       if (banner) {
         const { error } = await supabase
@@ -461,6 +469,31 @@ function BannerForm({
         </div>
 
         <div className="space-y-4 px-5 pb-6">
+          <Field label="Formato do banner">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setBannerFormat("horizontal")}
+                className={`rounded-xl px-3 py-3 text-sm font-bold ${bannerFormat === "horizontal" ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
+              >
+                Horizontal 16:9
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setBannerFormat("vertical");
+                  setExibirAbertura(true);
+                }}
+                className={`rounded-xl px-3 py-3 text-sm font-bold ${bannerFormat === "vertical" ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
+              >
+                Vertical 9:16
+              </button>
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              O formato vertical ocupa a tela na abertura e é ideal para publicidade do plano Free.
+            </p>
+          </Field>
+
           {/* Upload */}
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -806,7 +839,7 @@ function BannerForm({
                   src={imagemPreview}
                   alt=""
                   className="w-full object-cover"
-                  style={{ aspectRatio: "16 / 9" }}
+                  style={{ aspectRatio: bannerFormat === "vertical" ? "9 / 16" : "16 / 9" }}
                   onError={() =>
                     console.warn("[admin-banners] preview2 failed", { src: imagemPreview })
                   }
@@ -829,6 +862,7 @@ function BannerForm({
           {cropFile && (
             <BannerImageCropper
               file={cropFile}
+              format={bannerFormat}
               onCancel={() => setCropFile(null)}
               onConfirm={async (blob, mime, ext) => {
                 setCropFile(null);

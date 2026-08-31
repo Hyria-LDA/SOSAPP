@@ -93,7 +93,7 @@ function Home() {
       const { data, error } = await supabase
         .from("banners" as any)
         .select(
-          "id, titulo, subtitulo, imagem_url, link, botao_texto, duracao_segundos, planos_alvo, data_inicio, data_fim, exibir_abertura, target_scope, target_uf, target_city",
+          "id, titulo, subtitulo, imagem_url, link, botao_texto, duracao_segundos, planos_alvo, data_inicio, data_fim, exibir_abertura, target_scope, target_uf, target_city, banner_format",
         )
         .eq("ativo", true)
         .order("ordem", { ascending: true });
@@ -101,6 +101,7 @@ function Home() {
       const slug = userPlanSlug ?? "free";
       const filtered = (data ?? []).filter((b: any) => {
         if (b.exibir_abertura) return false; // splash apenas
+        if (b.banner_format === "vertical") return false;
         if (b.data_inicio && b.data_inicio > nowIso) return false;
         if (b.data_fim && b.data_fim < nowIso) return false;
         if (!bannerMatchesAudience(b, bannerAudience ?? null)) return false;
