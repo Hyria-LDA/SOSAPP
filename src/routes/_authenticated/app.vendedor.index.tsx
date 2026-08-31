@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Copy, Users, FileText, CheckCircle2, Sparkles, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { buildPartnerInstallLink } from "@/lib/partner-branch";
 
 export const Route = createFileRoute("/_authenticated/app/vendedor/")({
   beforeLoad: async () => {
@@ -47,7 +48,7 @@ function VendedorDash() {
 
   if (!data) return <div className="p-6 text-sm text-muted-foreground">Carregando…</div>;
 
-  const link = `${window.location.origin}/r/${data.vendedor.codigo}`;
+  const link = buildPartnerInstallLink(data.vendedor.codigo);
   const m = data.metrics ?? {};
 
   const copyLink = async () => {
@@ -85,6 +86,7 @@ function VendedorDash() {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
+        <Stat icon={Users} label="Instalações" value={m.instalacoes ?? 0} />
         <Stat icon={Users} label="Acessos ao link" value={m.acessos ?? m.cliques ?? 0} />
         <Stat icon={FileText} label="Cadastros" value={m.cadastros ?? 0} />
         <Stat icon={CheckCircle2} label="Pagantes" value={m.pagantes ?? m.aprovados ?? 0} accent />

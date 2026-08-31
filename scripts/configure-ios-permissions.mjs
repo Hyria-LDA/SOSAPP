@@ -15,7 +15,11 @@ const appDelegate = resolve("ios", "App", "App", "AppDelegate.swift");
 if (existsSync(appDelegate)) {
   let appDelegateSource = readFileSync(appDelegate, "utf8");
 
-  for (const firebaseImport of ["import FirebaseCore", "import FirebaseMessaging"]) {
+  for (const firebaseImport of [
+    "import FirebaseCore",
+    "import FirebaseMessaging",
+    "import BranchSDK",
+  ]) {
     if (!appDelegateSource.includes(firebaseImport)) {
       const importAnchor = "import Capacitor";
       if (!appDelegateSource.includes(importAnchor)) {
@@ -27,6 +31,38 @@ if (existsSync(appDelegate)) {
         `${importAnchor}\n${firebaseImport}`,
       );
     }
+  }
+
+  const launchSignature =
+    "func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {";
+  const branchInit = "Branch.getInstance().initSession(launchOptions: launchOptions)";
+  if (appDelegateSource.includes(launchSignature) && !appDelegateSource.includes(branchInit)) {
+    appDelegateSource = appDelegateSource.replace(
+      launchSignature,
+      `${launchSignature}\n        ${branchInit}`,
+    );
+  }
+
+  const capOpenUrl = "return CAPBridge.handleOpenUrl(url, options)";
+  if (
+    appDelegateSource.includes(capOpenUrl) &&
+    !appDelegateSource.includes("Branch.getInstance().application(app, open: url")
+  ) {
+    appDelegateSource = appDelegateSource.replace(
+      capOpenUrl,
+      `Branch.getInstance().application(app, open: url, options: options)\n        ${capOpenUrl}`,
+    );
+  }
+
+  const capContinue = "return CAPBridge.handleContinueActivity(userActivity, restorationHandler)";
+  if (
+    appDelegateSource.includes(capContinue) &&
+    !appDelegateSource.includes("Branch.getInstance().continue(userActivity)")
+  ) {
+    appDelegateSource = appDelegateSource.replace(
+      capContinue,
+      `Branch.getInstance().continue(userActivity)\n        ${capContinue}`,
+    );
   }
 
   const remoteNotificationMethods = [
@@ -111,6 +147,23 @@ const permissions = {
   NSPhotoLibraryUsageDescription: "Permite escolher fotos das sobras de materiais anunciadas.",
   NSPhotoLibraryAddUsageDescription: "Permite salvar imagens do SOS Marceneiros na sua galeria.",
 };
+
+const branchValues = {
+  branch_key: "key_live_aCFKGgAVvROwIcr6Cb0yDdadxCjCI7XO",
+  branch_app_domain: "4n5y8.app.link",
+};
+
+for (const [key, value] of Object.entries(branchValues)) {
+  const setResult = spawnSync(plistBuddy, ["-c", `Set :${key} ${value}`, infoPlist], {
+    stdio: "ignore",
+  });
+  if (setResult.status !== 0) {
+    const addResult = spawnSync(plistBuddy, ["-c", `Add :${key} string ${value}`, infoPlist], {
+      stdio: "inherit",
+    });
+    if (addResult.status !== 0) process.exit(addResult.status ?? 1);
+  }
+}
 
 for (const [key, value] of Object.entries(permissions)) {
   const setResult = spawnSync(plistBuddy, ["-c", `Set :${key} ${value}`, infoPlist], {

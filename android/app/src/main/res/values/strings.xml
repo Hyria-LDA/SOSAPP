@@ -7,4 +7,5 @@
     <string name="default_notification_channel_id">matches</string>
     <string name="notification_channel_name">SOS Marceneiros</string>
     <string name="notification_channel_description">Avisos de sobras, matches e mensagens importantes.</string>
+    <string name="branch_key">key_live_aCFKGgAVvROwIcr6Cb0yDdadxCjCI7XO</string>
 </resources>

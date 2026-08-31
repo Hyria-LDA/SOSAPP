@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
+        android:name="io.branch.referral.BranchApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -16,6 +17,8 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_notification" />
+        <meta-data android:name="io.branch.sdk.BranchKey" android:value="@string/branch_key" />
+        <meta-data android:name="io.branch.sdk.TestMode" android:value="false" />
 
         <service
             android:name="com.capacitorjs.plugins.pushnotifications.MessagingService"
@@ -77,6 +80,14 @@
                     android:scheme="https"
                     android:host="sosmarceneiros.com.br"
                     android:pathPrefix="/auth/callback" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="4n5y8.app.link" />
+                <data android:scheme="https" android:host="4n5y8-alternate.app.link" />
             </intent-filter>
 
         </activity>

@@ -23,5 +23,8 @@ project(':capgo-capacitor-social-login').projectDir = new File('../node_modules/
 include ':revenuecat-purchases-capacitor'
 project(':revenuecat-purchases-capacitor').projectDir = new File('../node_modules/@revenuecat/purchases-capacitor/android')
 
+include ':capacitor-branch-deep-links'
+project(':capacitor-branch-deep-links').projectDir = new File('../node_modules/capacitor-branch-deep-links/android')
+
 include ':capacitor-push-notifications'
 project(':capacitor-push-notifications').projectDir = new File('../node_modules/@capacitor/push-notifications/android')

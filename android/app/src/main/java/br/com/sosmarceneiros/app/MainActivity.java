@@ -10,6 +10,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebViewClient;
+import co.boundstate.BranchDeepLinks;
 import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
 
 public class MainActivity extends BridgeActivity implements ModifiedMainActivityForSocialLoginPlugin {
@@ -20,6 +21,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(ExternalBrowserPlugin.class);
+        registerPlugin(BranchDeepLinks.class);
         super.onCreate(savedInstanceState);
         clearWebViewCache();
         installSOSPushBridge();
@@ -36,6 +38,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
 
     @Override
     protected void onNewIntent(Intent intent) {
+        setIntent(intent);
         super.onNewIntent(intent);
         openAuthCallbackInWebView(intent);
         openPushPathInWebView(intent);

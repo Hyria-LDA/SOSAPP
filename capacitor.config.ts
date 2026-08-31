@@ -8,6 +8,7 @@ const sharedNativePlugins = [
   "@capawesome/capacitor-badge",
   "@capgo/capacitor-social-login",
   "@revenuecat/purchases-capacitor",
+  "capacitor-branch-deep-links",
 ];
 
 /**

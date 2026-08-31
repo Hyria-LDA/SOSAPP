@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import appCss from "../styles.css?url";
 import { reportAppError } from "../lib/app-error-reporting";
 import { syncInAppPurchaseState } from "../lib/in-app-purchase";
+import { startPartnerBranchAttribution } from "../lib/partner-branch";
 import { Toaster } from "@/components/ui/sonner";
 import { isPasswordRecoveryPending, supabase } from "@/integrations/supabase/client";
 
@@ -362,6 +363,16 @@ function InAppPurchaseSync({ queryClient }: { queryClient: QueryClient }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    void startPartnerBranchAttribution()
+      .then((cleanup) => {
+        stop = cleanup;
+      })
+      .catch((error) => console.warn("[Branch] atribuição indisponível", error));
+    return () => stop?.();
+  }, []);
 
   useEffect(() => {
     let removeDeepLinkListener: (() => void) | undefined;
