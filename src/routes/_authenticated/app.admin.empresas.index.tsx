@@ -1,8 +1,9 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ArrowLeft, Search, Download, MapPin, Building2, Package } from "lucide-react";
+import { ArrowLeft, Search, Download, MapPin, Building2, Package, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/admin/empresas/")({
   beforeLoad: async () => {
@@ -63,6 +64,7 @@ function AdminEmpresas() {
         e.cidade,
         e.estado,
         e.bairro,
+        e.numero_sorte,
       ]
         .filter(Boolean)
         .some((v: string) => String(v).toLowerCase().includes(term));
@@ -112,9 +114,39 @@ function AdminEmpresas() {
     URL.revokeObjectURL(url);
   };
 
+  const copyLuckyNumbers = async () => {
+    const numbers = filtered
+      .map((empresa: any) => empresa.numero_sorte)
+      .filter((numero: unknown) => numero != null)
+      .join("\n");
+    if (!numbers) {
+      toast.error("Nenhum número da sorte encontrado neste filtro.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(numbers);
+      toast.success(`${filtered.length} número(s) copiado(s), um por linha.`);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = numbers;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand("copy");
+      textarea.remove();
+      if (copied) {
+        toast.success(`${filtered.length} número(s) copiado(s), um por linha.`);
+      } else {
+        toast.error("Não foi possível copiar. Use o arquivo CSV.");
+      }
+    }
+  };
+
   return (
     <div className="safe-top px-5 pt-4 pb-10">
-      <header className="flex items-center justify-between gap-2">
+      <header className="flex items-center gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <Link
             to="/app/admin"
@@ -124,20 +156,29 @@ function AdminEmpresas() {
           </Link>
           <h1 className="truncate text-xl font-black">Empresas cadastradas</h1>
         </div>
-        <button
-          onClick={exportCsv}
-          className="flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground"
-        >
-          <Download className="h-4 w-4" /> CSV
-        </button>
       </header>
 
-      <div className="mt-4 flex items-center gap-2 rounded-2xl bg-card px-3 py-2 shadow-card">
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          onClick={copyLuckyNumbers}
+          className="flex h-10 items-center justify-center gap-1 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground"
+        >
+          <Copy className="h-4 w-4" /> Copiar números
+        </button>
+        <button
+          onClick={exportCsv}
+          className="flex h-10 items-center justify-center gap-1 rounded-xl bg-secondary px-3 text-xs font-bold"
+        >
+          <Download className="h-4 w-4" /> Baixar CSV
+        </button>
+      </div>
+
+      <div className="mt-3 flex items-center gap-2 rounded-2xl bg-card px-3 py-2 shadow-card">
         <Search className="h-4 w-4 text-muted-foreground" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar empresa, responsável, cidade…"
+          placeholder="Buscar empresa ou número da sorte…"
           className="w-full bg-transparent text-sm outline-none"
         />
       </div>
