@@ -13,7 +13,6 @@ import { Capacitor } from "@capacitor/core";
 
 import appCss from "../styles.css?url";
 import { reportAppError } from "../lib/app-error-reporting";
-import { syncInAppPurchaseState } from "../lib/in-app-purchase";
 import { startPartnerBranchAttribution } from "../lib/partner-branch";
 import { Toaster } from "@/components/ui/sonner";
 import { isPasswordRecoveryPending, supabase } from "@/integrations/supabase/client";
@@ -335,6 +334,7 @@ function InAppPurchaseSync({ queryClient }: { queryClient: QueryClient }) {
       if (!force && Date.now() - lastSync < sixHours) return;
 
       try {
+        const { syncInAppPurchaseState } = await import("../lib/in-app-purchase");
         await syncInAppPurchaseState();
         if (cancelled) return;
         window.localStorage.setItem(storageKey, String(Date.now()));
