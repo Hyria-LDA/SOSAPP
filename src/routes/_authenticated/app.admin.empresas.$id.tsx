@@ -19,6 +19,7 @@ import {
   Eye,
   Package,
   TrendingUp,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -120,6 +121,7 @@ function EmpresaDetail() {
   }, [e?.observacoes_admin]);
 
   const [showFin, setShowFin] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [finForm, setFinForm] = useState({
     valor: "",
     forma: "PIX",
@@ -198,6 +200,32 @@ function EmpresaDetail() {
     if (error) return toast.error(error.message);
     toast.success("Observações salvas");
     reload();
+  };
+
+  const deleteCompany = async () => {
+    const confirmed = window.confirm(
+      `Excluir permanentemente a empresa "${e.nome_empresa || "sem nome"}"?\n\nA conta, anúncios e dados relacionados serão apagados, e o e-mail poderá ser cadastrado novamente. Esta ação não pode ser desfeita.`,
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    const { data: result, error } = await supabase.functions.invoke("admin-delete-company", {
+      body: { empresa_id: id },
+    });
+    setDeleting(false);
+
+    if (error || !result?.ok) {
+      if (result?.error === "cannot_delete_own_admin_account") {
+        toast.error("Sua própria conta de administrador não pode ser excluída.");
+        return;
+      }
+      toast.error("Não foi possível excluir a empresa.");
+      return;
+    }
+
+    await qc.invalidateQueries({ queryKey: ["admin-empresas-full"] });
+    toast.success("Empresa e conta excluídas. O e-mail já pode ser usado novamente.");
+    navigate({ to: "/app/admin/empresas" });
   };
 
   const addFinanceiro = async () => {
@@ -282,6 +310,9 @@ function EmpresaDetail() {
               </span>
             </div>
             <div className="text-xs text-muted-foreground">{e.responsavel || "—"}</div>
+            <div className="mt-1 text-xs font-bold">
+              Número da sorte: {(e as any).numero_sorte ?? "—"}
+            </div>
             <div className="mt-2 grid grid-cols-1 gap-1 text-xs">
               {e.email && <Row icon={Mail} value={e.email} href={`mailto:${e.email}`} />}
               {e.whatsapp && <Row icon={MessageCircle} value={e.whatsapp} href={wa!} />}
@@ -560,6 +591,23 @@ function EmpresaDetail() {
           <Mini label="Vendidos" value={counts.vendidos} />
           <Mini label="Pausados" value={counts.pausados} />
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-destructive/30 bg-card p-4">
+        <h2 className="font-bold text-destructive">Excluir empresa</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Remove permanentemente a empresa, a conta de acesso e os anúncios. Use apenas para
+          cadastros que realmente devem ser apagados.
+        </p>
+        <button
+          type="button"
+          onClick={deleteCompany}
+          disabled={deleting}
+          className="mt-3 flex h-10 items-center justify-center gap-2 rounded-xl bg-destructive px-4 text-xs font-bold text-destructive-foreground disabled:opacity-60"
+        >
+          <Trash2 className="h-4 w-4" />
+          {deleting ? "Excluindo..." : "Excluir empresa permanentemente"}
+        </button>
       </section>
 
       {/* Histórico */}

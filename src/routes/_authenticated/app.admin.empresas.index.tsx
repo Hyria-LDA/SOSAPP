@@ -19,6 +19,7 @@ export const Route = createFileRoute("/_authenticated/app/admin/empresas/")({
 function AdminEmpresas() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [planFilter, setPlanFilter] = useState<string>("all");
 
   const { data } = useQuery({
     queryKey: ["admin-empresas-full"],
@@ -49,6 +50,9 @@ function AdminEmpresas() {
     const term = q.trim().toLowerCase();
     return (data?.empresas ?? []).filter((e: any) => {
       if (statusFilter !== "all" && e.status !== statusFilter) return false;
+      if (planFilter !== "all" && planKey(e.plano) !== planFilter) {
+        return false;
+      }
       if (!term) return true;
       return [
         e.nome_empresa,
@@ -63,7 +67,7 @@ function AdminEmpresas() {
         .filter(Boolean)
         .some((v: string) => String(v).toLowerCase().includes(term));
     });
-  }, [data, q, statusFilter]);
+  }, [data, q, statusFilter, planFilter]);
 
   const exportCsv = () => {
     const rows = filtered;
@@ -83,6 +87,7 @@ function AdminEmpresas() {
       "latitude",
       "longitude",
       "status",
+      "numero_sorte",
       "plano",
       "plano_vencimento",
       "avaliacao",
@@ -155,6 +160,23 @@ function AdminEmpresas() {
         ))}
       </div>
 
+      <label className="mt-3 block">
+        <span className="mb-1 block text-[11px] font-semibold text-muted-foreground">
+          Filtrar por plano
+        </span>
+        <select
+          value={planFilter}
+          onChange={(e) => setPlanFilter(e.target.value)}
+          className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm outline-none"
+        >
+          <option value="all">Todos os planos</option>
+          <option value="free">Free</option>
+          <option value="tx">TX</option>
+          <option value="ultra">Ultra</option>
+          <option value="premium">Brilhante</option>
+        </select>
+      </label>
+
       <div className="mt-2 text-[11px] text-muted-foreground">{filtered.length} resultado(s)</div>
 
       <div className="mt-2 space-y-2">
@@ -190,7 +212,10 @@ function AdminEmpresas() {
                     {c.ativos} ativos · {c.total} total
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    Plano: <b>{e.plano || "—"}</b>
+                    Plano: <b>{e.plano || "Free"}</b>
+                  </span>
+                  <span className="inline-flex items-center gap-1 font-bold text-foreground">
+                    Nº da sorte: {e.numero_sorte ?? "—"}
                   </span>
                   {e.plano_vencimento && (
                     <span>Venc: {new Date(e.plano_vencimento).toLocaleDateString("pt-BR")}</span>
@@ -223,4 +248,10 @@ function badge(s: string) {
     default:
       return "bg-secondary";
   }
+}
+
+function planKey(value: unknown) {
+  const plan = String(value || "free").toLowerCase();
+  if (plan === "brilhante") return "premium";
+  return plan;
 }
