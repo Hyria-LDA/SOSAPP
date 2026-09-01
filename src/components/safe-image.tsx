@@ -30,6 +30,8 @@ export function SafeImage({ src, fallback = null, alt = "", onError, ...rest }: 
   return (
     <img
       {...rest}
+      loading={rest.loading ?? "lazy"}
+      decoding={rest.decoding ?? "async"}
       src={currentSrc}
       alt={alt}
       onError={async (e) => {

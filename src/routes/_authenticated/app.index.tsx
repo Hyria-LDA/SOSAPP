@@ -301,7 +301,13 @@ function Home() {
             >
               <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-muted">
                 {m.foto ? (
-                  <img src={m.foto} alt={m.padrao} className="h-full w-full object-cover" />
+                  <img
+                    src={m.foto}
+                    alt={m.padrao}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="grid h-full w-full place-items-center text-muted-foreground text-xs">
                     Sem foto
@@ -423,6 +429,8 @@ function BannerSlide({ banner }: { banner: Banner }) {
       <img
         src={banner.imagem_url}
         alt={banner.titulo ?? ""}
+        loading="lazy"
+        decoding="async"
         className={`w-full object-cover ${hasContent ? "h-[82.5%]" : "h-full"}`}
       />
 

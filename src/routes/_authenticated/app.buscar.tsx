@@ -638,7 +638,13 @@ function Buscar() {
               <div className="flex">
                 <div className="h-28 w-28 shrink-0 bg-secondary">
                   {m.foto ? (
-                    <img src={m.foto} alt={m.padrao} className="h-full w-full object-cover" />
+                    <img
+                      src={m.foto}
+                      alt={m.padrao}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <div className="grid h-full place-items-center text-xs text-muted-foreground">
                       sem foto

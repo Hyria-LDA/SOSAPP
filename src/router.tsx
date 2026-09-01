@@ -9,6 +9,12 @@ export const getRouter = () => {
         // Evita refetch ao abrir/fechar teclado virtual no mobile,
         // que causava re-render e perda de foco/scroll nos formulários.
         refetchOnWindowFocus: false,
+        // Reaproveita os dados já carregados ao navegar entre telas.
+        // Atualizações explícitas após criar/editar continuam invalidando o cache.
+        staleTime: 2 * 60 * 1000,
+        gcTime: 30 * 60 * 1000,
+        refetchOnReconnect: true,
+        retry: 1,
       },
     },
   });

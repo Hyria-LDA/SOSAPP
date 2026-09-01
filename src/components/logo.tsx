@@ -18,6 +18,7 @@ export function Logo({
     <img
       src={logoUrl}
       alt="SOS Marceneiros"
+      decoding="async"
       className={cn("w-auto object-contain", height, className)}
     />
   );
