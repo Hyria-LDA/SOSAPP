@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as ExcluirContaRouteImport } from './routes/excluir-conta'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -51,6 +52,11 @@ const TermosRoute = TermosRouteImport.update({
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
   id: '/privacidade',
   path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExcluirContaRoute = ExcluirContaRouteImport.update({
+  id: '/excluir-conta',
+  path: '/excluir-conta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -227,6 +233,7 @@ const AuthenticatedAppAdminEmpresasIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/excluir-conta': typeof ExcluirContaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
@@ -261,6 +268,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/excluir-conta': typeof ExcluirContaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/excluir-conta': typeof ExcluirContaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
@@ -331,6 +340,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/excluir-conta'
     | '/privacidade'
     | '/termos'
     | '/app'
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/excluir-conta'
     | '/privacidade'
     | '/termos'
     | '/onboarding'
@@ -398,6 +409,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/excluir-conta'
     | '/privacidade'
     | '/termos'
     | '/_authenticated/app'
@@ -434,6 +446,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  ExcluirContaRoute: typeof ExcluirContaRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   TermosRoute: typeof TermosRoute
   AuthRedefinirRoute: typeof AuthRedefinirRoute
@@ -454,6 +467,13 @@ declare module '@tanstack/react-router' {
       path: '/privacidade'
       fullPath: '/privacidade'
       preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/excluir-conta': {
+      id: '/excluir-conta'
+      path: '/excluir-conta'
+      fullPath: '/excluir-conta'
+      preLoaderRoute: typeof ExcluirContaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -774,6 +794,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  ExcluirContaRoute: ExcluirContaRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   TermosRoute: TermosRoute,
   AuthRedefinirRoute: AuthRedefinirRoute,

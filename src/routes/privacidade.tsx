@@ -75,7 +75,11 @@ function PrivacyPage() {
           <Section title="8. Seus direitos">
             Você pode solicitar acesso, correção ou exclusão dos seus dados, bem como pedir a
             remoção da sua conta, quando aplicável. Algumas informações podem ser mantidas quando
-            necessário para segurança, prevenção de fraude ou obrigações legais.
+            necessário para segurança, prevenção de fraude ou obrigações legais. Consulte o{" "}
+            <Link to="/excluir-conta" className="font-bold text-primary underline">
+              procedimento para excluir sua conta e seus dados
+            </Link>
+            .
           </Section>
 
           <Section title="9. Contato">
