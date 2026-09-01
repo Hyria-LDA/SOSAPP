@@ -56,12 +56,17 @@ Deno.serve(async (request) => {
 
     const { data: photos, error: photosError } = await admin
       .from("fotos_materiais")
-      .select("url")
+      .select("url,thumbnail_url")
       .eq("material_id", materialId);
     if (photosError) throw photosError;
 
     const paths = [
-      ...new Set((photos ?? []).map((photo) => storagePath(photo.url)).filter(Boolean)),
+      ...new Set(
+        (photos ?? [])
+          .flatMap((photo) => [photo.url, photo.thumbnail_url])
+          .map((value) => storagePath(value ?? ""))
+          .filter(Boolean),
+      ),
     ] as string[];
     if (paths.length > 0) {
       const { error: storageError } = await admin.storage.from("materiais").remove(paths);

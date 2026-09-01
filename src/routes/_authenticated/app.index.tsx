@@ -149,7 +149,7 @@ function Home() {
       const [{ data: fotos }, { data: medidas }] = await Promise.all([
         supabase
           .from("fotos_materiais")
-          .select("material_id, url, ordem")
+          .select("material_id, url, thumbnail_url, ordem")
           .in("material_id", ids)
           .order("ordem", { ascending: true }),
         supabase.from("materiais").select("id, comprimento_cm, largura_cm").in("id", ids),

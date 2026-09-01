@@ -162,7 +162,11 @@ function Perfil() {
       const path = `${u.user.id}/logo-${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from("logos")
-        .upload(path, blob, { contentType: mime, upsert: false });
+        .upload(path, blob, {
+          contentType: mime,
+          cacheControl: "31536000",
+          upsert: false,
+        });
       if (uploadError) throw uploadError;
 
       const { data: publicData } = supabase.storage.from("logos").getPublicUrl(path);

@@ -4,9 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 // New rows store only the storage path. These helpers transparently sign paths
 // on demand with a short TTL while still rendering legacy full URLs as-is.
 
-const SIGNED_TTL_SECONDS = 60 * 60; // 1 hour
+const SIGNED_TTL_SECONDS = 60 * 60 * 24; // 24 horas: melhora o reaproveitamento pelo cache
 
-export type FotoRow = { url: string; ordem: number } | null | undefined;
+export type FotoRow =
+  | { url: string; thumbnail_url?: string | null; ordem: number }
+  | null
+  | undefined;
 
 function isFullUrl(v: string): boolean {
   return /^https?:\/\//i.test(v);
@@ -67,9 +70,10 @@ export async function signMateriaisPaths(values: string[]): Promise<Record<strin
 }
 
 function firstFotoRaw(rows: any): string | null {
-  const arr = (rows ?? []) as { url: string; ordem: number }[];
+  const arr = (rows ?? []) as { url: string; thumbnail_url?: string | null; ordem: number }[];
   if (!arr.length) return null;
-  return [...arr].sort((a, b) => a.ordem - b.ordem)[0]?.url ?? null;
+  const first = [...arr].sort((a, b) => a.ordem - b.ordem)[0];
+  return first?.thumbnail_url || first?.url || null;
 }
 
 /** Attach a `foto` field (signed short-lived URL) to each row from its fotos_materiais. */

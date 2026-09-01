@@ -61,14 +61,15 @@ Deno.serve(async (request) => {
 
     const { data: photos, error: photosError } = await admin
       .from("fotos_materiais")
-      .select("url,materiais!inner(empresa_id)")
+      .select("url,thumbnail_url,materiais!inner(empresa_id)")
       .eq("materiais.empresa_id", empresaId);
     if (photosError) throw photosError;
 
     const materialPaths = [
       ...new Set(
         (photos ?? [])
-          .map((photo) => storagePath(photo.url, "materiais"))
+          .flatMap((photo) => [photo.url, photo.thumbnail_url])
+          .map((value) => storagePath(value ?? "", "materiais"))
           .filter((path): path is string => Boolean(path)),
       ),
     ];

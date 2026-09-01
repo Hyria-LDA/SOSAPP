@@ -31,7 +31,7 @@ function EmpresaPublica() {
       const { data, error } = await supabase
         .from("materiais")
         .select(
-          "id, padrao, fabricante, espessura_mm, preco, area_m2, created_at, fotos_materiais(url, ordem)",
+          "id, padrao, fabricante, espessura_mm, preco, area_m2, created_at, fotos_materiais(url, thumbnail_url, ordem)",
         )
         .eq("empresa_id", id)
         .eq("status", "ativo")

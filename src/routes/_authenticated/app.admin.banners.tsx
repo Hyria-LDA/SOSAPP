@@ -354,7 +354,11 @@ function BannerForm({
       const path = `${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("banners")
-        .upload(path, blob, { contentType: mime, upsert: false });
+        .upload(path, blob, {
+          contentType: mime,
+          cacheControl: "31536000",
+          upsert: false,
+        });
       if (upErr) throw upErr;
       // Persist only the storage path. Short-lived signed URLs are generated at read time.
       setImagemUrl(path);

@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 // on demand with a short TTL and pass through legacy full URLs unchanged for
 // backwards compatibility until the migration normalizes all rows.
 
-const SIGNED_TTL_SECONDS = 60 * 60; // 1 hour
+const SIGNED_TTL_SECONDS = 60 * 60 * 24; // 24 horas: reduz novas URLs e downloads repetidos
 
 function isFullUrl(v: string): boolean {
   return /^https?:\/\//i.test(v);

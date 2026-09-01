@@ -166,7 +166,7 @@ function Buscar() {
       let query = supabase
         .from("materiais")
         .select(
-          "id, padrao, fabricante, fabricante_id, padrao_id, espessura_mm, comprimento_cm, largura_cm, preco, area_m2, valor_m2, cidade, estado, latitude, longitude, created_at, grain_direction, quantidade, fotos_materiais(url, ordem)",
+          "id, padrao, fabricante, fabricante_id, padrao_id, espessura_mm, comprimento_cm, largura_cm, preco, area_m2, valor_m2, cidade, estado, latitude, longitude, created_at, grain_direction, quantidade, fotos_materiais(url, thumbnail_url, ordem)",
         )
         .eq("status", "ativo")
         .gt("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());

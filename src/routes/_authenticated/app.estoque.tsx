@@ -49,7 +49,7 @@ function Estoque() {
       const { data, error } = await supabase
         .from("materiais")
         .select(
-          "id, padrao, fabricante, espessura_mm, comprimento_cm, largura_cm, preco, area_m2, status, views, contatos, valor_vendido, created_at, fotos_materiais(url, ordem)",
+          "id, padrao, fabricante, espessura_mm, comprimento_cm, largura_cm, preco, area_m2, status, views, contatos, valor_vendido, created_at, fotos_materiais(url, thumbnail_url, ordem)",
         )
         .eq("empresa_id", emp.id)
         .eq("status", statusFilter)

@@ -10,13 +10,13 @@ type Props = {
 
 /**
  * Cropper visual com viewport 16:9. O usuário arrasta e dá zoom; ao confirmar,
- * geramos um PNG/WEBP recortado em 1600×900, centralizado, sem distorção.
+ * geramos um WEBP otimizado, centralizado e sem distorção.
  * Imagens menores são ampliadas; maiores são reduzidas — sempre `cover`.
  */
 export function BannerImageCropper({ file, format = "horizontal", onCancel, onConfirm }: Props) {
   const bannerAspect = format === "vertical" ? 9 / 16 : 16 / 9;
-  const outputWidth = format === "vertical" ? 900 : 1600;
-  const outputHeight = format === "vertical" ? 1600 : 900;
+  const outputWidth = format === "vertical" ? 720 : 1280;
+  const outputHeight = format === "vertical" ? 1280 : 720;
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [warn, setWarn] = useState<string | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -125,7 +125,7 @@ export function BannerImageCropper({ file, format = "horizontal", onCancel, onCo
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
       const blob: Blob | null = await new Promise((res) =>
-        canvas.toBlob((b) => res(b), "image/webp", 0.86),
+        canvas.toBlob((b) => res(b), "image/webp", 0.8),
       );
       if (blob && blob.size > 0) {
         onConfirm(blob, "image/webp", "webp");

@@ -414,22 +414,50 @@ function Anunciar() {
         material_id: string;
         empresa_id: string;
         url: string;
+        thumbnail_url: string | null;
         ordem: number;
         needs_ai_analysis: boolean;
         ai_status: "pending";
       }[] = [];
       for (let i = 0; i < photos.length; i++) {
-        const { blob, ext, mime } = await compressImage(photos[i].file);
-        const path = `${emp.id}/${mat.id}/foto-${i + 1}-${Date.now()}.${ext}`;
+        const stamp = Date.now();
+        const { blob, ext, mime } = await compressImage(photos[i].file, {
+          maxDim: 1400,
+          quality: 0.8,
+        });
+        const path = `${emp.id}/${mat.id}/foto-${i + 1}-${stamp}.${ext}`;
         const up = await supabase.storage
           .from("materiais")
-          .upload(path, blob, { contentType: mime, upsert: false });
+          .upload(path, blob, {
+            contentType: mime,
+            cacheControl: "31536000",
+            upsert: false,
+          });
         if (up.error) throw up.error;
         uploadedPaths.push(path);
+
+        let thumbnailPath: string | null = null;
+        if (i === 0) {
+          const thumbnail = await compressImage(photos[i].file, { maxDim: 480, quality: 0.72 });
+          thumbnailPath = `${emp.id}/${mat.id}/thumb-${stamp}.${thumbnail.ext}`;
+          const thumbUpload = await supabase.storage.from("materiais").upload(
+            thumbnailPath,
+            thumbnail.blob,
+            {
+              contentType: thumbnail.mime,
+              cacheControl: "31536000",
+              upsert: false,
+            },
+          );
+          if (thumbUpload.error) throw thumbUpload.error;
+          uploadedPaths.push(thumbnailPath);
+        }
+
         rows.push({
           material_id: mat.id,
           empresa_id: emp.id,
           url: path,
+          thumbnail_url: thumbnailPath,
           ordem: i,
           needs_ai_analysis: true,
           ai_status: "pending",
