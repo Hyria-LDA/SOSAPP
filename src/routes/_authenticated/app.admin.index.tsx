@@ -134,6 +134,19 @@ function Admin() {
       </Link>
 
       <Link
+        to="/app/admin/atualizacao"
+        className="mt-3 flex items-center justify-between rounded-2xl bg-card p-4 shadow-card"
+      >
+        <div>
+          <div className="text-base font-bold">📲 Atualização obrigatória</div>
+          <div className="text-xs text-muted-foreground">
+            Definir o build mínimo aceito no Android e iPhone
+          </div>
+        </div>
+        <span className="text-xl">→</span>
+      </Link>
+
+      <Link
         to="/app/admin/vendedores"
         className="mt-3 flex items-center justify-between rounded-2xl bg-card p-4 shadow-card"
       >

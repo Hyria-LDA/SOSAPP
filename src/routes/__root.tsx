@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ForceUpdateGate } from "@/components/force-update-gate";
 import {
   Outlet,
   createRootRouteWithContext,
@@ -482,6 +483,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <ForceUpdateGate />
       <InAppNotificationListener queryClient={queryClient} />
       <InAppPurchaseSync queryClient={queryClient} />
       <OpenAppBridgePrompt />

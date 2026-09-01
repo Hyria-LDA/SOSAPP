@@ -37,6 +37,7 @@ import { Route as AuthenticatedAppAdminNotificacoesPushRouteImport } from './rou
 import { Route as AuthenticatedAppAdminModeracaoFotosRouteImport } from './routes/_authenticated/app.admin.moderacao-fotos'
 import { Route as AuthenticatedAppAdminDenunciasRouteImport } from './routes/_authenticated/app.admin.denuncias'
 import { Route as AuthenticatedAppAdminBannersRouteImport } from './routes/_authenticated/app.admin.banners'
+import { Route as AuthenticatedAppAdminAtualizacaoRouteImport } from './routes/_authenticated/app.admin.atualizacao'
 import { Route as AuthenticatedAppAdminVendedoresIndexRouteImport } from './routes/_authenticated/app.admin.vendedores.index'
 import { Route as AuthenticatedAppAdminEmpresasIndexRouteImport } from './routes/_authenticated/app.admin.empresas.index'
 import { Route as AuthenticatedAppAdminVendedoresIdRouteImport } from './routes/_authenticated/app.admin.vendedores.$id'
@@ -192,6 +193,12 @@ const AuthenticatedAppAdminBannersRoute =
     path: '/banners',
     getParentRoute: () => AuthenticatedAppAdminRoute,
   } as any)
+const AuthenticatedAppAdminAtualizacaoRoute =
+  AuthenticatedAppAdminAtualizacaoRouteImport.update({
+    id: '/atualizacao',
+    path: '/atualizacao',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
 const AuthenticatedAppAdminVendedoresIndexRoute =
   AuthenticatedAppAdminVendedoresIndexRouteImport.update({
     id: '/vendedores/',
@@ -236,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/app/pedidos': typeof AuthenticatedAppPedidosRoute
   '/app/perfil': typeof AuthenticatedAppPerfilRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/admin/atualizacao': typeof AuthenticatedAppAdminAtualizacaoRoute
   '/app/admin/banners': typeof AuthenticatedAppAdminBannersRoute
   '/app/admin/denuncias': typeof AuthenticatedAppAdminDenunciasRoute
   '/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
@@ -267,6 +275,7 @@ export interface FileRoutesByTo {
   '/app/pedidos': typeof AuthenticatedAppPedidosRoute
   '/app/perfil': typeof AuthenticatedAppPerfilRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/admin/atualizacao': typeof AuthenticatedAppAdminAtualizacaoRoute
   '/app/admin/banners': typeof AuthenticatedAppAdminBannersRoute
   '/app/admin/denuncias': typeof AuthenticatedAppAdminDenunciasRoute
   '/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
@@ -302,6 +311,7 @@ export interface FileRoutesById {
   '/_authenticated/app/pedidos': typeof AuthenticatedAppPedidosRoute
   '/_authenticated/app/perfil': typeof AuthenticatedAppPerfilRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/admin/atualizacao': typeof AuthenticatedAppAdminAtualizacaoRoute
   '/_authenticated/app/admin/banners': typeof AuthenticatedAppAdminBannersRoute
   '/_authenticated/app/admin/denuncias': typeof AuthenticatedAppAdminDenunciasRoute
   '/_authenticated/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
@@ -337,6 +347,7 @@ export interface FileRouteTypes {
     | '/app/pedidos'
     | '/app/perfil'
     | '/app/'
+    | '/app/admin/atualizacao'
     | '/app/admin/banners'
     | '/app/admin/denuncias'
     | '/app/admin/moderacao-fotos'
@@ -368,6 +379,7 @@ export interface FileRouteTypes {
     | '/app/pedidos'
     | '/app/perfil'
     | '/app'
+    | '/app/admin/atualizacao'
     | '/app/admin/banners'
     | '/app/admin/denuncias'
     | '/app/admin/moderacao-fotos'
@@ -402,6 +414,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/pedidos'
     | '/_authenticated/app/perfil'
     | '/_authenticated/app/'
+    | '/_authenticated/app/admin/atualizacao'
     | '/_authenticated/app/admin/banners'
     | '/_authenticated/app/admin/denuncias'
     | '/_authenticated/app/admin/moderacao-fotos'
@@ -625,6 +638,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminBannersRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
+    '/_authenticated/app/admin/atualizacao': {
+      id: '/_authenticated/app/admin/atualizacao'
+      path: '/atualizacao'
+      fullPath: '/app/admin/atualizacao'
+      preLoaderRoute: typeof AuthenticatedAppAdminAtualizacaoRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
     '/_authenticated/app/admin/vendedores/': {
       id: '/_authenticated/app/admin/vendedores/'
       path: '/vendedores'
@@ -657,6 +677,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAppAdminRouteChildren {
+  AuthenticatedAppAdminAtualizacaoRoute: typeof AuthenticatedAppAdminAtualizacaoRoute
   AuthenticatedAppAdminBannersRoute: typeof AuthenticatedAppAdminBannersRoute
   AuthenticatedAppAdminDenunciasRoute: typeof AuthenticatedAppAdminDenunciasRoute
   AuthenticatedAppAdminModeracaoFotosRoute: typeof AuthenticatedAppAdminModeracaoFotosRoute
@@ -670,6 +691,7 @@ interface AuthenticatedAppAdminRouteChildren {
 }
 
 const AuthenticatedAppAdminRouteChildren: AuthenticatedAppAdminRouteChildren = {
+  AuthenticatedAppAdminAtualizacaoRoute: AuthenticatedAppAdminAtualizacaoRoute,
   AuthenticatedAppAdminBannersRoute: AuthenticatedAppAdminBannersRoute,
   AuthenticatedAppAdminDenunciasRoute: AuthenticatedAppAdminDenunciasRoute,
   AuthenticatedAppAdminModeracaoFotosRoute:
