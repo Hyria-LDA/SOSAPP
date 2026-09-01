@@ -6,6 +6,7 @@ export type PlanId = "tx" | "ultra" | "premium";
 
 export type PurchaseResult =
   | { status: "success"; planId: PlanId }
+  | { status: "pending"; message: string }
   | { status: "cancelled" }
   | { status: "error"; message: string }
   | { status: "unsupported"; message: string };
@@ -125,6 +126,46 @@ async function hasPartnerStoreTrialEligibility() {
   return result?.eligible === true;
 }
 
+async function openPartnerAppleOffer(planId: PlanId): Promise<PurchaseResult> {
+  const configuredEnvironment = import.meta.env.VITE_APPLE_OFFER_CODE_ENVIRONMENT
+    ?.trim()
+    .toLowerCase();
+  const environment = configuredEnvironment === "sandbox" ? "sandbox" : "production";
+  const { data, error } = await supabase.rpc(
+    "claim_partner_apple_offer_code" as never,
+    { _plan_slug: planId, _environment: environment } as never,
+  );
+
+  if (error) throw new Error("Nao foi possivel reservar o codigo promocional da Apple.");
+
+  const result = data as {
+    ok?: boolean;
+    error?: string;
+    reserved_plan?: string;
+    redeem_url?: string;
+  } | null;
+
+  if (!result?.ok || !result.redeem_url) {
+    if (result?.error === "no_codes_available") {
+      throw new Error("A promocao foi validada, mas os codigos da Apple acabaram. Tente novamente mais tarde.");
+    }
+    if (result?.error === "offer_already_reserved") {
+      throw new Error(
+        `Seu mes gratuito ja foi reservado para o plano ${result.reserved_plan ?? "escolhido anteriormente"}.`,
+      );
+    }
+    throw new Error("Esta conta nao esta elegivel para a promocao da Apple.");
+  }
+
+  const { Browser } = await import("@capacitor/browser");
+  await Browser.open({ url: result.redeem_url });
+
+  return {
+    status: "pending",
+    message: "Conclua o resgate na Apple. Ao voltar, o aplicativo confirmara sua assinatura.",
+  };
+}
+
 export async function startInAppPurchase(planId: PlanId): Promise<PurchaseResult> {
   if (!isNativeApp()) {
     return {
@@ -146,6 +187,13 @@ export async function startInAppPurchase(planId: PlanId): Promise<PurchaseResult
     );
     if (!selectedPackage) {
       throw new Error(`O plano ${planId} nao foi encontrado na oferta atual do RevenueCat.`);
+    }
+
+    if (
+      Capacitor.getPlatform() === "ios" &&
+      (await hasPartnerStoreTrialEligibility())
+    ) {
+      return await openPartnerAppleOffer(planId);
     }
 
     let purchaseResult;

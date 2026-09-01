@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { Capacitor } from "@capacitor/core";
 
 import appCss from "../styles.css?url";
 import { reportAppError } from "../lib/app-error-reporting";
@@ -324,6 +325,7 @@ function InAppNotificationListener({ queryClient }: { queryClient: QueryClient }
 function InAppPurchaseSync({ queryClient }: { queryClient: QueryClient }) {
   useEffect(() => {
     let cancelled = false;
+    let currentUserId: string | null = null;
     const sixHours = 6 * 60 * 60 * 1000;
 
     const syncForUser = async (userId: string, force = false) => {
@@ -342,18 +344,33 @@ function InAppPurchaseSync({ queryClient }: { queryClient: QueryClient }) {
     };
 
     supabase.auth.getSession().then(({ data }) => {
-      if (!cancelled && data.session?.user) void syncForUser(data.session.user.id);
+      currentUserId = data.session?.user.id ?? null;
+      if (!cancelled && currentUserId) void syncForUser(currentUserId);
     });
 
     const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+      currentUserId = session?.user.id ?? null;
       if (event === "SIGNED_IN" && session?.user) {
         void syncForUser(session.user.id, true);
       }
     });
 
+    let removeAppStateListener: (() => void) | undefined;
+    if (Capacitor.isNativePlatform()) {
+      void import("@capacitor/app").then(async ({ App }) => {
+        const handle = await App.addListener("appStateChange", ({ isActive }) => {
+          if (!isActive || cancelled) return;
+          if (currentUserId) void syncForUser(currentUserId, true);
+        });
+        if (cancelled) await handle.remove();
+        else removeAppStateListener = () => void handle.remove();
+      });
+    }
+
     return () => {
       cancelled = true;
       authSub.subscription.unsubscribe();
+      removeAppStateListener?.();
     };
   }, [queryClient]);
 

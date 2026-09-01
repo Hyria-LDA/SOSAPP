@@ -94,6 +94,9 @@ export function UpgradeModal({
         await refreshUserSubscription(queryClient);
         toast.success("Assinatura ativada!");
         onClose();
+      } else if (result.status === "pending") {
+        toast(result.message);
+        onClose();
       } else if (result.status === "cancelled") {
         toast("Compra cancelada.");
       } else if (result.status === "unsupported") {
