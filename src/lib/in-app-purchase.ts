@@ -114,6 +114,17 @@ async function syncValidatedSubscription() {
   return data as { ok: true; active: boolean; plan: PlanId | "free" };
 }
 
+async function hasPartnerStoreTrialEligibility() {
+  const { data, error } = await supabase.rpc(
+    "get_partner_store_trial_eligibility" as never,
+  );
+
+  if (error) throw new Error("Nao foi possivel validar a promocao do parceiro.");
+
+  const result = data as { eligible?: boolean } | null;
+  return result?.eligible === true;
+}
+
 export async function startInAppPurchase(planId: PlanId): Promise<PurchaseResult> {
   if (!isNativeApp()) {
     return {
@@ -137,9 +148,34 @@ export async function startInAppPurchase(planId: PlanId): Promise<PurchaseResult
       throw new Error(`O plano ${planId} nao foi encontrado na oferta atual do RevenueCat.`);
     }
 
-    const { customerInfo } = await context.Purchases.purchasePackage({
-      aPackage: selectedPackage,
-    });
+    let purchaseResult;
+    if (Capacitor.getPlatform() === "android") {
+      const isPartnerEligible = await hasPartnerStoreTrialEligibility();
+      const options = selectedPackage.product.subscriptionOptions ?? [];
+      const selectedOption = isPartnerEligible
+        ? options.find((option) =>
+            option.tags.some((tag) => tag.trim().toLowerCase() === "partner-30d"),
+          )
+        : options.find((option) => option.isBasePlan);
+
+      if (!selectedOption) {
+        throw new Error(
+          isPartnerEligible
+            ? "Sua promocao foi validada, mas a oferta de 30 dias ainda nao esta disponivel na Google Play. Tente novamente mais tarde."
+            : "O plano-base ainda nao esta disponivel na Google Play. Tente novamente mais tarde.",
+        );
+      }
+
+      purchaseResult = await context.Purchases.purchaseSubscriptionOption({
+        subscriptionOption: selectedOption,
+      });
+    } else {
+      purchaseResult = await context.Purchases.purchasePackage({
+        aPackage: selectedPackage,
+      });
+    }
+
+    const { customerInfo } = purchaseResult;
     if (!customerInfo.entitlements.active[planId]) {
       throw new Error("A loja concluiu a compra, mas o acesso ainda nao foi confirmado.");
     }
