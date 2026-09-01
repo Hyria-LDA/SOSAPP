@@ -46,7 +46,12 @@ const PLANOS: Plano[] = [
     nome: "Ultra",
     preco: 29.9,
     cor: "purple",
-    recursos: ["Sem propaganda", "Até 50 anúncios ativos", "10 buscas automáticas"],
+    recursos: [
+      "Sem propaganda",
+      "Até 50 anúncios ativos",
+      "10 buscas automáticas",
+      "Sorteio de brindes exclusivos",
+    ],
   },
   {
     id: "premium",
@@ -63,6 +68,7 @@ const PLANOS: Plano[] = [
       "Destaque visual nos resultados",
       "Selo Premium",
       "Possibilidade de aparecer na Home",
+      "Prioridade nos avisos automáticos",
       "Sorteio de brindes exclusivos",
     ],
   },
