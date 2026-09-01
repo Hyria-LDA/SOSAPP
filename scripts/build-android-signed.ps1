@@ -9,6 +9,7 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $androidDir = Join-Path $projectRoot "android"
 $gradle = Join-Path $androidDir "gradlew.bat"
 $output = Join-Path $androidDir "app\build\outputs\bundle\release\app-release.aab"
+$mappingOutput = Join-Path $androidDir "app\build\outputs\mapping\release\mapping.txt"
 $destinationDir = Join-Path $projectRoot "dist"
 
 if (-not (Test-Path -LiteralPath $Keystore)) {
@@ -102,9 +103,19 @@ try {
     $destination = Join-Path $destinationDir "sos-marceneiros-android-$versionName-$versionCode.aab"
     Copy-Item -LiteralPath $output -Destination $destination -Force
 
+    $mappingDestination = $null
+    if (Test-Path -LiteralPath $mappingOutput) {
+        $mappingDestination = Join-Path $destinationDir "mapping-android-$versionName-$versionCode.txt"
+        Copy-Item -LiteralPath $mappingOutput -Destination $mappingDestination -Force
+    }
+
     Write-Host ""
     Write-Host "AAB assinado criado com sucesso:" -ForegroundColor Green
     Write-Host $destination -ForegroundColor Cyan
+    if ($mappingDestination) {
+        Write-Host "Mapeamento R8 para relatorios de falha:" -ForegroundColor Green
+        Write-Host $mappingDestination -ForegroundColor Cyan
+    }
 }
 finally {
     Remove-Item Env:SOS_ANDROID_KEYSTORE -ErrorAction SilentlyContinue
