@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { Loader2, MapPin, Crosshair, Search, Check, Pencil } from "lucide-react";
+import { useState } from "react";
+import { Loader2, MapPin, Search, Check, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { geocodeAddress, lookupCep, osmEmbedUrl, type Coords } from "@/lib/geocode";
-import { useGeolocation } from "@/hooks/use-geolocation";
 
 export type EnderecoValue = {
   endereco: string;
@@ -62,8 +61,6 @@ export function EnderecoEmpresaForm({
   const [cepLoading, setCepLoading] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
   const [confirmed, setConfirmed] = useState(!!(v.latitude && v.longitude));
-  const { request, coords, loading: gpsLoading } = useGeolocation();
-  const gpsRequested = useRef(false);
 
   // Sempre que o endereço muda, a confirmação cai
   const markDirty = () => setConfirmed(false);
@@ -94,30 +91,13 @@ export function EnderecoEmpresaForm({
     const c = await geocodeAddress(v);
     setGeoLoading(false);
     if (!c) {
-      toast.error(
-        "Não conseguimos localizar este endereço. Verifique os dados ou use o botão de localização atual.",
-      );
+      toast.error("Não conseguimos localizar este endereço. Verifique os dados informados.");
       return;
     }
     onChange({ ...v, latitude: c.lat, longitude: c.lng });
     setConfirmed(false);
     toast.success("Endereço localizado no mapa");
   };
-
-  const useDevice = () => {
-    gpsRequested.current = true;
-    request();
-  };
-
-  useEffect(() => {
-    if (gpsRequested.current && coords) {
-      onChange({ ...v, latitude: coords.lat, longitude: coords.lng });
-      setConfirmed(false);
-      gpsRequested.current = false;
-      toast.success("Usando a localização atual do dispositivo");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coords]);
 
   const hasCoords = v.latitude != null && v.longitude != null;
 
@@ -216,12 +196,12 @@ export function EnderecoEmpresaForm({
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 pt-1">
+      <div className="pt-1">
         <button
           type="button"
           onClick={runGeocode}
           disabled={geoLoading}
-          className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-60"
         >
           {geoLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -229,19 +209,6 @@ export function EnderecoEmpresaForm({
             <Search className="h-4 w-4" />
           )}
           Localizar pelo endereço
-        </button>
-        <button
-          type="button"
-          onClick={useDevice}
-          disabled={gpsLoading}
-          className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold disabled:opacity-60"
-        >
-          {gpsLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Crosshair className="h-4 w-4" />
-          )}
-          Usar minha localização
         </button>
       </div>
 
