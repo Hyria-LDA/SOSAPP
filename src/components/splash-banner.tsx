@@ -75,7 +75,7 @@ export function SplashBannerGate() {
         return alvo.includes(slug);
       });
       if (cancelled || list.length === 0) return;
-      const raw = list[0] as any;
+      const raw = list[Math.floor(Math.random() * list.length)] as any;
       const { signBannerImage } = await import("@/lib/banner-images");
       const signed = await signBannerImage(raw.imagem_url);
       const b = { ...raw, imagem_url: signed || raw.imagem_url } as SplashBannerData;

@@ -35,6 +35,15 @@ type Banner = BannerTarget & {
   planos_alvo: string[] | null;
 };
 
+function shuffledBanners(items: Banner[]) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
 function Home() {
   const [visibleMaterialCount, setVisibleMaterialCount] = useState(7);
   const loadMoreMaterialsRef = useRef<HTMLDivElement>(null);
@@ -118,6 +127,7 @@ function Home() {
         imagem_url: map[b.imagem_url] ?? b.imagem_url,
       })) as unknown as Banner[];
     },
+    select: shuffledBanners,
     staleTime: 50 * 60 * 1000,
   });
 
@@ -361,11 +371,7 @@ function Home() {
             </Link>
           ))}
           {visibleMaterialCount < populares.length && (
-            <div
-              ref={loadMoreMaterialsRef}
-              className="h-2"
-              aria-label="Carregando mais sobras"
-            />
+            <div ref={loadMoreMaterialsRef} className="h-2" aria-label="Carregando mais sobras" />
           )}
           {populares && populares.length === 0 && (
             <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
