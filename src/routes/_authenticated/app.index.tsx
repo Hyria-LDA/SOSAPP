@@ -36,6 +36,8 @@ type Banner = BannerTarget & {
 };
 
 function Home() {
+  const [visibleMaterialCount, setVisibleMaterialCount] = useState(7);
+  const loadMoreMaterialsRef = useRef<HTMLDivElement>(null);
   const { coords: gpsCoords } = useGeolocation();
   const { data: companyLocation } = useQuery({
     queryKey: ["home-company-location"],
@@ -173,6 +175,28 @@ function Home() {
 
   const populares = popularesRaw ?? [];
 
+  useEffect(() => {
+    setVisibleMaterialCount(7);
+  }, [geoKey]);
+
+  useEffect(() => {
+    const target = loadMoreMaterialsRef.current;
+    if (!target || visibleMaterialCount >= populares.length) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setVisibleMaterialCount((current) => Math.min(current + 7, populares.length));
+      },
+      { rootMargin: "160px 0px" },
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [populares.length, visibleMaterialCount]);
+
+  const visibleMaterials = populares.slice(0, visibleMaterialCount);
+
   return (
     <div className="safe-top px-5 pt-3">
       <SplashBannerGate />
@@ -292,7 +316,7 @@ function Home() {
           </Link>
         </div>
         <div className="space-y-2">
-          {(populares ?? []).map((m: any) => (
+          {visibleMaterials.map((m: any) => (
             <Link
               key={m.id}
               to="/app/material/$id"
@@ -336,6 +360,13 @@ function Home() {
               </div>
             </Link>
           ))}
+          {visibleMaterialCount < populares.length && (
+            <div
+              ref={loadMoreMaterialsRef}
+              className="h-2"
+              aria-label="Carregando mais sobras"
+            />
+          )}
           {populares && populares.length === 0 && (
             <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
               Nenhuma sobra encontrada por perto ainda.
