@@ -269,6 +269,9 @@ function Perfil() {
             <div className="text-xs opacity-80">
               {emp?.cidade}/{emp?.estado}
             </div>
+            <div className="mt-1 inline-flex rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold">
+              🍀 Número da sorte: {emp?.numero_sorte ?? "—"}
+            </div>
           </div>
         </div>
         <div className="mt-5 grid grid-cols-4 gap-2 text-center text-[11px]">
