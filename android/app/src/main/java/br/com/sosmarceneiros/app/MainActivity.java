@@ -8,6 +8,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
+import androidx.core.view.WindowCompat;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebViewClient;
 import co.boundstate.BranchDeepLinks;
@@ -23,6 +24,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         registerPlugin(ExternalBrowserPlugin.class);
         registerPlugin(BranchDeepLinks.class);
         super.onCreate(savedInstanceState);
+        WindowCompat.enableEdgeToEdge(getWindow());
         clearWebViewCache();
         installSOSPushBridge();
         forceGoogleOAuthOutsideWebView();
