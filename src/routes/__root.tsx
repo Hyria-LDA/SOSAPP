@@ -326,6 +326,7 @@ function InAppPurchaseSync({ queryClient }: { queryClient: QueryClient }) {
   useEffect(() => {
     let cancelled = false;
     let currentUserId: string | null = null;
+    let initialSyncTimer: number | undefined;
     const sixHours = 6 * 60 * 60 * 1000;
 
     const syncForUser = async (userId: string, force = false) => {
@@ -346,7 +347,13 @@ function InAppPurchaseSync({ queryClient }: { queryClient: QueryClient }) {
 
     supabase.auth.getSession().then(({ data }) => {
       currentUserId = data.session?.user.id ?? null;
-      if (!cancelled && currentUserId) void syncForUser(currentUserId);
+      if (!cancelled && currentUserId) {
+        // A tela e as imagens carregam primeiro; a conferência periódica da
+        // assinatura acontece depois, sem competir pela abertura do app.
+        initialSyncTimer = window.setTimeout(() => {
+          if (!cancelled && currentUserId) void syncForUser(currentUserId);
+        }, 12_000);
+      }
     });
 
     const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
@@ -361,7 +368,7 @@ function InAppPurchaseSync({ queryClient }: { queryClient: QueryClient }) {
       void import("@capacitor/app").then(async ({ App }) => {
         const handle = await App.addListener("appStateChange", ({ isActive }) => {
           if (!isActive || cancelled) return;
-          if (currentUserId) void syncForUser(currentUserId, true);
+          if (currentUserId) void syncForUser(currentUserId);
         });
         if (cancelled) await handle.remove();
         else removeAppStateListener = () => void handle.remove();
@@ -370,6 +377,7 @@ function InAppPurchaseSync({ queryClient }: { queryClient: QueryClient }) {
 
     return () => {
       cancelled = true;
+      if (initialSyncTimer !== undefined) window.clearTimeout(initialSyncTimer);
       authSub.subscription.unsubscribe();
       removeAppStateListener?.();
     };
