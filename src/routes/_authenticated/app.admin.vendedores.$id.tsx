@@ -1,9 +1,10 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, Save, Download } from "lucide-react";
+import { ArrowLeft, Copy, Save, Download, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { buildPartnerReferralLink } from "@/lib/partner-branch";
 
 export const Route = createFileRoute("/_authenticated/app/admin/vendedores/$id")({
   beforeLoad: async () => {
@@ -22,6 +23,8 @@ function VendedorDetail() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>(null);
+  const [fromDate, setFromDate] = useState(firstDayOfMonth());
+  const [toDate, setToDate] = useState(today());
 
   const { data } = useQuery({
     queryKey: ["admin-vendedor", id],
@@ -58,6 +61,20 @@ function VendedorDetail() {
         indicacoes: (inds.data as any[]) ?? [],
         counts,
       };
+    },
+  });
+
+  const { data: periodMetrics } = useQuery({
+    queryKey: ["admin-vendedor-report", id, fromDate, toDate],
+    enabled: !!fromDate && !!toDate && fromDate <= toDate,
+    queryFn: async () => {
+      const { data: report, error } = await supabase.rpc("admin_partner_report" as any, {
+        _vendedor_id: id,
+        _from_date: fromDate,
+        _to_date: toDate,
+      });
+      if (error) throw error;
+      return report as any;
     },
   });
 
@@ -110,11 +127,16 @@ function VendedorDetail() {
   const v = data.vendedor;
   const current = form ?? v;
   const m = data.metrics ?? {};
+  const referralLink = buildPartnerReferralLink(v.codigo);
+  const filteredIndications = data.indicacoes.filter((indication: any) => {
+    const date = indication.created_at.slice(0, 10);
+    return date >= fromDate && date <= toDate;
+  });
 
   const exportCSV = () => {
     const rows = [
       ["Empresa", "Cidade", "Data", "Anúncios", "Status", "Comissão", "Pago"],
-      ...data.indicacoes.map((i: any) => [
+      ...filteredIndications.map((i: any) => [
         i.empresas?.nome_empresa || "",
         `${i.empresas?.cidade || ""}/${i.empresas?.estado || ""}`,
         new Date(i.created_at).toLocaleDateString("pt-BR"),
@@ -131,9 +153,29 @@ function VendedorDetail() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `indicacoes-${v.codigo}.csv`;
+    a.download = `relatorio-${v.codigo}-${fromDate}-a-${toDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const printReport = () => {
+    const report = periodMetrics ?? {};
+    const issuedAt = new Date();
+    const reportWindow = window.open("", "_blank", "width=900,height=700");
+    if (!reportWindow) {
+      toast.error("Permita pop-ups para gerar o relatório.");
+      return;
+    }
+    const rows = filteredIndications
+      .map(
+        (item: any) =>
+          `<tr><td>${escapeHtml(item.empresas?.nome_empresa || "—")}</td><td>${escapeHtml(`${item.empresas?.cidade || ""}/${item.empresas?.estado || ""}`)}</td><td>${new Date(item.created_at).toLocaleDateString("pt-BR")}</td><td>${escapeHtml(item.status)}</td><td>R$ ${fmt(item.comissao_valor)}</td><td>${item.paga ? "Sim" : "Não"}</td></tr>`,
+      )
+      .join("");
+    reportWindow.document.write(
+      `<!doctype html><html><head><meta charset="utf-8"><title>Relatório ${escapeHtml(v.nome)}</title><style>body{font-family:Arial,sans-serif;color:#222;padding:32px}h1{margin-bottom:4px}.muted{color:#666;font-size:12px}.link{word-break:break-all}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:24px 0}.card{border:1px solid #ddd;border-radius:8px;padding:12px}.value{font-size:22px;font-weight:700}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border-bottom:1px solid #ddd;padding:8px;text-align:left;font-size:12px}th{background:#f3f3f3}@media print{body{padding:0}.no-print{display:none}}</style></head><body><button class="no-print" onclick="window.print()">Imprimir ou salvar em PDF</button><h1>Relatório de parceiro</h1><div><strong>${escapeHtml(v.nome)}</strong></div><div class="muted">Código: ${escapeHtml(v.codigo)}</div><div class="muted link">Link: ${escapeHtml(referralLink)}</div><p>Período: <strong>${formatDate(fromDate)} a ${formatDate(toDate)}</strong><br><span class="muted">Emitido em ${issuedAt.toLocaleString("pt-BR")}</span></p><div class="cards"><div class="card"><div class="value">${report.acessos ?? 0}</div><div>Acessos</div></div><div class="card"><div class="value">${report.instalacoes ?? 0}</div><div>Instalações (${report.instalacoes_android ?? 0} Android / ${report.instalacoes_ios ?? 0} iOS)</div></div><div class="card"><div class="value">${report.cadastros ?? 0}</div><div>Cadastros</div></div><div class="card"><div class="value">${report.pagantes ?? 0}</div><div>Pagantes</div></div></div><p><strong>Comissões do período:</strong> R$ ${fmt(report.valor_total)} &nbsp; | &nbsp; <strong>Pagas:</strong> R$ ${fmt(report.valor_pago)}</p><h2>Empresas cadastradas no período</h2><table><thead><tr><th>Empresa</th><th>Cidade/UF</th><th>Cadastro</th><th>Status</th><th>Comissão</th><th>Pago</th></tr></thead><tbody>${rows || '<tr><td colspan="6">Nenhum cadastro no período.</td></tr>'}</tbody></table></body></html>`,
+    );
+    reportWindow.document.close();
   };
 
   return (
@@ -209,6 +251,23 @@ function VendedorDetail() {
         </div>
       </div>
 
+      <div className="mt-4 rounded-2xl bg-primary p-4 text-primary-foreground shadow-card">
+        <div className="text-[11px] font-bold uppercase tracking-wider opacity-80">
+          Link exclusivo do parceiro
+        </div>
+        <div className="mt-1 break-all font-mono text-xs">{referralLink}</div>
+        <button
+          type="button"
+          onClick={async () => {
+            await navigator.clipboard.writeText(referralLink);
+            toast.success("Link copiado!");
+          }}
+          className="mt-3 flex items-center gap-1.5 rounded-xl bg-white/20 px-3 py-2 text-xs font-bold"
+        >
+          <Copy className="h-3.5 w-3.5" /> Copiar link
+        </button>
+      </div>
+
       <div className="mt-4 grid grid-cols-2 gap-2 text-center">
         <MiniBig label="Acessos ao link" value={m.acessos ?? m.cliques ?? 0} />
         <MiniBig label="Cadastros" value={m.cadastros ?? 0} />
@@ -221,18 +280,54 @@ function VendedorDetail() {
         <MiniBig label="A pagar" value={`R$ ${fmt(m.valor_pendente)}`} accent />
       </div>
 
-      <div className="mt-4 flex items-center justify-between">
-        <h2 className="text-sm font-bold">Indicações</h2>
-        <button
-          onClick={exportCSV}
-          className="flex items-center gap-1 rounded-xl bg-secondary px-3 py-1.5 text-xs font-bold"
-        >
-          <Download className="h-3.5 w-3.5" /> CSV
-        </button>
+      <div className="mt-5 rounded-2xl border border-border bg-card p-4 shadow-card">
+        <h2 className="text-sm font-bold">Relatório por período</h2>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <DateField label="Data inicial" value={fromDate} onChange={setFromDate} />
+          <DateField label="Data final" value={toDate} onChange={setToDate} />
+        </div>
+        {fromDate > toDate && (
+          <p className="mt-2 text-xs font-semibold text-destructive">
+            A data inicial não pode ser posterior à data final.
+          </p>
+        )}
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+          <MiniPeriod label="Acessos" value={periodMetrics?.acessos ?? 0} />
+          <MiniPeriod label="Instalações" value={periodMetrics?.instalacoes ?? 0} />
+          <MiniPeriod label="Cadastros" value={periodMetrics?.cadastros ?? 0} />
+          <MiniPeriod label="Pagantes" value={periodMetrics?.pagantes ?? 0} />
+          <MiniPeriod label="Android" value={periodMetrics?.instalacoes_android ?? 0} />
+          <MiniPeriod label="iOS" value={periodMetrics?.instalacoes_ios ?? 0} />
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={fromDate > toDate}
+            onClick={printReport}
+            className="flex h-10 items-center justify-center gap-1 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground disabled:opacity-50"
+          >
+            <Printer className="h-3.5 w-3.5" /> Gerar relatório
+          </button>
+          <button
+            type="button"
+            disabled={fromDate > toDate}
+            onClick={exportCSV}
+            className="flex h-10 items-center justify-center gap-1 rounded-xl bg-secondary px-3 text-xs font-bold disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5" /> Baixar CSV
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center justify-between">
+        <h2 className="text-sm font-bold">Indicações no período</h2>
+        <span className="text-xs text-muted-foreground">
+          {filteredIndications.length} registros
+        </span>
       </div>
 
       <div className="mt-2 space-y-2">
-        {data.indicacoes.map((i: any) => (
+        {filteredIndications.map((i: any) => (
           <div key={i.id} className="rounded-2xl bg-card p-4 shadow-card">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -269,9 +364,9 @@ function VendedorDetail() {
             </div>
           </div>
         ))}
-        {data.indicacoes.length === 0 && (
+        {filteredIndications.length === 0 && (
           <div className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground">
-            Sem indicações.
+            Sem indicações neste período.
           </div>
         )}
       </div>
@@ -324,4 +419,64 @@ function fmt(n: any) {
   return Number(n ?? 0)
     .toFixed(2)
     .replace(".", ",");
+}
+
+function DateField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label>
+      <span className="mb-1 block text-[11px] font-medium text-muted-foreground">{label}</span>
+      <input
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-10 w-full rounded-xl border border-input bg-background px-2 text-xs"
+      />
+    </label>
+  );
+}
+
+function MiniPeriod({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl bg-secondary p-2">
+      <div className="font-black">{value}</div>
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function dateInputValue(date: Date) {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10);
+}
+
+function today() {
+  return dateInputValue(new Date());
+}
+
+function firstDayOfMonth() {
+  const date = new Date();
+  date.setDate(1);
+  return dateInputValue(date);
+}
+
+function formatDate(value: string) {
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+function escapeHtml(value: unknown) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }

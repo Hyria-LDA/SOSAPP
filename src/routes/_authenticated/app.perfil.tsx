@@ -25,10 +25,7 @@ import { UpgradeModal } from "@/components/upgrade-modal";
 import { compressImage } from "@/lib/image-compress";
 
 export const Route = createFileRoute("/_authenticated/app/perfil")({
-  validateSearch: (s) =>
-    z
-      .object({ upgrade: z.coerce.number().optional().default(0) })
-      .parse(s),
+  validateSearch: (s) => z.object({ upgrade: z.coerce.number().optional().default(0) }).parse(s),
   component: Perfil,
 });
 
@@ -54,7 +51,7 @@ function Perfil() {
         .eq("owner_id", u.user!.id)
         .single();
       const empresaId = emp?.id;
-      const [ativosRes, vendidosRes, contatosVendaRes, contatosCompraRes, rolesRes, vendedorRes] =
+      const [ativosRes, vendidosRes, contatosVendaRes, contatosCompraRes, rolesRes] =
         await Promise.all([
           empresaId
             ? supabase
@@ -84,11 +81,6 @@ function Perfil() {
             .select("id", { count: "exact", head: true })
             .eq("viewer_id", u.user!.id),
           supabase.from("user_roles").select("role").eq("user_id", u.user!.id),
-          supabase
-            .from("vendedores_parceiros" as any)
-            .select("id, codigo")
-            .eq("user_id", u.user!.id)
-            .maybeSingle(),
         ]);
       const ganhos = (vendidosRes.data ?? []).reduce(
         (s: number, r: any) => s + Number(r.valor_vendido ?? 0),
@@ -102,7 +94,6 @@ function Perfil() {
         ganhos,
         contatos,
         isAdmin,
-        vendedor: (vendedorRes as any)?.data ?? null,
         email: u.user!.email,
       };
     },
@@ -160,13 +151,11 @@ function Perfil() {
 
       const { blob, ext, mime } = await compressImage(file, { maxDim: 700, quality: 0.84 });
       const path = `${u.user.id}/logo-${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("logos")
-        .upload(path, blob, {
-          contentType: mime,
-          cacheControl: "31536000",
-          upsert: false,
-        });
+      const { error: uploadError } = await supabase.storage.from("logos").upload(path, blob, {
+        contentType: mime,
+        cacheControl: "31536000",
+        upsert: false,
+      });
       if (uploadError) throw uploadError;
 
       const { data: publicData } = supabase.storage.from("logos").getPublicUrl(path);
@@ -283,9 +272,21 @@ function Perfil() {
           </div>
         </div>
         <div className="mt-5 grid grid-cols-4 gap-2 text-center text-[11px]">
-          <Mini icon={Wallet} value={ganhosLabel} label="Ganhos" to="/app/estoque" search={{ tab: "vendido" }} />
+          <Mini
+            icon={Wallet}
+            value={ganhosLabel}
+            label="Ganhos"
+            to="/app/estoque"
+            search={{ tab: "vendido" }}
+          />
           <Mini icon={MessageCircle} value={data.contatos} label="Contatos" />
-          <Mini icon={Package} value={data.ativos} label="Ativos" to="/app/estoque" search={{ tab: "ativo" }} />
+          <Mini
+            icon={Package}
+            value={data.ativos}
+            label="Ativos"
+            to="/app/estoque"
+            search={{ tab: "ativo" }}
+          />
           <Mini icon={Calendar} value={tempoLabel} label="No app" />
         </div>
       </div>
@@ -372,21 +373,6 @@ function Perfil() {
           <div className="flex-1">
             <div className="font-bold">Painel Administrativo</div>
             <div className="text-xs opacity-80">Gerenciar empresas e anúncios</div>
-          </div>
-        </Link>
-      )}
-
-      {data.vendedor && (
-        <Link
-          to="/app/vendedor"
-          className="mt-3 flex items-center gap-3 rounded-2xl bg-primary p-4 text-primary-foreground shadow-card"
-        >
-          <span className="text-xl">🤝</span>
-          <div className="flex-1">
-            <div className="font-bold">Painel do Parceiro</div>
-            <div className="text-xs opacity-80">
-              Código <b>{data.vendedor.codigo}</b> · ver indicações e comissões
-            </div>
           </div>
         </Link>
       )}

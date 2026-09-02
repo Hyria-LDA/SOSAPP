@@ -7,14 +7,7 @@ import { buildPartnerReferralLink } from "@/lib/partner-branch";
 
 export const Route = createFileRoute("/_authenticated/app/vendedor/")({
   beforeLoad: async () => {
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) throw redirect({ to: "/auth" });
-    const { data: v } = await supabase
-      .from("vendedores_parceiros" as any)
-      .select("id")
-      .eq("user_id", u.user.id)
-      .maybeSingle();
-    if (!v) throw redirect({ to: "/app" });
+    throw redirect({ to: "/app" });
   },
   component: VendedorDash,
 });

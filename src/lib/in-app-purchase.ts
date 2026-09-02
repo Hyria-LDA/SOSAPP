@@ -24,9 +24,7 @@ const IOS_PRODUCT_IDS: Record<PlanId, string> = {
 };
 
 function expectedProductId(planId: PlanId) {
-  return Capacitor.getPlatform() === "ios"
-    ? IOS_PRODUCT_IDS[planId]
-    : ANDROID_PRODUCT_IDS[planId];
+  return Capacitor.getPlatform() === "ios" ? IOS_PRODUCT_IDS[planId] : ANDROID_PRODUCT_IDS[planId];
 }
 
 function matchesPlanPackage(
@@ -115,57 +113,6 @@ async function syncValidatedSubscription() {
   return data as { ok: true; active: boolean; plan: PlanId | "free" };
 }
 
-async function hasPartnerStoreTrialEligibility() {
-  const { data, error } = await supabase.rpc(
-    "get_partner_store_trial_eligibility" as never,
-  );
-
-  if (error) throw new Error("Nao foi possivel validar a promocao do parceiro.");
-
-  const result = data as { eligible?: boolean } | null;
-  return result?.eligible === true;
-}
-
-async function openPartnerAppleOffer(planId: PlanId): Promise<PurchaseResult> {
-  const configuredEnvironment = import.meta.env.VITE_APPLE_OFFER_CODE_ENVIRONMENT
-    ?.trim()
-    .toLowerCase();
-  const environment = configuredEnvironment === "sandbox" ? "sandbox" : "production";
-  const { data, error } = await supabase.rpc(
-    "claim_partner_apple_offer_code" as never,
-    { _plan_slug: planId, _environment: environment } as never,
-  );
-
-  if (error) throw new Error("Nao foi possivel reservar o codigo promocional da Apple.");
-
-  const result = data as {
-    ok?: boolean;
-    error?: string;
-    reserved_plan?: string;
-    redeem_url?: string;
-  } | null;
-
-  if (!result?.ok || !result.redeem_url) {
-    if (result?.error === "no_codes_available") {
-      throw new Error("A promocao foi validada, mas os codigos da Apple acabaram. Tente novamente mais tarde.");
-    }
-    if (result?.error === "offer_already_reserved") {
-      throw new Error(
-        `Seu mes gratuito ja foi reservado para o plano ${result.reserved_plan ?? "escolhido anteriormente"}.`,
-      );
-    }
-    throw new Error("Esta conta nao esta elegivel para a promocao da Apple.");
-  }
-
-  const { Browser } = await import("@capacitor/browser");
-  await Browser.open({ url: result.redeem_url });
-
-  return {
-    status: "pending",
-    message: "Conclua o resgate na Apple. Ao voltar, o aplicativo confirmara sua assinatura.",
-  };
-}
-
 export async function startInAppPurchase(planId: PlanId): Promise<PurchaseResult> {
   if (!isNativeApp()) {
     return {
@@ -189,28 +136,14 @@ export async function startInAppPurchase(planId: PlanId): Promise<PurchaseResult
       throw new Error(`O plano ${planId} nao foi encontrado na oferta atual do RevenueCat.`);
     }
 
-    if (
-      Capacitor.getPlatform() === "ios" &&
-      (await hasPartnerStoreTrialEligibility())
-    ) {
-      return await openPartnerAppleOffer(planId);
-    }
-
     let purchaseResult;
     if (Capacitor.getPlatform() === "android") {
-      const isPartnerEligible = await hasPartnerStoreTrialEligibility();
       const options = selectedPackage.product.subscriptionOptions ?? [];
-      const selectedOption = isPartnerEligible
-        ? options.find((option) =>
-            option.tags.some((tag) => tag.trim().toLowerCase() === "partner-30d"),
-          )
-        : options.find((option) => option.isBasePlan);
+      const selectedOption = options.find((option) => option.isBasePlan);
 
       if (!selectedOption) {
         throw new Error(
-          isPartnerEligible
-            ? "Sua promocao foi validada, mas a oferta de 30 dias ainda nao esta disponivel na Google Play. Tente novamente mais tarde."
-            : "O plano-base ainda nao esta disponivel na Google Play. Tente novamente mais tarde.",
+          "O plano-base ainda nao esta disponivel na Google Play. Tente novamente mais tarde.",
         );
       }
 

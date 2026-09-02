@@ -1,9 +1,10 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, Copy, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { buildPartnerReferralLink } from "@/lib/partner-branch";
 
 export const Route = createFileRoute("/_authenticated/app/admin/vendedores/")({
   beforeLoad: async () => {
@@ -79,8 +80,22 @@ function AdminVendedores() {
               <div className="min-w-0">
                 <div className="truncate font-bold">{v.nome}</div>
                 <div className="truncate text-xs text-muted-foreground">
-                  {v.email} · código <b>{v.codigo}</b>
+                  Código <b>{v.codigo}</b>
+                  {v.email ? ` · ${v.email}` : ""}
                 </div>
+                <button
+                  type="button"
+                  onClick={async (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    await navigator.clipboard.writeText(buildPartnerReferralLink(v.codigo));
+                    toast.success("Link copiado!");
+                  }}
+                  className="mt-2 flex max-w-full items-center gap-1 text-left text-[11px] font-semibold text-primary"
+                >
+                  <Copy className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{buildPartnerReferralLink(v.codigo)}</span>
+                </button>
               </div>
               <button
                 onClick={(e) => {
@@ -129,7 +144,6 @@ function NovoVendedorModal({ onClose, qc }: { onClose: () => void; qc: any }) {
     nome: "",
     email: "",
     telefone: "",
-    senha: "",
     codigo: "",
     comissao_valor: "50",
   });
@@ -137,7 +151,7 @@ function NovoVendedorModal({ onClose, qc }: { onClose: () => void; qc: any }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nome || !form.email || !form.senha || !form.codigo) {
+    if (!form.nome || !form.codigo) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -148,7 +162,6 @@ function NovoVendedorModal({ onClose, qc }: { onClose: () => void; qc: any }) {
           nome: form.nome,
           email: form.email,
           telefone: form.telefone,
-          senha: form.senha,
           codigo: form.codigo,
           comissao_valor: Number(form.comissao_valor) || 0,
         },
@@ -187,16 +200,10 @@ function NovoVendedorModal({ onClose, qc }: { onClose: () => void; qc: any }) {
         <form onSubmit={submit} className="space-y-3">
           <Input label="Nome *" value={form.nome} onChange={(v) => setForm({ ...form, nome: v })} />
           <Input
-            label="E-mail *"
+            label="E-mail (opcional, somente para contato)"
             value={form.email}
             onChange={(v) => setForm({ ...form, email: v })}
             type="email"
-          />
-          <Input
-            label="Senha *"
-            value={form.senha}
-            onChange={(v) => setForm({ ...form, senha: v })}
-            type="password"
           />
           <Input
             label="Telefone"
