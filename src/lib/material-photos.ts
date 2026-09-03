@@ -19,7 +19,9 @@ function isFullUrl(v: string): boolean {
 export function extractMateriaisPath(url: string): string | null {
   try {
     const u = new URL(url);
-    const m = u.pathname.match(/\/storage\/v1\/object\/(?:sign|public)\/materiais\/(.+)$/);
+    const m = u.pathname.match(
+      /\/storage\/v1\/(?:object|render\/image)\/(?:sign|public)\/materiais\/(.+)$/,
+    );
     return m?.[1] ? decodeURIComponent(m[1]) : null;
   } catch {
     return null;
@@ -69,11 +71,26 @@ export async function signMateriaisPaths(values: string[]): Promise<Record<strin
   return result;
 }
 
-function firstFotoRaw(rows: any): string | null {
+function firstFotoSource(rows: any): { value: string; isThumbnail: boolean } | null {
   const arr = (rows ?? []) as { url: string; thumbnail_url?: string | null; ordem: number }[];
   if (!arr.length) return null;
   const first = [...arr].sort((a, b) => a.ordem - b.ordem)[0];
-  return first?.thumbnail_url || first?.url || null;
+  if (first?.thumbnail_url) return { value: first.thumbnail_url, isThumbnail: true };
+  return first?.url ? { value: first.url, isThumbnail: false } : null;
+}
+
+async function signListingFallback(value: string): Promise<string | null> {
+  const path = isFullUrl(value) ? extractMateriaisPath(value) : value;
+  if (!path) return value;
+
+  const { data, error } = await supabase.storage
+    .from("materiais")
+    .createSignedUrl(path, SIGNED_TTL_SECONDS, {
+      transform: { width: 480, height: 480, resize: "cover", quality: 70 },
+    });
+  if (!error && data?.signedUrl) return data.signedUrl;
+
+  return resignMateriaisPath(path);
 }
 
 /** Attach a `foto` field (signed short-lived URL) to each row from its fotos_materiais. */
@@ -81,11 +98,25 @@ export async function attachFirstFoto<T extends { fotos_materiais?: any }>(
   rows: T[] | null | undefined,
 ): Promise<(T & { foto: string | null })[]> {
   const list = rows ?? [];
-  const raws = list.map((r) => firstFotoRaw(r.fotos_materiais)).filter(Boolean) as string[];
-  const map = await signMateriaisPaths(raws);
+  const sources = list.map((r) => firstFotoSource(r.fotos_materiais));
+  const thumbnails = sources.filter((source) => source?.isThumbnail).map((source) => source!.value);
+  const map = await signMateriaisPaths(thumbnails);
+
+  const fallbackValues = Array.from(
+    new Set(
+      sources.filter((source) => source && !source.isThumbnail).map((source) => source!.value),
+    ),
+  );
+  await Promise.all(
+    fallbackValues.map(async (value) => {
+      const signed = await signListingFallback(value);
+      if (signed) map[value] = signed;
+    }),
+  );
+
   return list.map((r) => {
-    const raw = firstFotoRaw(r.fotos_materiais);
-    return { ...r, foto: raw ? map[raw] ?? null : null };
+    const source = firstFotoSource(r.fotos_materiais);
+    return { ...r, foto: source ? (map[source.value] ?? null) : null };
   });
 }
 
