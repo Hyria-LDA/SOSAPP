@@ -133,6 +133,9 @@ Obrigado!`;
                     <img
                       src={foto.url}
                       alt={`${data.padrao} ${i + 1}`}
+                      loading={i === 0 ? "eager" : "lazy"}
+                      decoding="async"
+                      fetchPriority={i === 0 ? "high" : "low"}
                       className="h-full w-full object-cover"
                     />
                   </div>

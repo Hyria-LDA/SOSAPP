@@ -91,6 +91,8 @@ function Buscar() {
   );
   const compInputRef = useRef<HTMLInputElement>(null);
   const largInputRef = useRef<HTMLInputElement>(null);
+  const loadMoreResultsRef = useRef<HTMLDivElement>(null);
+  const [visibleResultCount, setVisibleResultCount] = useState(20);
   // Seed estável por montagem → rotação muda a cada nova visita à busca,
   // mas mantém ordem consistente enquanto o usuário interage com filtros.
   const rotationSeedRef = useRef<string>("");
@@ -262,6 +264,34 @@ function Buscar() {
   }, [data, coords, params, effectiveCompMin, effectiveLargMin, raioBusca, rotationSeed]);
 
   const hasSelection = !!(params.fabricante_id || params.padrao_id);
+  const visibleResults = results.slice(0, visibleResultCount);
+
+  useEffect(() => {
+    setVisibleResultCount(20);
+  }, [
+    params.fabricante_id,
+    params.padrao_id,
+    params.espessuras,
+    params.raio,
+    params.comp_min,
+    params.larg_min,
+    params.aceitar_giro,
+  ]);
+
+  useEffect(() => {
+    const target = loadMoreResultsRef.current;
+    if (!target || visibleResultCount >= results.length) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setVisibleResultCount((current) => Math.min(current + 20, results.length));
+      },
+      { rootMargin: "240px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [results.length, visibleResultCount]);
 
   const update = useCallback(
     (patch: Partial<typeof params>) =>
@@ -628,7 +658,7 @@ function Buscar() {
             </div>
           )}
 
-          {results.map((m: any) => (
+          {visibleResults.map((m: any) => (
             <Link
               key={m.id}
               to="/app/material/$id"
@@ -694,6 +724,9 @@ function Buscar() {
               </div>
             </Link>
           ))}
+          {visibleResultCount < results.length && (
+            <div ref={loadMoreResultsRef} className="h-2" aria-label="Carregando mais resultados" />
+          )}
         </div>
       </div>
 

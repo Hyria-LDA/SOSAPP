@@ -172,7 +172,15 @@ function EmpresaPublica() {
               className="flex gap-3 overflow-hidden rounded-2xl border border-border bg-card shadow-card"
             >
               <div className="h-24 w-24 shrink-0 bg-secondary">
-                {m.foto && <img src={m.foto} className="h-full w-full object-cover" alt="" />}
+                {m.foto && (
+                  <img
+                    src={m.foto}
+                    className="h-full w-full object-cover"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
+                )}
               </div>
               <div className="min-w-0 flex-1 py-2 pr-3">
                 <div className="truncate font-bold">{m.padrao}</div>
