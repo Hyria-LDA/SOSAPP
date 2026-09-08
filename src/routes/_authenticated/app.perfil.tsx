@@ -10,6 +10,7 @@ import {
   Wallet,
   MessageCircle,
   Package,
+  Boxes,
   Calendar,
   Shield,
   Save,
@@ -56,10 +57,10 @@ function Perfil() {
           empresaId
             ? supabase
                 .from("materiais")
-                .select("id", { count: "exact", head: true })
+                .select("preco")
                 .eq("empresa_id", empresaId)
                 .eq("status", "ativo")
-            : Promise.resolve({ count: 0 } as any),
+            : Promise.resolve({ data: [] } as any),
           empresaId
             ? supabase
                 .from("materiais")
@@ -86,11 +87,16 @@ function Perfil() {
         (s: number, r: any) => s + Number(r.valor_vendido ?? 0),
         0,
       );
+      const valorEstoque = (ativosRes.data ?? []).reduce(
+        (s: number, r: any) => s + Number(r.preco ?? 0),
+        0,
+      );
       const isAdmin = (rolesRes.data ?? []).some((r: any) => r.role === "admin");
       const contatos = (contatosVendaRes.count ?? 0) + (contatosCompraRes.count ?? 0);
       return {
         empresa: emp,
-        ativos: ativosRes.count ?? 0,
+        ativos: ativosRes.data?.length ?? 0,
+        valorEstoque,
         ganhos,
         contatos,
         isAdmin,
@@ -229,10 +235,12 @@ function Perfil() {
     ? Math.max(1, Math.floor((Date.now() - +new Date(emp.created_at)) / (1000 * 60 * 60 * 24)))
     : 0;
   const tempoLabel = dias >= 365 ? `${Math.floor(dias / 365)}a` : `${dias}d`;
-  const ganhosLabel =
-    data.ganhos >= 1000
-      ? `R$ ${(data.ganhos / 1000).toFixed(data.ganhos >= 10000 ? 0 : 1).replace(".", ",")}k`
-      : `R$ ${Math.round(data.ganhos)}`;
+  const formatCompactBRL = (value: number) =>
+    value >= 1000
+      ? `R$ ${(value / 1000).toFixed(value >= 10000 ? 0 : 1).replace(".", ",")}k`
+      : `R$ ${Math.round(value)}`;
+  const ganhosLabel = formatCompactBRL(data.ganhos);
+  const estoqueLabel = formatCompactBRL(data.valorEstoque);
 
   return (
     <div className="safe-top px-5 pt-4 pb-10">
@@ -274,7 +282,7 @@ function Perfil() {
             </div>
           </div>
         </div>
-        <div className="mt-5 grid grid-cols-4 gap-2 text-center text-[11px]">
+        <div className="mt-5 grid grid-cols-5 gap-2 text-center text-[10px]">
           <Mini
             icon={Wallet}
             value={ganhosLabel}
@@ -287,6 +295,13 @@ function Perfil() {
             icon={Package}
             value={data.ativos}
             label="Ativos"
+            to="/app/estoque"
+            search={{ tab: "ativo" }}
+          />
+          <Mini
+            icon={Boxes}
+            value={estoqueLabel}
+            label="Em estoque"
             to="/app/estoque"
             search={{ tab: "ativo" }}
           />
