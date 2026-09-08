@@ -18,6 +18,7 @@ type PushRequest = {
   title?: string;
   body?: string;
   path?: string;
+  external_url?: string;
   target?: "all";
 };
 
@@ -29,6 +30,17 @@ type PushFailure = {
 };
 
 const ALLOWED_PATHS = new Set(["/app", "/app/anunciar", "/app/buscar", "/app/perfil?upgrade=1"]);
+
+function validExternalUrl(value: string) {
+  if (!value || value.length > 2048) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -58,7 +70,10 @@ Deno.serve(async (request) => {
     const title = payload.title?.trim().slice(0, 80);
     const body = payload.body?.trim().slice(0, 180);
     const path = payload.path?.trim() || "/app";
+    const requestedExternalUrl = payload.external_url?.trim() ?? "";
+    const externalUrl = requestedExternalUrl ? validExternalUrl(requestedExternalUrl) : null;
     if (!title || !body) return json({ error: "missing_title_or_body" }, 400);
+    if (requestedExternalUrl && !externalUrl) return json({ error: "invalid_external_url" }, 400);
     if (!ALLOWED_PATHS.has(path)) return json({ error: "invalid_path" }, 400);
     const { data: tokens, error: tokenError } = await adminClient
       .from("push_tokens")
@@ -95,6 +110,7 @@ Deno.serve(async (request) => {
         data: {
           type: "admin_broadcast",
           path,
+          ...(externalUrl ? { external_url: externalUrl } : {}),
         },
       });
 

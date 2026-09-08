@@ -1,6 +1,7 @@
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { App } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
 import { Badge } from "@capawesome/capacitor-badge";
 import {
   PushNotifications,
@@ -85,8 +86,21 @@ export function usePushNotifications() {
     let cancelled = false;
     const handles: PluginListenerHandle[] = [];
 
-    const openNotificationTarget = (data?: PushData) => {
+    const openNotificationTarget = async (data?: PushData) => {
       void clearNativeNotificationBadge();
+
+      const externalUrl = asString(data?.external_url);
+      if (externalUrl) {
+        try {
+          const parsedUrl = new URL(externalUrl);
+          if (parsedUrl.protocol === "https:") {
+            await Browser.open({ url: parsedUrl.toString() });
+            return;
+          }
+        } catch {
+          console.warn("[push] link externo invalido ignorado");
+        }
+      }
 
       const materialId = asString(data?.material_id);
       if (materialId) {
@@ -141,7 +155,7 @@ export function usePushNotifications() {
             await FirebaseMessaging.addListener(
               "notificationActionPerformed",
               ({ notification }) => {
-                openNotificationTarget((notification.data ?? {}) as PushData);
+                void openNotificationTarget((notification.data ?? {}) as PushData);
               },
             ),
           );
@@ -239,7 +253,7 @@ export function usePushNotifications() {
               description: notification.body,
               action: {
                 label: "Ver",
-                onClick: () => openNotificationTarget(notification.data),
+                onClick: () => void openNotificationTarget(notification.data),
               },
             });
           }),
@@ -249,7 +263,7 @@ export function usePushNotifications() {
           await PushNotifications.addListener(
             "pushNotificationActionPerformed",
             (action: ActionPerformed) => {
-              openNotificationTarget(action.notification.data);
+              void openNotificationTarget(action.notification.data);
             },
           ),
         );

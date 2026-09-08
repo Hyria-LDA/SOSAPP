@@ -2,7 +2,16 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { ArrowLeft, BellRing, Home, Plus, Search, Send, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  BellRing,
+  ExternalLink,
+  Home,
+  Plus,
+  Search,
+  Send,
+  Sparkles,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -40,6 +49,15 @@ const PUSH_TARGETS = [
 ] as const;
 
 type PushTargetPath = (typeof PUSH_TARGETS)[number]["path"];
+type PushTargetType = "internal" | "external";
+
+function normalizeExternalUrl(value: string) {
+  const url = new URL(value.trim());
+  if (url.protocol !== "https:" || url.username || url.password) {
+    throw new Error("Digite um link seguro comecando por https://");
+  }
+  return url.toString();
+}
 
 function readableError(error: unknown) {
   if (error instanceof Error) {
@@ -62,6 +80,7 @@ async function invokeSendPush(
   title: string,
   body: string,
   path: PushTargetPath,
+  externalUrl?: string,
 ) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -81,6 +100,7 @@ async function invokeSendPush(
       title,
       body,
       path,
+      external_url: externalUrl,
       target: "all",
     }),
   });
@@ -105,6 +125,8 @@ function AdminPushNotifications() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [targetPath, setTargetPath] = useState<PushTargetPath>("/app");
+  const [targetType, setTargetType] = useState<PushTargetType>("internal");
+  const [externalUrl, setExternalUrl] = useState("");
 
   const { data: appDiagnostics } = useQuery({
     queryKey: ["admin-push-app-diagnostics"],
@@ -151,7 +173,17 @@ function AdminPushNotifications() {
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) throw new Error("Sessao expirada. Entre novamente.");
 
-      return invokeSendPush(accessToken, cleanTitle, cleanBody, targetPath);
+      let cleanExternalUrl: string | undefined;
+      if (targetType === "external") {
+        if (!externalUrl.trim()) throw new Error("Digite o link externo da notificacao.");
+        try {
+          cleanExternalUrl = normalizeExternalUrl(externalUrl);
+        } catch {
+          throw new Error("Digite um link seguro comecando por https://");
+        }
+      }
+
+      return invokeSendPush(accessToken, cleanTitle, cleanBody, targetPath, cleanExternalUrl);
     },
     onSuccess: (result) => {
       toast.success(`Notificacao enviada para ${result.sent} celular(es).`);
@@ -249,12 +281,15 @@ function AdminPushNotifications() {
           <div className="mt-2 grid grid-cols-2 gap-2">
             {PUSH_TARGETS.map((target) => {
               const Icon = target.icon;
-              const selected = targetPath === target.path;
+              const selected = targetType === "internal" && targetPath === target.path;
               return (
                 <button
                   key={target.path}
                   type="button"
-                  onClick={() => setTargetPath(target.path)}
+                  onClick={() => {
+                    setTargetType("internal");
+                    setTargetPath(target.path);
+                  }}
                   className={`flex items-center gap-2 rounded-2xl border px-3 py-3 text-left text-xs font-black transition ${
                     selected
                       ? "border-primary bg-primary text-primary-foreground"
@@ -266,7 +301,39 @@ function AdminPushNotifications() {
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => setTargetType("external")}
+              className={`flex items-center gap-2 rounded-2xl border px-3 py-3 text-left text-xs font-black transition ${
+                targetType === "external"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-secondary text-foreground"
+              }`}
+            >
+              <ExternalLink className="h-4 w-4 shrink-0" />
+              <span>Link externo</span>
+            </button>
           </div>
+          {targetType === "external" ? (
+            <div className="mt-3">
+              <label className="text-xs font-bold" htmlFor="push-external-url">
+                Endereco que sera aberto
+              </label>
+              <input
+                id="push-external-url"
+                type="url"
+                inputMode="url"
+                value={externalUrl}
+                onChange={(event) => setExternalUrl(event.target.value)}
+                maxLength={2048}
+                className="mt-2 w-full rounded-2xl border border-border bg-secondary px-4 py-3 text-base outline-none focus:border-accent"
+                placeholder="https://exemplo.com.br/promocao"
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Por seguranca, somente links que comecam com https:// sao aceitos.
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <button
