@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, Copy, Plus, X } from "lucide-react";
+import { ArrowLeft, Copy, Download, Plus, Printer, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { buildPartnerReferralLink } from "@/lib/partner-branch";
@@ -21,6 +21,9 @@ export const Route = createFileRoute("/_authenticated/app/admin/vendedores/")({
 function AdminVendedores() {
   const qc = useQueryClient();
   const [showNew, setShowNew] = useState(false);
+  const [fromDate, setFromDate] = useState(firstDayOfMonth());
+  const [toDate, setToDate] = useState(today());
+  const [reporting, setReporting] = useState(false);
 
   const { data } = useQuery({
     queryKey: ["admin-vendedores"],
@@ -53,6 +56,108 @@ function AdminVendedores() {
     },
   });
 
+  const fetchAllReport = async () => {
+    if (!fromDate || !toDate || fromDate > toDate) {
+      toast.error("Confira o período do relatório.");
+      return null;
+    }
+
+    const { data: report, error } = await supabase.rpc("admin_all_partners_report" as any, {
+      _from_date: fromDate,
+      _to_date: toDate,
+    });
+    if (error) throw error;
+    return report as any;
+  };
+
+  const printAllReport = async () => {
+    const reportWindow = window.open("", "_blank", "width=1100,height=750");
+    if (!reportWindow) {
+      toast.error("Permita pop-ups para gerar o relatório.");
+      return;
+    }
+    reportWindow.document.write("<p style='font-family:Arial;padding:24px'>Gerando relatório…</p>");
+    setReporting(true);
+    try {
+      const report = await fetchAllReport();
+      if (!report) {
+        reportWindow.close();
+        return;
+      }
+      const sellers = (report.vendedores as any[]) ?? [];
+      const rows = sellers
+        .map(
+          (v) =>
+            `<tr><td>${escapeHtml(v.nome)}</td><td>${escapeHtml(v.codigo)}</td><td>${v.ativo ? "Ativo" : "Inativo"}</td><td>${v.acessos ?? 0}</td><td>${v.instalacoes ?? 0}</td><td>${v.instalacoes_android ?? 0}</td><td>${v.instalacoes_ios ?? 0}</td><td>${v.cadastros ?? 0}</td><td>${v.pagantes ?? 0}</td><td>R$ ${fmt(v.valor_total)}</td><td>R$ ${fmt(v.valor_pago)}</td><td>R$ ${fmt(v.valor_pendente)}</td></tr>`,
+        )
+        .join("");
+      reportWindow.document.open();
+      reportWindow.document.write(
+        `<!doctype html><html><head><meta charset="utf-8"><title>Relatório geral de vendedores</title><style>body{font-family:Arial,sans-serif;color:#222;padding:28px}h1{margin-bottom:4px}.muted{color:#666;font-size:12px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0}.card{border:1px solid #ddd;border-radius:8px;padding:10px}.value{font-size:20px;font-weight:700}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border-bottom:1px solid #ddd;padding:7px;text-align:left;font-size:11px}th{background:#f3f3f3;white-space:nowrap}@media print{body{padding:0}.no-print{display:none}}@page{size:landscape}</style></head><body><button class="no-print" onclick="window.print()">Imprimir ou salvar em PDF</button><h1>Relatório geral de vendedores parceiros</h1><p>Período: <strong>${formatDate(fromDate)} a ${formatDate(toDate)}</strong><br><span class="muted">Emitido em ${new Date().toLocaleString("pt-BR")}</span></p><div class="cards"><div class="card"><div class="value">${report.acessos ?? 0}</div><div>Acessos</div></div><div class="card"><div class="value">${report.instalacoes ?? 0}</div><div>Instalações</div></div><div class="card"><div class="value">${report.cadastros ?? 0}</div><div>Cadastros</div></div><div class="card"><div class="value">${report.pagantes ?? 0}</div><div>Pagantes</div></div></div><p><strong>Comissões:</strong> R$ ${fmt(report.valor_total)} &nbsp; | &nbsp; <strong>Pagas:</strong> R$ ${fmt(report.valor_pago)} &nbsp; | &nbsp; <strong>Pendentes:</strong> R$ ${fmt(report.valor_pendente)}</p><table><thead><tr><th>Vendedor</th><th>Código</th><th>Status</th><th>Acessos</th><th>Instalações</th><th>Android</th><th>iOS</th><th>Cadastros</th><th>Pagantes</th><th>Comissão</th><th>Pago</th><th>Pendente</th></tr></thead><tbody>${rows || '<tr><td colspan="12">Nenhum vendedor cadastrado.</td></tr>'}</tbody></table></body></html>`,
+      );
+      reportWindow.document.close();
+    } catch (error: any) {
+      reportWindow.close();
+      toast.error(error?.message || "Não foi possível gerar o relatório.");
+    } finally {
+      setReporting(false);
+    }
+  };
+
+  const exportAllCSV = async () => {
+    setReporting(true);
+    try {
+      const report = await fetchAllReport();
+      if (!report) return;
+      const rows = [
+        [
+          "Vendedor",
+          "Código",
+          "Link",
+          "Status",
+          "Acessos",
+          "Instalações",
+          "Android",
+          "iOS",
+          "Cadastros",
+          "Pagantes",
+          "Comissão total",
+          "Pago",
+          "Pendente",
+        ],
+        ...(((report.vendedores as any[]) ?? []).map((v) => [
+          v.nome,
+          v.codigo,
+          buildPartnerReferralLink(v.codigo),
+          v.ativo ? "Ativo" : "Inativo",
+          v.acessos ?? 0,
+          v.instalacoes ?? 0,
+          v.instalacoes_android ?? 0,
+          v.instalacoes_ios ?? 0,
+          v.cadastros ?? 0,
+          v.pagantes ?? 0,
+          Number(v.valor_total ?? 0).toFixed(2),
+          Number(v.valor_pago ?? 0).toFixed(2),
+          Number(v.valor_pendente ?? 0).toFixed(2),
+        ])),
+      ];
+      const csv = rows
+        .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+      const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `relatorio-geral-vendedores-${fromDate}-a-${toDate}.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast.error(error?.message || "Não foi possível baixar o relatório.");
+    } finally {
+      setReporting(false);
+    }
+  };
+
   return (
     <div className="safe-top px-5 pt-4 pb-10">
       <header className="flex items-center gap-2">
@@ -67,6 +172,40 @@ function AdminVendedores() {
           <Plus className="h-4 w-4" /> Novo
         </button>
       </header>
+
+      <section className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-card">
+        <h2 className="text-sm font-bold">Relatório de todos os links</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Consulte todos os vendedores e resultados dentro do período escolhido.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <DateField label="Data inicial" value={fromDate} onChange={setFromDate} />
+          <DateField label="Data final" value={toDate} onChange={setToDate} />
+        </div>
+        {fromDate > toDate && (
+          <p className="mt-2 text-xs font-semibold text-destructive">
+            A data inicial não pode ser posterior à data final.
+          </p>
+        )}
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={reporting || fromDate > toDate}
+            onClick={printAllReport}
+            className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground disabled:opacity-50"
+          >
+            <Printer className="h-4 w-4" /> {reporting ? "Gerando…" : "Gerar relatório"}
+          </button>
+          <button
+            type="button"
+            disabled={reporting || fromDate > toDate}
+            onClick={exportAllCSV}
+            className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-secondary px-3 text-xs font-bold disabled:opacity-50"
+          >
+            <Download className="h-4 w-4" /> Baixar CSV
+          </button>
+        </div>
+      </section>
 
       <div className="mt-4 space-y-2">
         {(data ?? []).map((v: any) => (
@@ -128,6 +267,61 @@ function AdminVendedores() {
       {showNew && <NovoVendedorModal onClose={() => setShowNew(false)} qc={qc} />}
     </div>
   );
+}
+
+function DateField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label>
+      <span className="mb-1 block text-[11px] font-medium text-muted-foreground">{label}</span>
+      <input
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-10 w-full rounded-xl border border-input bg-background px-2 text-xs"
+      />
+    </label>
+  );
+}
+
+function dateInputValue(date: Date) {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10);
+}
+
+function today() {
+  return dateInputValue(new Date());
+}
+
+function firstDayOfMonth() {
+  const date = new Date();
+  date.setDate(1);
+  return dateInputValue(date);
+}
+
+function formatDate(value: string) {
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+function fmt(value: unknown) {
+  return Number(value ?? 0).toFixed(2).replace(".", ",");
+}
+
+function escapeHtml(value: unknown) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function Mini({ value, label }: { value: any; label: string }) {
