@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
@@ -11,9 +11,10 @@ import {
   Plus,
   Search,
   Send,
+  Save,
   Sparkles,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -234,20 +235,7 @@ function AdminPushNotifications() {
         </div>
       </section>
 
-      <section className="mt-4 rounded-2xl bg-card p-4 shadow-card">
-        <div className="flex items-start gap-3">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
-            <Clock3 className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-sm font-bold">Lembretes automaticos</div>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Segunda a sexta, as 09h, 14h e 19h (horario de Brasilia). Somente quem ainda nao
-              concluiu o cadastro recebe; ao concluir, os envios param automaticamente.
-            </p>
-          </div>
-        </div>
-      </section>
+      <AutomationSettings />
 
       <section className="mt-4 rounded-2xl bg-card p-4 shadow-card">
         <div className="text-sm font-bold">Diagnostico do app</div>
@@ -363,6 +351,165 @@ function AdminPushNotifications() {
         </button>
       </section>
     </div>
+  );
+}
+
+type AutomationRow = {
+  id: string;
+  position: number;
+  send_time: string;
+  title: string;
+  body: string;
+  audience: string;
+  active: boolean;
+};
+
+const AUDIENCES = [
+  ["no_registration", "Sem cadastro concluido"],
+  ["active_registration", "Cadastro ativo"],
+  ["plan_tx", "Plano TX"],
+  ["plan_ultra", "Plano Ultra"],
+  ["plan_premium", "Plano Brilhante"],
+  ["all", "Todos os clientes"],
+] as const;
+
+function AutomationSettings() {
+  const queryClient = useQueryClient();
+  const [drafts, setDrafts] = useState<AutomationRow[]>([]);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["notification-automation-schedules"],
+    queryFn: async () => {
+      const { data: rows, error: queryError } = await supabase
+        .from("notification_automation_schedules" as any)
+        .select("id, position, send_time, title, body, audience, active")
+        .order("position");
+      if (queryError) throw queryError;
+      return (rows ?? []) as AutomationRow[];
+    },
+  });
+
+  useEffect(() => {
+    if (data) setDrafts(data.map((row) => ({ ...row, send_time: row.send_time.slice(0, 5) })));
+  }, [data]);
+
+  const save = useMutation({
+    mutationFn: async (row: AutomationRow) => {
+      if (!row.title.trim() || !row.body.trim()) throw new Error("Preencha titulo e mensagem.");
+      const { error: updateError } = await supabase
+        .from("notification_automation_schedules" as any)
+        .update({
+          send_time: row.send_time,
+          title: row.title.trim(),
+          body: row.body.trim(),
+          audience: row.audience,
+          active: row.active,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id);
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notification-automation-schedules"] });
+      toast.success("Horario automatico salvo.");
+    },
+    onError: (saveError) => toast.error(readableError(saveError)),
+  });
+
+  const updateDraft = (id: string, patch: Partial<AutomationRow>) =>
+    setDrafts((current) => current.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+
+  return (
+    <section className="mt-4 rounded-2xl bg-card p-4 shadow-card">
+      <div className="flex items-start gap-3">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+          <Clock3 className="h-5 w-5" />
+        </div>
+        <div>
+          <div className="text-sm font-bold">Lembretes automaticos</div>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Configure os tres envios de segunda a sexta. Os horarios seguem Brasilia.
+          </p>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <p className="mt-4 text-xs text-muted-foreground">Carregando horarios...</p>
+      ) : null}
+      {error ? (
+        <p className="mt-4 rounded-xl bg-destructive/10 p-3 text-xs text-destructive">
+          Execute o novo SQL no Supabase para liberar estas configuracoes.
+        </p>
+      ) : null}
+      <div className="mt-4 space-y-4">
+        {drafts.map((row) => (
+          <div key={row.id} className="rounded-2xl border border-border bg-secondary/50 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-xs font-black">Envio {row.position}</div>
+              <label className="flex items-center gap-2 text-xs font-semibold">
+                <input
+                  type="checkbox"
+                  checked={row.active}
+                  onChange={(event) => updateDraft(row.id, { active: event.target.checked })}
+                />
+                Ativo
+              </label>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <label className="text-[11px] font-semibold">
+                Hora
+                <input
+                  type="time"
+                  value={row.send_time}
+                  onChange={(event) => updateDraft(row.id, { send_time: event.target.value })}
+                  className="mt-1 h-10 w-full rounded-xl border border-input bg-background px-3 text-sm"
+                />
+              </label>
+              <label className="text-[11px] font-semibold">
+                Quem recebe
+                <select
+                  value={row.audience}
+                  onChange={(event) => updateDraft(row.id, { audience: event.target.value })}
+                  className="mt-1 h-10 w-full rounded-xl border border-input bg-background px-2 text-xs"
+                >
+                  {AUDIENCES.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="mt-3 block text-[11px] font-semibold">
+              Titulo
+              <input
+                value={row.title}
+                maxLength={80}
+                onChange={(event) => updateDraft(row.id, { title: event.target.value })}
+                className="mt-1 h-10 w-full rounded-xl border border-input bg-background px-3 text-sm"
+              />
+            </label>
+            <label className="mt-3 block text-[11px] font-semibold">
+              Mensagem
+              <textarea
+                value={row.body}
+                maxLength={180}
+                rows={3}
+                onChange={(event) => updateDraft(row.id, { body: event.target.value })}
+                className="mt-1 w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-sm"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={save.isPending}
+              onClick={() => save.mutate(row)}
+              className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-xs font-black text-white disabled:opacity-60"
+            >
+              <Save className="h-4 w-4" /> Salvar envio {row.position}
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
