@@ -151,6 +151,8 @@ Obrigado!`;
           </CarouselContent>
         </Carousel>
         <button
+          type="button"
+          aria-label="Voltar para a busca"
           onClick={() =>
             navigate({
               to: "/app/buscar",
@@ -175,12 +177,16 @@ Obrigado!`;
               },
             })
           }
-          className="safe-top absolute left-4 top-3 grid h-10 w-10 place-items-center rounded-xl bg-card/90 backdrop-blur shadow-card"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
+          className="absolute left-4 z-20 grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border bg-background/95 text-foreground shadow-lg backdrop-blur"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="h-6 w-6" strokeWidth={2.5} aria-hidden="true" />
         </button>
         {isAuthed && (
-          <div className="safe-top absolute right-4 top-3 flex gap-2">
+          <div
+            style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
+            className="absolute right-4 z-20 flex gap-2"
+          >
             <DenunciaButton
               target={{ type: "anuncio", materialId: id, empresaId: data.empresa_id }}
             />

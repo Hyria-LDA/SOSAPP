@@ -156,7 +156,11 @@ function Estoque() {
               className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
             >
               <div className="flex">
-                <Link to="/app/material/$id" params={{ id: m.id }} className="flex flex-1 gap-3">
+                <Link
+                  to="/app/material/$id"
+                  params={{ id: m.id }}
+                  className="flex min-w-0 flex-1 gap-3 overflow-hidden"
+                >
                   <div className="h-24 w-24 shrink-0 bg-secondary">
                     {foto && (
                       <img
@@ -197,7 +201,12 @@ function Estoque() {
                     </div>
                   </div>
                 </Link>
-                <button onClick={() => setOpen(open === m.id ? null : m.id)} className="px-2">
+                <button
+                  type="button"
+                  aria-label={`Abrir opções de ${m.padrao}`}
+                  onClick={() => setOpen(open === m.id ? null : m.id)}
+                  className="flex w-11 shrink-0 items-center justify-center self-stretch"
+                >
                   <MoreVertical className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
