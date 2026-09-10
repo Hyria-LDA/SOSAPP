@@ -120,12 +120,14 @@ function AdminVendedores() {
           "Android",
           "iOS",
           "Cadastros",
+          "Cadastros ativos",
           "Pagantes",
+          "Comissão por cadastro ativo",
           "Comissão total",
           "Pago",
           "Pendente",
         ],
-        ...(((report.vendedores as any[]) ?? []).map((v) => [
+        ...((report.vendedores as any[]) ?? []).map((v) => [
           v.nome,
           v.codigo,
           buildPartnerReferralLink(v.codigo),
@@ -135,11 +137,13 @@ function AdminVendedores() {
           v.instalacoes_android ?? 0,
           v.instalacoes_ios ?? 0,
           v.cadastros ?? 0,
+          v.cadastros_ativos ?? 0,
           v.pagantes ?? 0,
+          Number(v.comissao_por_cadastro ?? 0).toFixed(2),
           Number(v.valor_total ?? 0).toFixed(2),
           Number(v.valor_pago ?? 0).toFixed(2),
           Number(v.valor_pendente ?? 0).toFixed(2),
-        ])),
+        ]),
       ];
       const csv = rows
         .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
@@ -312,7 +316,9 @@ function formatDate(value: string) {
 }
 
 function fmt(value: unknown) {
-  return Number(value ?? 0).toFixed(2).replace(".", ",");
+  return Number(value ?? 0)
+    .toFixed(2)
+    .replace(".", ",");
 }
 
 function escapeHtml(value: unknown) {
@@ -411,7 +417,7 @@ function NovoVendedorModal({ onClose, qc }: { onClose: () => void; qc: any }) {
             placeholder="JOAO123"
           />
           <Input
-            label="Comissão por indicação aprovada (R$)"
+            label="Comissão por cadastro ativo (R$)"
             value={form.comissao_valor}
             onChange={(v) => setForm({ ...form, comissao_valor: v })}
             type="number"

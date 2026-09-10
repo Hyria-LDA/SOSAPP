@@ -135,6 +135,14 @@ function VendedorDetail() {
 
   const exportCSV = () => {
     const rows = [
+      ["Resumo do período", "Valor"],
+      ["Cadastros", periodMetrics?.cadastros ?? 0],
+      ["Cadastros ativos", periodMetrics?.cadastros_ativos ?? 0],
+      ["Comissão por cadastro ativo", `R$ ${fmt(periodMetrics?.comissao_por_cadastro)}`],
+      ["Comissão de cadastros ativos", `R$ ${fmt(periodMetrics?.valor_total)}`],
+      ["Comissão paga", `R$ ${fmt(periodMetrics?.valor_pago)}`],
+      ["Comissão pendente", `R$ ${fmt(periodMetrics?.valor_pendente)}`],
+      [],
       ["Empresa", "Cidade", "Data", "Anúncios", "Status", "Comissão", "Pago"],
       ...filteredIndications.map((i: any) => [
         i.empresas?.nome_empresa || "",
@@ -232,7 +240,7 @@ function VendedorDetail() {
             />
           ))}
           <Row
-            label="comissao_valor (R$)"
+            label="Comissão por cadastro ativo (R$)"
             value={current.comissao_valor}
             editing={editing}
             type="number"
@@ -276,7 +284,7 @@ function VendedorDetail() {
           label="Planos pagos ativos"
           value={m.planos_pagos_ativos ?? m.premiums_ativos ?? 0}
         />
-        <MiniBig label="Total devido" value={`R$ ${fmt(m.valor_total)}`} />
+        <MiniBig label="Comissão cadastros ativos" value={`R$ ${fmt(m.valor_total)}`} />
         <MiniBig label="A pagar" value={`R$ ${fmt(m.valor_pendente)}`} accent />
       </div>
 
@@ -295,6 +303,7 @@ function VendedorDetail() {
           <MiniPeriod label="Acessos" value={periodMetrics?.acessos ?? 0} />
           <MiniPeriod label="Instalações" value={periodMetrics?.instalacoes ?? 0} />
           <MiniPeriod label="Cadastros" value={periodMetrics?.cadastros ?? 0} />
+          <MiniPeriod label="Cadastros ativos" value={periodMetrics?.cadastros_ativos ?? 0} />
           <MiniPeriod label="Pagantes" value={periodMetrics?.pagantes ?? 0} />
           <MiniPeriod label="Android" value={periodMetrics?.instalacoes_android ?? 0} />
           <MiniPeriod label="iOS" value={periodMetrics?.instalacoes_ios ?? 0} />
