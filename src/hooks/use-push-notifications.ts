@@ -25,6 +25,7 @@ const ALLOWED_NOTIFICATION_PATHS = new Set([
   "/app/buscar",
   "/app/notificacoes",
   "/app/perfil?upgrade=1",
+  "/onboarding",
 ]);
 
 type SOSPushResult = {

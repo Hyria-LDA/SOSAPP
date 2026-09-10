@@ -5,12 +5,16 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { EnderecoEmpresaForm, type EnderecoValue } from "@/components/endereco-empresa-form";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   component: Onboarding,
 });
 
 function Onboarding() {
+  // Registra o aparelho antes da conclusao do cadastro para que lembretes
+  // de onboarding tambem consigam chegar a quem abandonou esta tela.
+  usePushNotifications();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({

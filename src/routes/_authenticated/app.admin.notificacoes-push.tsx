@@ -5,6 +5,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import {
   ArrowLeft,
   BellRing,
+  Clock3,
   ExternalLink,
   Home,
   Plus,
@@ -229,6 +230,21 @@ function AdminPushNotifications() {
                 Abra o app no celular, faca login e aceite a permissao de notificacao.
               </div>
             ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-2xl bg-card p-4 shadow-card">
+        <div className="flex items-start gap-3">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <Clock3 className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-sm font-bold">Lembretes automaticos</div>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Segunda a sexta, as 09h, 14h e 19h (horario de Brasilia). Somente quem ainda nao
+              concluiu o cadastro recebe; ao concluir, os envios param automaticamente.
+            </p>
           </div>
         </div>
       </section>
