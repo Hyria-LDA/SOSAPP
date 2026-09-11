@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Bell, MapPin, PackageSearch, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,6 +22,14 @@ function isNativeApp() {
   const w = window as CapacitorWindow;
   const platform = w.Capacitor?.getPlatform?.();
   return !!w.Capacitor?.isNativePlatform?.() || (!!platform && ["android", "ios"].includes(platform));
+}
+
+function isAppLoginReturn() {
+  if (typeof window === "undefined") return false;
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const mobileBrowser = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+  return search.get("from_app") === "1" || hash.get("from_app") === "1" || mobileBrowser;
 }
 
 function buildOpenAppIntentUrl(session: {
@@ -49,9 +57,20 @@ function buildOpenAppIntentUrl(session: {
 
 function HomePage() {
   const navigate = useNavigate();
+  const [returningToApp, setReturningToApp] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
     if (isNativeApp()) navigate({ to: "/app", replace: true });
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setReturningToApp(Boolean(data.session) && isAppLoginReturn());
+      setCheckingSession(false);
+    });
+    return () => {
+      active = false;
+    };
   }, [navigate]);
 
   const openApp = async () => {
@@ -71,6 +90,31 @@ function HomePage() {
       provider_refresh_token: data.session.provider_refresh_token,
     });
   };
+
+  if (checkingSession) {
+    return <main className="min-h-screen bg-[#f6f2e9]" />;
+  }
+
+  if (returningToApp) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f6f2e9] px-6">
+        <div className="w-full max-w-sm text-center">
+          <Logo className="mx-auto h-20 w-auto" />
+          <h1 className="mt-7 text-2xl font-black text-[#111827]">Login concluído</h1>
+          <p className="mt-2 text-sm text-[#6b7280]">
+            Toque no botão abaixo para continuar no SOS Marceneiros.
+          </p>
+          <button
+            type="button"
+            onClick={openApp}
+            className="mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-base font-black text-primary-foreground shadow-pop"
+          >
+            Entrar no aplicativo <ArrowRight className="h-5 w-5" />
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f6f2e9] text-[#111827]">
