@@ -197,7 +197,7 @@ export async function restorePurchases(): Promise<PurchaseResult> {
       return { status: "error", message: "Nenhuma assinatura ativa foi encontrada nesta conta." };
     }
 
-    return { status: "success", planId: activePlan };
+    return { status: "success", planId: synced.plan === "ultra" ? "ultra" : activePlan };
   } catch (error) {
     const parsed = friendlyError(error);
     if (parsed.cancelled) return { status: "cancelled" };

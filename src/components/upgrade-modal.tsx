@@ -31,44 +31,19 @@ const PLANOS: Plano[] = [
     recursos: ["Visualização de propaganda", "Até 10 anúncios ativos", "1 busca automática"],
   },
   {
-    id: "tx",
-    slug: "tx",
-    storeProductId: "tx",
-    nome: "TX",
-    preco: 19.9,
-    cor: "blue",
-    recursos: ["Visualização de propaganda", "Até 25 anúncios ativos", "3 buscas automáticas"],
-  },
-  {
     id: "ultra",
     slug: "ultra",
     storeProductId: "ultra",
-    nome: "Ultra",
+    nome: "Brilhante",
     preco: 29.9,
     cor: "purple",
     recursos: [
       "Sem propaganda",
-      "Até 50 anúncios ativos",
-      "10 buscas automáticas",
-      "Sorteio de brindes exclusivos",
-    ],
-  },
-  {
-    id: "premium",
-    slug: "premium",
-    storeProductId: "premium",
-    nome: "Brilhante",
-    preco: 39.9,
-    cor: "yellow",
-    recursos: [
-      "Sem propaganda",
-      "Anúncio na tela inicial",
       "Anúncios ilimitados",
-      "50 buscas automáticas",
+      "Buscas automáticas ilimitadas",
       "Destaque visual nos resultados",
       "Selo Premium",
       "Possibilidade de aparecer na Home",
-      "Prioridade nos avisos automáticos",
       "Sorteio de brindes exclusivos",
     ],
   },
@@ -162,7 +137,10 @@ export function UpgradeModal({
 
         <div className="space-y-3 px-5 pb-3">
           {PLANOS.map((p) => {
-            const atual = p.slug === currentSlug;
+            const currentPlan = ["tx", "ultra", "premium"].includes(currentSlug ?? "")
+              ? "ultra"
+              : (currentSlug ?? "free");
+            const atual = p.slug === currentPlan;
             const isLoading = loadingSlug === p.slug;
             return (
               <div

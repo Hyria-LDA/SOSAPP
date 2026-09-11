@@ -230,13 +230,12 @@ function Buscar() {
       const slug = m.plano_vigente === false ? "free" : (m.plano_slug ?? "free");
       switch (slug) {
         case "premium":
-          return 0;
         case "ultra":
-          return 1;
+          return 0;
         case "tx":
-          return 2;
+          return 1;
         default:
-          return 3;
+          return 2;
       }
     };
     // Hash determinístico por id + seed da sessão → rotação estável dentro do plano

@@ -332,7 +332,7 @@ function Perfil() {
                 </div>
               )}
             </div>
-            {planStatus.plano.slug !== "premium" && (
+            {planStatus.plano.slug !== "ultra" && planStatus.plano.slug !== "premium" && (
               <button
                 onClick={() => setShowUpgrade(true)}
                 className="flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground"

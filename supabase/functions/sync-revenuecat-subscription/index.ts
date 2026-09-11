@@ -71,8 +71,10 @@ Deno.serve(async (request) => {
     }
 
     const entitlements = rcData.subscriber?.entitlements ?? {};
-    const activePlan = PLAN_PRIORITY.find((plan) => isActive(entitlements[plan]));
-    const selected = activePlan ? entitlements[activePlan] : undefined;
+    const storePlan = PLAN_PRIORITY.find((plan) => isActive(entitlements[plan]));
+    // Compras legadas de TX e Brilhante continuam válidas, mas recebem o plano único Ultra.
+    const activePlan: "ultra" | undefined = storePlan ? "ultra" : undefined;
+    const selected = storePlan ? entitlements[storePlan] : undefined;
     const productId = selected?.product_identifier ?? null;
     const subscription = productId ? rcData.subscriber?.subscriptions?.[productId] : undefined;
     const expiresAt = selected?.expires_date ?? subscription?.expires_date ?? null;
@@ -129,7 +131,7 @@ Deno.serve(async (request) => {
         user_id: userId,
         empresa_id: empresa?.id ?? null,
         app_user_id: userId,
-        entitlement_id: activePlan ?? null,
+        entitlement_id: storePlan ?? null,
         product_id: productId,
         status,
         expires_at: expiresAt,

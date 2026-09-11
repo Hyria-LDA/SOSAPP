@@ -7,11 +7,13 @@ type Props = {
 };
 
 export function isBrilhante(plano_slug?: string | null, plano_vigente?: boolean | null) {
-  return plano_slug === "premium" && plano_vigente !== false;
+  return (plano_slug === "ultra" || plano_slug === "premium") && plano_vigente !== false;
 }
 
 function effectiveSlug(plano_slug?: string | null, plano_vigente?: boolean | null) {
-  return plano_vigente === false ? "free" : (plano_slug ?? "free");
+  if (plano_vigente === false) return "free";
+  if (["tx", "ultra", "premium"].includes(plano_slug ?? "")) return "ultra";
+  return plano_slug ?? "free";
 }
 
 export function CrownBadge({ plano_slug, plano_vigente, size = "md", className = "" }: Props) {
@@ -19,7 +21,7 @@ export function CrownBadge({ plano_slug, plano_vigente, size = "md", className =
   const sz = size === "sm" ? "text-sm" : size === "lg" ? "text-lg" : "text-base";
   return (
     <span
-      aria-label="Empresa Brilhante"
+      aria-label="Empresa Premium"
       title="Empresa Brilhante — Parceiro Premium SOS Marceneiros"
       className={`inline-flex shrink-0 leading-none ${sz} ${className}`}
     >
@@ -35,7 +37,7 @@ export function BrilhanteSelo({ plano_slug, plano_vigente, className = "" }: Pro
       className={`inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-yellow-900 ring-1 ring-yellow-300 ${className}`}
     >
       <span aria-hidden>👑</span>
-      Brilhante
+      Premium
     </span>
   );
 }
@@ -53,7 +55,7 @@ const planStyles: Record<string, string> = {
 
 const planLabels: Record<string, string> = {
   premium: "Brilhante",
-  ultra: "Ultra",
+  ultra: "Brilhante",
   tx: "TX",
   free: "Free",
 };
@@ -62,7 +64,7 @@ export function PlanoBadge({ plano_slug, plano_vigente, className = "" }: Props)
   const slug = effectiveSlug(plano_slug, plano_vigente);
   const label = planLabels[slug] ?? "Free";
   const styles = planStyles[slug] ?? planStyles.free;
-  const icon = slug === "premium" ? "👑" : null;
+  const icon = slug === "premium" || slug === "ultra" ? "👑" : null;
 
   return (
     <span

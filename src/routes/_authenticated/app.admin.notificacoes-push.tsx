@@ -367,9 +367,7 @@ type AutomationRow = {
 const AUDIENCES = [
   ["no_registration", "Sem cadastro concluido"],
   ["active_registration", "Cadastro ativo"],
-  ["plan_tx", "Plano TX"],
-  ["plan_ultra", "Plano Ultra"],
-  ["plan_premium", "Plano Brilhante"],
+  ["plan_ultra", "Plano Brilhante"],
   ["all", "Todos os clientes"],
 ] as const;
 

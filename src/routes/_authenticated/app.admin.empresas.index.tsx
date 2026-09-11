@@ -212,9 +212,7 @@ function AdminEmpresas() {
         >
           <option value="all">Todos os planos</option>
           <option value="free">Free</option>
-          <option value="tx">TX</option>
-          <option value="ultra">Ultra</option>
-          <option value="premium">Brilhante</option>
+          <option value="ultra">Brilhante</option>
         </select>
       </label>
 

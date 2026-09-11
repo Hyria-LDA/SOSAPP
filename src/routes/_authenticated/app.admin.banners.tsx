@@ -80,9 +80,7 @@ function targetLabel(banner: Banner) {
 
 const PLANOS_DISPONIVEIS: { slug: string; nome: string }[] = [
   { slug: "free", nome: "Free" },
-  { slug: "tx", nome: "TX" },
-  { slug: "ultra", nome: "Ultra" },
-  { slug: "premium", nome: "Brilhante" },
+  { slug: "ultra", nome: "Brilhante" },
 ];
 
 export const Route = createFileRoute("/_authenticated/app/admin/banners")({

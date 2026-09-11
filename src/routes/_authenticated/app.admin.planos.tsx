@@ -46,7 +46,7 @@ function AdminPlanos() {
       const { data, error } = await supabase
         .from("planos")
         .select("*")
-        .not("slug", "in", "(standard,plus)")
+        .in("slug", ["free", "ultra"])
         .order("ordem");
       if (error) throw error;
       return (data ?? []) as unknown as Plano[];
@@ -304,7 +304,7 @@ function PlanoForm({
               <select value={cor} onChange={(e) => setCor(e.target.value)} className={inp}>
                 <option value="gray">Cinza (Free)</option>
                 <option value="blue">Azul (TX)</option>
-                <option value="purple">Roxo (Ultra)</option>
+                <option value="purple">Roxo (Brilhante)</option>
                 <option value="yellow">Amarelo (Brilhante)</option>
                 <option value="orange">Laranja</option>
               </select>
