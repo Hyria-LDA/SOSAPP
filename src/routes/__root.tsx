@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
 
@@ -28,29 +28,6 @@ type AppNotification = {
   alerta_id?: string | null;
 };
 
-type CapacitorWindow = Window &
-  typeof globalThis & {
-    Capacitor?: {
-      getPlatform?: () => string;
-      isNativePlatform?: () => boolean;
-    };
-  };
-
-function authCallbackPathFromDeepLink(url: string) {
-  try {
-    const deepLink = new URL(url);
-    const isAuthCallback =
-      deepLink.protocol === "sosmarceneiros:" && deepLink.host === "auth-callback";
-
-    if (!isAuthCallback) return null;
-
-    return `/auth/callback${deepLink.search}${deepLink.hash}`;
-  } catch (error) {
-    console.warn("[deep-link] URL invalida recebida", error);
-    return null;
-  }
-}
-
 function isPasswordRecoveryUrl() {
   if (typeof window === "undefined") return false;
 
@@ -61,42 +38,6 @@ function isPasswordRecoveryUrl() {
     hash.get("type") === "recovery" ||
     isPasswordRecoveryPending()
   );
-}
-
-function buildNativeIntentUrl(session: {
-  access_token: string;
-  refresh_token: string;
-  expires_in?: number;
-  token_type?: string;
-  provider_token?: string | null;
-  provider_refresh_token?: string | null;
-}) {
-  const query = new URLSearchParams();
-  query.set("from_app", "1");
-  query.set("access_token", session.access_token);
-  query.set("refresh_token", session.refresh_token);
-  if (session.expires_in) query.set("expires_in", String(session.expires_in));
-  query.set("token_type", session.token_type ?? "bearer");
-  if (session.provider_token) query.set("provider_token", session.provider_token);
-  if (session.provider_refresh_token)
-    query.set("provider_refresh_token", session.provider_refresh_token);
-
-  return `intent://auth-callback?${query.toString()}#Intent;scheme=sosmarceneiros;end`;
-}
-
-function isMobileBrowserOutsideApp() {
-  if (typeof window === "undefined") return false;
-  const ua = navigator.userAgent || "";
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
-  const isAndroidWebView = /(; wv\)|\bwv\b)/i.test(ua);
-  const w = window as CapacitorWindow;
-  const platform = w?.Capacitor?.getPlatform?.();
-  const isNative =
-    !!w?.Capacitor?.isNativePlatform?.() ||
-    (!!platform && ["android", "ios"].includes(platform)) ||
-    isAndroidWebView;
-
-  return isMobile && !isNative;
 }
 
 function NotFoundComponent() {
@@ -203,56 +144,6 @@ function RootShell({ children }: { children: ReactNode }) {
         <Scripts />
       </body>
     </html>
-  );
-}
-
-function OpenAppBridgePrompt() {
-  const [nativeUrl, setNativeUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!isMobileBrowserOutsideApp()) return;
-    if (!window.location.pathname.startsWith("/app")) return;
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancelled || !data.session) return;
-      setNativeUrl(
-        buildNativeIntentUrl({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-          expires_in: data.session.expires_in,
-          token_type: data.session.token_type,
-          provider_token: data.session.provider_token,
-          provider_refresh_token: data.session.provider_refresh_token,
-        }),
-      );
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (!nativeUrl) return null;
-
-  return (
-    <div className="fixed inset-x-3 bottom-4 z-50 rounded-2xl border border-primary/20 bg-card p-3 shadow-card">
-      <div className="flex items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Login feito no navegador</p>
-          <p className="text-xs text-muted-foreground">
-            Toque para continuar dentro do aplicativo.
-          </p>
-        </div>
-        <a
-          href={nativeUrl}
-          className="shrink-0 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
-        >
-          Abrir app
-        </a>
-      </div>
-    </div>
   );
 }
 
@@ -401,47 +292,10 @@ function RootComponent() {
   }, []);
 
   useEffect(() => {
-    let removeDeepLinkListener: (() => void) | undefined;
-    let cancelled = false;
-
     if (window.location.pathname !== "/auth/redefinir" && isPasswordRecoveryUrl()) {
       window.location.replace(`/auth/redefinir${window.location.search}${window.location.hash}`);
       return;
     }
-
-    const openAuthCallback = (url: string) => {
-      const callbackPath = authCallbackPathFromDeepLink(url);
-      if (!callbackPath) return false;
-
-      import("@capacitor/browser").then(({ Browser }) => Browser.close()).catch(() => {});
-      window.location.replace(callbackPath);
-      return true;
-    };
-
-    import("@capacitor/app")
-      .then(async ({ App }) => {
-        App.getLaunchUrl()
-          .then((launch) => {
-            if (!cancelled && launch?.url) openAuthCallback(launch.url);
-          })
-          .catch((error) => {
-            console.warn("[deep-link] launch url indisponivel", error);
-          });
-
-        return App.addListener("appUrlOpen", ({ url }) => {
-          openAuthCallback(url);
-        });
-      })
-      .then((handle) => {
-        if (cancelled) {
-          handle.remove();
-          return;
-        }
-        removeDeepLinkListener = () => handle.remove();
-      })
-      .catch((error) => {
-        console.warn("[deep-link] listener nativo indisponivel", error);
-      });
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
@@ -481,8 +335,6 @@ function RootComponent() {
     window.addEventListener("error", onImgError, true);
 
     return () => {
-      cancelled = true;
-      removeDeepLinkListener?.();
       sub.subscription.unsubscribe();
       window.removeEventListener("error", onImgError, true);
     };
@@ -494,7 +346,6 @@ function RootComponent() {
       <ForceUpdateGate />
       <InAppNotificationListener queryClient={queryClient} />
       <InAppPurchaseSync queryClient={queryClient} />
-      <OpenAppBridgePrompt />
       <Toaster position="top-center" richColors />
     </QueryClientProvider>
   );

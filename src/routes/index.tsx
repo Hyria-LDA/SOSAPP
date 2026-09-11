@@ -1,9 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Bell, MapPin, PackageSearch, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Logo } from "@/components/logo";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -24,97 +23,12 @@ function isNativeApp() {
   return !!w.Capacitor?.isNativePlatform?.() || (!!platform && ["android", "ios"].includes(platform));
 }
 
-function isAppLoginReturn() {
-  if (typeof window === "undefined") return false;
-  const search = new URLSearchParams(window.location.search);
-  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  const mobileBrowser = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
-  return search.get("from_app") === "1" || hash.get("from_app") === "1" || mobileBrowser;
-}
-
-function buildOpenAppIntentUrl(session: {
-  access_token: string;
-  refresh_token: string;
-  expires_in?: number;
-  token_type?: string;
-  provider_token?: string | null;
-  provider_refresh_token?: string | null;
-}) {
-  const query = new URLSearchParams();
-  query.set("from_app", "1");
-  query.set("access_token", session.access_token);
-  query.set("refresh_token", session.refresh_token);
-  if (session.expires_in) query.set("expires_in", String(session.expires_in));
-  query.set("token_type", session.token_type ?? "bearer");
-  if (session.provider_token) query.set("provider_token", session.provider_token);
-  if (session.provider_refresh_token)
-    query.set("provider_refresh_token", session.provider_refresh_token);
-
-  return `intent://auth-callback?${query.toString()}#Intent;scheme=sosmarceneiros;package=br.com.sosmarceneiros.app;S.browser_fallback_url=${encodeURIComponent(
-    "https://www.sosmarceneiros.com.br/auth",
-  )};end`;
-}
-
 function HomePage() {
   const navigate = useNavigate();
-  const [returningToApp, setReturningToApp] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
     if (isNativeApp()) navigate({ to: "/app", replace: true });
-    let active = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      setReturningToApp(Boolean(data.session) && isAppLoginReturn());
-      setCheckingSession(false);
-    });
-    return () => {
-      active = false;
-    };
   }, [navigate]);
-
-  const openApp = async () => {
-    const { data } = await supabase.auth.getSession();
-
-    if (!data.session) {
-      navigate({ to: "/auth" });
-      return;
-    }
-
-    window.location.href = buildOpenAppIntentUrl({
-      access_token: data.session.access_token,
-      refresh_token: data.session.refresh_token,
-      expires_in: data.session.expires_in,
-      token_type: data.session.token_type,
-      provider_token: data.session.provider_token,
-      provider_refresh_token: data.session.provider_refresh_token,
-    });
-  };
-
-  if (checkingSession) {
-    return <main className="min-h-screen bg-[#f6f2e9]" />;
-  }
-
-  if (returningToApp) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f6f2e9] px-6">
-        <div className="w-full max-w-sm text-center">
-          <Logo className="mx-auto h-20 w-auto" />
-          <h1 className="mt-7 text-2xl font-black text-[#111827]">Login concluído</h1>
-          <p className="mt-2 text-sm text-[#6b7280]">
-            Toque no botão abaixo para continuar no SOS Marceneiros.
-          </p>
-          <button
-            type="button"
-            onClick={openApp}
-            className="mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-base font-black text-primary-foreground shadow-pop"
-          >
-            Entrar no aplicativo <ArrowRight className="h-5 w-5" />
-          </button>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-[#f6f2e9] text-[#111827]">

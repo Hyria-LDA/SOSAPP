@@ -20,11 +20,11 @@ const sharedNativePlugins = [
  * index.html mínimo de redirecionamento. Em runtime, `server.url` faz o
  * WebView carregar o site online diretamente.
  *
- * Deep Links / OAuth Google e Apple:
+ * Links e autenticação Google/Apple:
  *  - `appId` (br.com.sosmarceneiros.app) é usado para Android App Links e
  *    iOS Universal Links posteriormente.
- *  - `scheme: "sosmarceneiros"` registra o esquema customizado consumido por
- *    /auth/callback (handoff `sosmarceneiros://auth-callback`).
+ *  - Nos apps, a autenticação social é nativa e a sessão é criada diretamente
+ *    pelo Supabase, sem transportar tokens em URLs.
  */
 const config: CapacitorConfig = {
   appId: "br.com.sosmarceneiros.app",
@@ -39,9 +39,6 @@ const config: CapacitorConfig = {
       "sosmarceneiros.com.br",
       "www.sosmarceneiros.com.br",
       "sosapp-murex.vercel.app",
-      "yzbfjqeltqgqpqecmwdv.supabase.co",
-      "accounts.google.com",
-      "*.googleusercontent.com",
     ],
   },
   android: {

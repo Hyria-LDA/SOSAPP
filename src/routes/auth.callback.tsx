@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,6 @@ export const Route = createFileRoute("/auth/callback")({
   component: AuthCallback,
 });
 
-const NATIVE_SCHEME = "sosmarceneiros://auth-callback";
 const SESSION_WAIT_MS = 5000;
 
 function goTo(path: "/app" | "/auth", navigate: ReturnType<typeof useNavigate>) {
@@ -20,28 +19,9 @@ function goTo(path: "/app" | "/auth", navigate: ReturnType<typeof useNavigate>) 
   }
 }
 
-function buildNativeUrl(session: {
-  access_token: string;
-  refresh_token: string;
-  expires_in?: number;
-  token_type?: string;
-  provider_token?: string | null;
-  provider_refresh_token?: string | null;
-}) {
-  const frag = new URLSearchParams();
-  frag.set("access_token", session.access_token);
-  frag.set("refresh_token", session.refresh_token);
-  if (session.expires_in) frag.set("expires_in", String(session.expires_in));
-  frag.set("token_type", session.token_type ?? "bearer");
-  if (session.provider_token) frag.set("provider_token", session.provider_token);
-  if (session.provider_refresh_token)
-    frag.set("provider_refresh_token", session.provider_refresh_token);
-  return `${NATIVE_SCHEME}?from_app=1#${frag.toString()}`;
-}
-
 /**
- * Lê parâmetros tanto do query string quanto do fragmento (#),
- * cobrindo PKCE (?code=...) e Implicit/setSession (#access_token=...).
+ * Lê os parâmetros do retorno OAuth. O fluxo novo usa somente PKCE (?code=...),
+ * mantendo tokens de sessão fora da URL.
  */
 function readAuthParams() {
   const params: Record<string, string> = {};
@@ -96,7 +76,6 @@ async function waitForSession() {
 
 function AuthCallback() {
   const navigate = useNavigate();
-  const [nativeHandoff, setNativeHandoff] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,34 +93,10 @@ function AuthCallback() {
           return;
         }
 
-        const isAppDeepLinkCallback = params.from_app === "1";
-        const isNative =
-          isAppDeepLinkCallback ||
-          params.native === "1" ||
-          (typeof sessionStorage !== "undefined" &&
-            sessionStorage.getItem("lov:native") === "1");
-
         const code = params.code;
-        const accessToken = params.access_token;
-        const refreshToken = params.refresh_token;
+        let flow: "pkce" | "existing" | "none" = "none";
 
-        let flow: "tokens" | "pkce" | "existing" | "none" = "none";
-
-        // 1) Tokens diretos no fragmento — usar setSession.
-        if (accessToken && refreshToken) {
-          flow = "tokens";
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          if (error) {
-            toast.error(`Falha ao restaurar sessão: ${error.message}`);
-            goTo("/auth", navigate);
-            return;
-          }
-        }
-        // 2) PKCE — code -> exchangeCodeForSession.
-        else if (code) {
+        if (code) {
           flow = "pkce";
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {
@@ -173,31 +128,6 @@ function AuthCallback() {
           );
         } catch {}
 
-        if (isAppDeepLinkCallback) {
-          try {
-            sessionStorage.removeItem("lov:native");
-          } catch {}
-          goTo("/app", navigate);
-          return;
-        }
-
-        if (isNative) {
-          const deepUrl = buildNativeUrl({
-            access_token: sessData.session.access_token,
-            refresh_token: sessData.session.refresh_token,
-            expires_in: sessData.session.expires_in,
-            token_type: sessData.session.token_type,
-            provider_token: sessData.session.provider_token,
-            provider_refresh_token: sessData.session.provider_refresh_token,
-          });
-          try {
-            sessionStorage.removeItem("lov:native");
-          } catch {}
-          setNativeHandoff(deepUrl);
-          window.location.replace(deepUrl);
-          return;
-        }
-
         goTo("/app", navigate);
       } catch (err: any) {
         console.error("[auth/callback] exceção", err);
@@ -211,26 +141,6 @@ function AuthCallback() {
       cancelled = true;
     };
   }, [navigate]);
-
-  if (nativeHandoff) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-secondary px-6">
-        <div className="flex max-w-sm flex-col items-center gap-4 text-center text-sm text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <p>Voltando para o aplicativo SOS Marceneiros…</p>
-          <a
-            href={nativeHandoff}
-            className="rounded-xl bg-primary px-4 py-2 font-semibold text-primary-foreground shadow-soft"
-          >
-            Abrir no app
-          </a>
-          <p className="text-xs">
-            Se nada acontecer, feche esta aba e volte ao aplicativo manualmente.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary">

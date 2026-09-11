@@ -6,27 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 
 const PUBLIC_SITE_URL = "https://sosmarceneiros.com.br";
-const NATIVE_REDIRECT_URL = "sosmarceneiros://auth-callback?from_app=1";
 
 function getPublicOrigin() {
   if (typeof window === "undefined") return PUBLIC_SITE_URL;
   const origin = window.location.origin;
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) return origin;
   return PUBLIC_SITE_URL;
-}
-
-async function openExternalLogin(url: string) {
-  try {
-    const { registerPlugin } = await import("@capacitor/core");
-    const ExternalBrowser = registerPlugin<{ openUrl(options: { url: string }): Promise<void> }>(
-      "ExternalBrowser",
-    );
-    await ExternalBrowser.openUrl({ url });
-    return;
-  } catch (error) {
-    console.warn("[auth/google] ExternalBrowser indisponivel", error);
-    window.location.assign(url);
-  }
 }
 
 type CapacitorWindow = Window & {
@@ -74,22 +59,32 @@ async function sha256(value: string) {
     .join("");
 }
 
-async function signInWithNativeGoogleOnIos() {
-  const iosClientId = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID?.trim();
+async function signInWithNativeGoogle(platform: "android" | "ios") {
   const webClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID?.trim();
 
-  if (!iosClientId || !webClientId) {
-    throw new Error("Configure VITE_GOOGLE_IOS_CLIENT_ID e VITE_GOOGLE_WEB_CLIENT_ID no Vercel.");
+  if (!webClientId) {
+    throw new Error("Configure VITE_GOOGLE_WEB_CLIENT_ID no ambiente de produção.");
+  }
+
+  const iosClientId = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID?.trim();
+  if (platform === "ios" && !iosClientId) {
+    throw new Error("Configure VITE_GOOGLE_IOS_CLIENT_ID no ambiente de produção.");
   }
 
   const { SocialLogin } = await import("@capgo/capacitor-social-login");
 
   await SocialLogin.initialize({
-    google: {
-      iOSClientId: iosClientId,
-      iOSServerClientId: webClientId,
-      mode: "online",
-    },
+    google:
+      platform === "ios"
+        ? {
+            iOSClientId: iosClientId,
+            iOSServerClientId: webClientId,
+            mode: "online",
+          }
+        : {
+            webClientId,
+            mode: "online",
+          },
   });
 
   const rawNonce = createAuthNonce();
@@ -296,52 +291,32 @@ function AuthPage() {
   const google = async () => {
     setLoading(true);
     try {
-      const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
       const w = typeof window !== "undefined" ? (window as CapacitorWindow) : undefined;
       const platform = w?.Capacitor?.getPlatform?.();
       const isCapacitor =
         !!w?.Capacitor?.isNativePlatform?.() ||
         (!!platform && ["android", "ios"].includes(platform));
-      const isWebViewish = /(; wv\)|\bwv\b)/i.test(ua) || /DreamFlow|Flutter|Capacitor/i.test(ua);
-      const isNativeWrapper = isCapacitor || isWebViewish;
 
-      if (isCapacitor && platform === "ios") {
-        await signInWithNativeGoogleOnIos();
+      if (isCapacitor && (platform === "android" || platform === "ios")) {
+        await signInWithNativeGoogle(platform);
         toast.success("Login realizado com Google!");
         navigate({ to: "/app", replace: true });
         setLoading(false);
         return;
       }
 
-      try {
-        sessionStorage.setItem("lov:native", isNativeWrapper ? "1" : "0");
-      } catch {
-        // sessionStorage pode estar indisponível em alguns WebViews.
-      }
-
-      const redirectTo = isNativeWrapper
-        ? NATIVE_REDIRECT_URL
-        : `${getPublicOrigin()}/auth/callback`;
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo,
+          redirectTo: `${getPublicOrigin()}/auth/callback`,
           queryParams: {
             access_type: "offline",
             prompt: "select_account",
           },
-          skipBrowserRedirect: isNativeWrapper,
         },
       });
 
       if (error) throw error;
-
-      if (isNativeWrapper) {
-        if (!data?.url) throw new Error("URL de login Google nao foi gerada.");
-        await openExternalLogin(data.url);
-        setLoading(false);
-      }
     } catch (err) {
       console.error("[auth/google] excecao", err);
       const msg = err instanceof Error ? err.message : String(err ?? "");
