@@ -12,6 +12,7 @@ import { grainArrow, grainLabel } from "@/lib/grain";
 import { useAuth } from "@/hooks/use-auth";
 import { DenunciaButton } from "@/components/denuncia-modal";
 import { CrownBadge } from "@/components/premium-badge";
+import { toast } from "sonner";
 import {
   Carousel,
   CarouselContent,
@@ -31,6 +32,24 @@ function Detalhe() {
   const isAuthed = !!user;
   const [idx, setIdx] = useState(0);
   const [api, setApi] = useState<CarouselApi>();
+
+  const { data: canAccessWhatsapp = false } = useQuery({
+    queryKey: ["ad-whatsapp-access", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const [{ data: company }, { data: roles }] = await Promise.all([
+        supabase
+          .from("empresas")
+          .select("id")
+          .eq("owner_id", user!.id)
+          .eq("status", "ativa")
+          .eq("onboarded", true)
+          .maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", user!.id).eq("role", "admin"),
+      ]);
+      return !!company || !!roles?.length;
+    },
+  });
 
   useEffect(() => {
     if (!api) return;
@@ -107,6 +126,10 @@ Obrigado!`;
   const conversar = async () => {
     if (!isAuthed) {
       navigate({ to: "/auth" });
+      return;
+    }
+    if (!canAccessWhatsapp) {
+      toast.error("Somente empresas ativas podem acessar o WhatsApp dos anuncios.");
       return;
     }
     if (!empresa?.whatsapp) return;
@@ -322,7 +345,7 @@ Obrigado!`;
 
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto max-w-md">
-          {isAuthed ? (
+          {isAuthed && canAccessWhatsapp ? (
             <button
               onClick={conversar}
               disabled={!empresa?.whatsapp}
@@ -332,6 +355,14 @@ Obrigado!`;
                 <path d="M19.11 17.21c-.27-.14-1.6-.79-1.85-.88s-.43-.14-.61.14-.7.88-.86 1.06-.31.21-.58.07a7.4 7.4 0 0 1-2.18-1.35 8.2 8.2 0 0 1-1.51-1.88c-.16-.27 0-.42.12-.56s.27-.31.4-.47a1.83 1.83 0 0 0 .27-.45.5.5 0 0 0 0-.47c-.07-.14-.61-1.47-.84-2s-.45-.45-.61-.46h-.52a1 1 0 0 0-.73.34 3 3 0 0 0-.95 2.25 5.27 5.27 0 0 0 1.11 2.81 12.06 12.06 0 0 0 4.64 4.1c.65.28 1.16.45 1.55.57a3.75 3.75 0 0 0 1.71.11 2.79 2.79 0 0 0 1.84-1.3 2.27 2.27 0 0 0 .16-1.3c-.07-.12-.25-.19-.52-.33zM16.05 4A12 12 0 0 0 5.7 22l-1.7 6.2 6.35-1.66A12 12 0 1 0 16.05 4zm0 21.84a9.84 9.84 0 0 1-5-1.37l-.36-.21-3.77 1 1-3.67-.23-.38a9.86 9.86 0 1 1 8.36 4.65z" />
               </svg>
               Comprar pelo WhatsApp
+            </button>
+          ) : isAuthed ? (
+            <button
+              onClick={conversar}
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-secondary text-sm font-bold text-muted-foreground"
+            >
+              <Lock className="h-5 w-5" />
+              Disponivel somente para empresas ativas
             </button>
           ) : (
             <button
