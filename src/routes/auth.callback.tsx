@@ -104,10 +104,6 @@ function AuthCallback() {
     const finish = async () => {
       try {
         const params = readAuthParams();
-        console.info("[auth/callback] params recebidos", {
-          keys: Object.keys(params),
-          href: window.location.href,
-        });
 
         const providerError =
           params.error_description || params.error_code || params.error;
@@ -134,15 +130,9 @@ function AuthCallback() {
         // 1) Tokens diretos no fragmento — usar setSession.
         if (accessToken && refreshToken) {
           flow = "tokens";
-          console.info("[auth/callback] fluxo: tokens diretos (#access_token)");
-          const { data, error } = await supabase.auth.setSession({
+          const { error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
-          });
-          console.info("[auth/callback] setSession", {
-            hasSession: !!data?.session,
-            user: data?.session?.user?.email,
-            error: error?.message,
           });
           if (error) {
             toast.error(`Falha ao restaurar sessão: ${error.message}`);
@@ -153,35 +143,15 @@ function AuthCallback() {
         // 2) PKCE — code -> exchangeCodeForSession.
         else if (code) {
           flow = "pkce";
-          console.info("[auth/callback] fluxo: PKCE (?code=)");
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          console.info("[auth/callback] exchangeCodeForSession", {
-            hasSession: !!data?.session,
-            user: data?.session?.user?.email,
-            error: error?.message,
-          });
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {
             toast.error(`Falha ao concluir login: ${error.message}`);
             goTo("/auth", navigate);
             return;
           }
-        } else {
-          console.info(
-            "[auth/callback] fluxo: nenhum code/token na URL — verificando sessão existente",
-          );
         }
 
-        const { data: sessData, error: sessError } = await waitForSession();
-
-        console.info("[auth/callback] getSession final", {
-          flow,
-          hasSession: !!sessData?.session,
-          user: sessData?.session?.user?.email,
-          hasAccessToken: !!sessData?.session?.access_token,
-          hasRefreshToken: !!sessData?.session?.refresh_token,
-          error: sessError?.message,
-          isNative,
-        });
+        const { data: sessData } = await waitForSession();
 
         if (cancelled) return;
 
@@ -207,9 +177,6 @@ function AuthCallback() {
           try {
             sessionStorage.removeItem("lov:native");
           } catch {}
-          console.info("[auth/callback] sessao OK no app — redirecionando para /app", {
-            flow,
-          });
           goTo("/app", navigate);
           return;
         }
@@ -227,14 +194,10 @@ function AuthCallback() {
             sessionStorage.removeItem("lov:native");
           } catch {}
           setNativeHandoff(deepUrl);
-          console.info("[auth/callback] deep link nativo", { scheme: NATIVE_SCHEME });
           window.location.replace(deepUrl);
           return;
         }
 
-        console.info("[auth/callback] sessão OK — redirecionando para /app", {
-          flow,
-        });
         goTo("/app", navigate);
       } catch (err: any) {
         console.error("[auth/callback] exceção", err);

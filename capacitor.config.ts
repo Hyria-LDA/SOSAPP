@@ -39,7 +39,7 @@ const config: CapacitorConfig = {
       "sosmarceneiros.com.br",
       "www.sosmarceneiros.com.br",
       "sosapp-murex.vercel.app",
-      "*.supabase.co",
+      "yzbfjqeltqgqpqecmwdv.supabase.co",
       "accounts.google.com",
       "*.googleusercontent.com",
     ],

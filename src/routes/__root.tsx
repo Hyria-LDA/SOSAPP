@@ -46,7 +46,7 @@ function authCallbackPathFromDeepLink(url: string) {
 
     return `/auth/callback${deepLink.search}${deepLink.hash}`;
   } catch (error) {
-    console.warn("[deep-link] URL invalida recebida", { url, error });
+    console.warn("[deep-link] URL invalida recebida", error);
     return null;
   }
 }
