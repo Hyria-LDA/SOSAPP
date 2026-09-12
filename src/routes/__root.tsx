@@ -65,8 +65,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="grid min-h-screen place-items-center bg-background px-6 text-center">
       <div>
-        <h1 className="text-lg font-bold">Algo deu errado</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
+        <h1 className="text-lg font-bold">Estamos em manutenção</h1>
+        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+          Estamos preparando uma nova atualização do SOS Marceneiros. Em breve, a versão 24 estará
+          disponível na loja. Quando ela aparecer, atualize o aplicativo para continuar.
+        </p>
         <button
           onClick={() => {
             router.invalidate();
