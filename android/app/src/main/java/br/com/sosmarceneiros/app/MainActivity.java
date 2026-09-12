@@ -6,7 +6,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import androidx.core.view.WindowCompat;
+import androidx.activity.EdgeToEdge;
 import com.getcapacitor.BridgeActivity;
 import co.boundstate.BranchDeepLinks;
 import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
@@ -19,9 +19,8 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(BranchDeepLinks.class);
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
-        WindowCompat.enableEdgeToEdge(getWindow());
-        clearWebViewCache();
         installSOSPushBridge();
         openPushPathInWebView(getIntent());
         if (savedInstanceState == null) {
@@ -71,11 +70,6 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         } else if (!granted && onDenied != null) {
             onDenied.run();
         }
-    }
-
-    private void clearWebViewCache() {
-        if (getBridge() == null || getBridge().getWebView() == null) return;
-        getBridge().getWebView().clearCache(true);
     }
 
     private void installSOSPushBridge() {
