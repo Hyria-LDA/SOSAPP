@@ -19,8 +19,10 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(BranchDeepLinks.class);
-        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
+        // O BridgeActivity aplica o tema sem ActionBar durante super.onCreate().
+        // Ativar antes disso pode criar uma barra nativa com o nome do app.
+        EdgeToEdge.enable(this);
         installSOSPushBridge();
         openPushPathInWebView(getIntent());
         if (savedInstanceState == null) {
