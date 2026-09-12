@@ -57,13 +57,12 @@ function HomePage() {
               fabricante, receba alertas automáticos e negocie direto com outras empresas.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={openApp}
+              <Link
+                to="/auth"
                 className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-black text-primary-foreground shadow-pop"
               >
                 Acessar o app <ArrowRight className="h-4 w-4" />
-              </button>
+              </Link>
               <Link
                 to="/privacidade"
                 className="inline-flex items-center gap-2 rounded-2xl border border-[#d8d1c2] bg-white px-5 py-3 text-sm font-bold"
