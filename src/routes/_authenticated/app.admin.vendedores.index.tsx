@@ -2,6 +2,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowLeft, Copy, Download, Plus, Printer, X } from "lucide-react";
+import { strToU8, zipSync } from "fflate";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { buildPartnerReferralLink } from "@/lib/partner-branch";
@@ -162,6 +163,85 @@ function AdminVendedores() {
     }
   };
 
+  const exportIndividualReports = async () => {
+    setReporting(true);
+    try {
+      const report = await fetchAllReport();
+      if (!report) return;
+
+      const sellers = (report.vendedores as any[]) ?? [];
+      const nextDay = new Date(`${toDate}T12:00:00`);
+      nextDay.setDate(nextDay.getDate() + 1);
+
+      const { data: indications, error } = await supabase
+        .from("indicacoes" as any)
+        .select("vendedor_id, empresa_id, created_at, status, comissao_valor, paga, empresas(nome_empresa, cidade, estado, status)")
+        .gte("created_at", `${fromDate}T00:00:00`)
+        .lt("created_at", `${dateInputValue(nextDay)}T00:00:00`)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+
+      const bySeller = new Map<string, any[]>();
+      for (const indication of (indications as any[]) ?? []) {
+        const list = bySeller.get(indication.vendedor_id) ?? [];
+        list.push(indication);
+        bySeller.set(indication.vendedor_id, list);
+      }
+
+      const files: Record<string, Uint8Array> = {};
+      for (const seller of sellers) {
+        const sellerIndications = bySeller.get(seller.id) ?? [];
+        const rows = [
+          ["Relatório individual do parceiro", seller.nome],
+          ["Código", seller.codigo],
+          ["Link", buildPartnerReferralLink(seller.codigo)],
+          ["Período", `${formatDate(fromDate)} a ${formatDate(toDate)}`],
+          [],
+          ["Resumo do período", "Valor"],
+          ["Acessos", seller.acessos ?? 0],
+          ["Instalações", seller.instalacoes ?? 0],
+          ["Instalações Android", seller.instalacoes_android ?? 0],
+          ["Instalações iOS", seller.instalacoes_ios ?? 0],
+          ["Cadastros", seller.cadastros ?? 0],
+          ["Cadastros ativos", seller.cadastros_ativos ?? 0],
+          ["Pagantes", seller.pagantes ?? 0],
+          ["Comissão por cadastro ativo", `R$ ${fmt(seller.comissao_por_cadastro)}`],
+          ["Comissão total", `R$ ${fmt(seller.valor_total)}`],
+          ["Comissão paga", `R$ ${fmt(seller.valor_pago)}`],
+          ["Comissão pendente", `R$ ${fmt(seller.valor_pendente)}`],
+          [],
+          ["Empresa", "Cidade/UF", "Cadastro", "Status do cadastro", "Status da empresa", "Comissão", "Pago"],
+          ...sellerIndications.map((item: any) => [
+            item.empresas?.nome_empresa || "",
+            [item.empresas?.cidade, item.empresas?.estado].filter(Boolean).join("/"),
+            new Date(item.created_at).toLocaleDateString("pt-BR"),
+            item.status || "",
+            item.empresas?.status || "",
+            Number(item.comissao_valor ?? 0).toFixed(2).replace(".", ","),
+            item.paga ? "Sim" : "Não",
+          ]),
+        ];
+        const csv = rows.map(csvRow).join("\r\n");
+        const filename = `${safeFilename(seller.nome)}-${safeFilename(seller.codigo)}.csv`;
+        files[filename] = strToU8(`\uFEFF${csv}`);
+      }
+
+      const zip = zipSync(files, { level: 6 });
+      const blob = new Blob([zip], { type: "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `relatorios-individuais-${fromDate}-a-${toDate}.zip`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${sellers.length} relatórios individuais preparados.`);
+    } catch (error: any) {
+      toast.error(error?.message || "Não foi possível baixar os relatórios individuais.");
+    } finally {
+      setReporting(false);
+    }
+  };
+
   return (
     <div className="safe-top px-5 pt-4 pb-10">
       <header className="flex items-center gap-2">
@@ -209,6 +289,14 @@ function AdminVendedores() {
             <Download className="h-4 w-4" /> Baixar CSV
           </button>
         </div>
+        <button
+          type="button"
+          disabled={reporting || fromDate > toDate}
+          onClick={exportIndividualReports}
+          className="mt-2 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-primary bg-background px-3 text-xs font-bold text-primary disabled:opacity-50"
+        >
+          <Download className="h-4 w-4" /> Baixar todos os relatórios individuais (.zip)
+        </button>
       </section>
 
       <div className="mt-4 space-y-2">
@@ -319,6 +407,19 @@ function fmt(value: unknown) {
   return Number(value ?? 0)
     .toFixed(2)
     .replace(".", ",");
+}
+
+function csvRow(row: unknown[]) {
+  return row.map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(";");
+}
+
+function safeFilename(value: unknown) {
+  return String(value ?? "relatorio")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase() || "relatorio";
 }
 
 function escapeHtml(value: unknown) {
