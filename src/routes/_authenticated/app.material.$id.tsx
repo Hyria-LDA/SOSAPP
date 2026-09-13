@@ -129,7 +129,7 @@ Obrigado!`;
       return;
     }
     if (!canAccessWhatsapp) {
-      toast.error("Somente empresas ativas podem acessar o WhatsApp dos anuncios.");
+      toast.error("Finalize seu cadastro para ver o número do vendedor.");
       return;
     }
     if (!empresa?.whatsapp) return;
@@ -141,7 +141,7 @@ Obrigado!`;
   };
 
   return (
-    <div className="pb-32">
+    <div className="pb-44">
       <div className="relative">
         <Carousel
           setApi={setApi}
@@ -357,13 +357,22 @@ Obrigado!`;
               Comprar pelo WhatsApp
             </button>
           ) : isAuthed ? (
-            <button
-              onClick={conversar}
-              className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-secondary text-sm font-bold text-muted-foreground"
-            >
-              <Lock className="h-5 w-5" />
-              Disponivel somente para empresas ativas
-            </button>
+            <div className="rounded-2xl bg-secondary p-3 text-center">
+              <div className="flex items-center justify-center gap-2 text-sm font-bold text-foreground">
+                <Lock className="h-5 w-5 shrink-0" />
+                Finalize seu cadastro para ver o número do vendedor
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                O contato fica disponível assim que sua empresa estiver ativa.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/app/perfil" })}
+                className="mt-3 flex h-11 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-card active:scale-[0.98]"
+              >
+                Completar cadastro no perfil
+              </button>
+            </div>
           ) : (
             <button
               onClick={() => navigate({ to: "/auth" })}
