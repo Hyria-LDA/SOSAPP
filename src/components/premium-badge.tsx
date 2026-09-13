@@ -21,8 +21,8 @@ export function CrownBadge({ plano_slug, plano_vigente, size = "md", className =
   const sz = size === "sm" ? "text-sm" : size === "lg" ? "text-lg" : "text-base";
   return (
     <span
-      aria-label="Empresa Premium"
-      title="Empresa Brilhante — Parceiro Premium SOS Marceneiros"
+      aria-label="Empresa Brilhante"
+      title="Empresa Brilhante — Parceiro SOS Marceneiros"
       className={`inline-flex shrink-0 leading-none ${sz} ${className}`}
     >
       👑
@@ -37,7 +37,7 @@ export function BrilhanteSelo({ plano_slug, plano_vigente, className = "" }: Pro
       className={`inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-yellow-900 ring-1 ring-yellow-300 ${className}`}
     >
       <span aria-hidden>👑</span>
-      Premium
+      Brilhante
     </span>
   );
 }
@@ -46,7 +46,7 @@ const planStyles: Record<string, string> = {
   premium:
     "bg-yellow-100 text-yellow-900 ring-yellow-300",
   ultra:
-    "bg-purple-100 text-purple-900 ring-purple-300",
+    "bg-yellow-100 text-yellow-900 ring-yellow-300",
   tx:
     "bg-blue-100 text-blue-900 ring-blue-300",
   free:

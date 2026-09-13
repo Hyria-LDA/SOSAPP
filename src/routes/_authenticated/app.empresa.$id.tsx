@@ -128,7 +128,7 @@ function EmpresaPublica() {
                   plano_vigente={(empresa as any).plano_vigente}
                 />
                 <p className="mt-1 text-[11px] font-semibold text-yellow-700">
-                  Parceiro Premium SOS Marceneiros
+                  Parceiro Brilhante SOS Marceneiros
                 </p>
               </div>
             )}

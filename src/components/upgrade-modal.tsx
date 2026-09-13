@@ -36,7 +36,7 @@ const PLANOS: Plano[] = [
     storeProductId: "ultra",
     nome: "Brilhante",
     preco: 29.9,
-    cor: "purple",
+    cor: "yellow",
     recursos: [
       "Sem propaganda",
       "Anúncios ilimitados",

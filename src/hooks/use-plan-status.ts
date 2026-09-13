@@ -77,7 +77,7 @@ export function planEmoji(slug: string): string {
     case "tx":
       return "🔵";
     case "ultra":
-      return "🟣";
+      return "🟡";
     case "premium":
       return "🟡";
     default:

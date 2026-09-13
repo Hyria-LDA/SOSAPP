@@ -318,7 +318,11 @@ function Perfil() {
               </div>
               <div className="mt-1 flex items-center gap-2">
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-bold ${planColor(planStatus.plano.cor)}`}
+                  className={`rounded-full px-2 py-0.5 text-xs font-bold ${planColor(
+                    ["ultra", "premium"].includes(planStatus.plano.slug)
+                      ? "yellow"
+                      : planStatus.plano.cor,
+                  )}`}
                 >
                   {planEmoji(planStatus.plano.slug)} {planStatus.plano.nome}
                 </span>
