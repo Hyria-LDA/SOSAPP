@@ -378,11 +378,11 @@ function AutomationSettings() {
     queryKey: ["notification-automation-schedules"],
     queryFn: async () => {
       const { data: rows, error: queryError } = await supabase
-        .from("notification_automation_schedules" as any)
+        .from("notification_automation_schedules")
         .select("id, position, send_time, title, body, audience, active")
         .order("position");
       if (queryError) throw queryError;
-      return (rows ?? []) as AutomationRow[];
+      return rows ?? [];
     },
   });
 
@@ -394,7 +394,7 @@ function AutomationSettings() {
     mutationFn: async (row: AutomationRow) => {
       if (!row.title.trim() || !row.body.trim()) throw new Error("Preencha titulo e mensagem.");
       const { error: updateError } = await supabase
-        .from("notification_automation_schedules" as any)
+        .from("notification_automation_schedules")
         .update({
           send_time: row.send_time,
           title: row.title.trim(),

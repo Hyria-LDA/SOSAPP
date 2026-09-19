@@ -1,19 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.1";
 import { corsHeaders, getEnv, json } from "../_shared/firebase-push.ts";
+import { collectOwnedStoragePaths } from "../_shared/storage-cleanup.ts";
 
 type DeleteRequest = { material_id?: string };
-
-function storagePath(value: string) {
-  if (!value) return null;
-  if (!/^https?:\/\//i.test(value)) return value.replace(/^\/+/, "");
-  try {
-    const url = new URL(value);
-    const match = url.pathname.match(/\/storage\/v1\/object\/(?:sign|public)\/materiais\/(.+)$/);
-    return match?.[1] ? decodeURIComponent(match[1]) : null;
-  } catch {
-    return null;
-  }
-}
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -23,7 +12,8 @@ Deno.serve(async (request) => {
     const jwt = (request.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
     if (!jwt) return json({ error: "not_authenticated" }, 401);
 
-    const admin = createClient(getEnv("SUPABASE_URL"), getEnv("SUPABASE_SERVICE_ROLE_KEY"), {
+    const supabaseUrl = getEnv("SUPABASE_URL");
+    const admin = createClient(supabaseUrl, getEnv("SUPABASE_SERVICE_ROLE_KEY"), {
       auth: { autoRefreshToken: false, persistSession: false },
     });
     const { data: authData, error: authError } = await admin.auth.getUser(jwt);
@@ -37,7 +27,7 @@ Deno.serve(async (request) => {
       await Promise.all([
         admin
           .from("materiais")
-          .select("id, empresas!inner(owner_id)")
+          .select("id, empresa_id, empresas!inner(owner_id)")
           .eq("id", materialId)
           .maybeSingle(),
         admin
@@ -60,14 +50,20 @@ Deno.serve(async (request) => {
       .eq("material_id", materialId);
     if (photosError) throw photosError;
 
-    const paths = [
-      ...new Set(
-        (photos ?? [])
-          .flatMap((photo) => [photo.url, photo.thumbnail_url])
-          .map((value) => storagePath(value ?? ""))
-          .filter(Boolean),
-      ),
-    ] as string[];
+    const { paths, skipped } = collectOwnedStoragePaths(
+      (photos ?? []).flatMap((photo) => [photo.url, photo.thumbnail_url]),
+      {
+        bucket: "materiais",
+        supabaseUrl,
+        companyId: material.empresa_id,
+        materialId: material.id,
+      },
+    );
+    if (skipped)
+      console.warn("[delete-material] skipped unsafe file references", {
+        materialId,
+        skipped,
+      });
     if (paths.length > 0) {
       const { error: storageError } = await admin.storage.from("materiais").remove(paths);
       if (storageError) throw storageError;
@@ -75,7 +71,11 @@ Deno.serve(async (request) => {
 
     const { error: deleteError } = await admin.from("materiais").delete().eq("id", materialId);
     if (deleteError) throw deleteError;
-    return json({ ok: true, removed_files: paths.length });
+    return json({
+      ok: true,
+      removed_files: paths.length,
+      cleanup_warnings: skipped ? ["unsafe_file_references"] : [],
+    });
   } catch (error) {
     console.error("[delete-material]", error);
     return json({ error: "delete_failed" }, 500);

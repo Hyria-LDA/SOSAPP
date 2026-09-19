@@ -861,6 +861,39 @@ export type Database = {
           },
         ]
       }
+      notification_automation_schedules: {
+        Row: {
+          active: boolean
+          audience: string
+          body: string
+          id: string
+          position: number
+          send_time: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          audience: string
+          body: string
+          id?: string
+          position: number
+          send_time: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          audience?: string
+          body?: string
+          id?: string
+          position?: number
+          send_time?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notificacoes: {
         Row: {
           alerta_id: string | null

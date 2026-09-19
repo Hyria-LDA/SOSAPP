@@ -367,7 +367,7 @@ Obrigado!`;
               </p>
               <button
                 type="button"
-                onClick={() => navigate({ to: "/app/perfil" })}
+                onClick={() => navigate({ to: "/app/perfil", search: { upgrade: 0 } })}
                 className="mt-3 flex h-11 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-card active:scale-[0.98]"
               >
                 Completar cadastro no perfil

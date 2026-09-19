@@ -1,25 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.1";
 import { corsHeaders, getEnv, json } from "../_shared/firebase-push.ts";
+import { collectOwnedStoragePaths } from "../_shared/storage-cleanup.ts";
 
 type DeleteCompanyRequest = { empresa_id?: string };
-
-function storagePath(value: string, bucket: string) {
-  if (!value) return null;
-  if (!/^https?:\/\//i.test(value)) return value.replace(/^\/+/, "");
-  try {
-    const pathname = new URL(value).pathname;
-    const markers = [
-      `/storage/v1/object/public/${bucket}/`,
-      `/storage/v1/object/sign/${bucket}/`,
-    ];
-    const marker = markers.find((candidate) => pathname.includes(candidate));
-    if (!marker) return null;
-    const path = pathname.split(marker)[1];
-    return path ? decodeURIComponent(path) : null;
-  } catch {
-    return null;
-  }
-}
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -29,7 +12,8 @@ Deno.serve(async (request) => {
     const jwt = (request.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
     if (!jwt) return json({ error: "not_authenticated" }, 401);
 
-    const admin = createClient(getEnv("SUPABASE_URL"), getEnv("SUPABASE_SERVICE_ROLE_KEY"), {
+    const supabaseUrl = getEnv("SUPABASE_URL");
+    const admin = createClient(supabaseUrl, getEnv("SUPABASE_SERVICE_ROLE_KEY"), {
       auth: { autoRefreshToken: false, persistSession: false },
     });
     const { data: authData, error: authError } = await admin.auth.getUser(jwt);
@@ -61,37 +45,55 @@ Deno.serve(async (request) => {
 
     const { data: photos, error: photosError } = await admin
       .from("fotos_materiais")
-      .select("url,thumbnail_url,materiais!inner(empresa_id)")
+      .select("material_id,url,thumbnail_url,materiais!inner(empresa_id)")
       .eq("materiais.empresa_id", empresaId);
     if (photosError) throw photosError;
 
-    const materialPaths = [
-      ...new Set(
-        (photos ?? [])
-          .flatMap((photo) => [photo.url, photo.thumbnail_url])
-          .map((value) => storagePath(value ?? "", "materiais"))
-          .filter((path): path is string => Boolean(path)),
-      ),
-    ];
-    const logoPath = storagePath(company.logo_url ?? "", "logos");
+    const materialPathSet = new Set<string>();
+    let skipped = 0;
+    for (const photo of photos ?? []) {
+      const result = collectOwnedStoragePaths([photo.url, photo.thumbnail_url], {
+        bucket: "materiais",
+        supabaseUrl,
+        companyId: company.id,
+        materialId: photo.material_id,
+      });
+      for (const path of result.paths) materialPathSet.add(path);
+      skipped += result.skipped;
+    }
+    const materialPaths = [...materialPathSet];
+    const logos = collectOwnedStoragePaths([company.logo_url], {
+      bucket: "logos",
+      supabaseUrl,
+      ownerId: company.owner_id,
+    });
+    skipped += logos.skipped;
+    if (skipped)
+      console.warn("[admin-delete-company] skipped unsafe file references", {
+        empresaId,
+        skipped,
+      });
 
     // Excluir o usuário dispara os ON DELETE CASCADE da empresa e dos dados relacionados.
     const { error: deleteError } = await admin.auth.admin.deleteUser(company.owner_id);
     if (deleteError) throw deleteError;
 
-    const cleanupWarnings: string[] = [];
+    const cleanupWarnings: string[] = skipped ? ["unsafe_file_references"] : [];
+    let removedFiles = 0;
     if (materialPaths.length) {
       const { error } = await admin.storage.from("materiais").remove(materialPaths);
       if (error) cleanupWarnings.push("material_files");
+      else removedFiles += materialPaths.length;
     }
-    if (logoPath) {
-      const { error } = await admin.storage.from("logos").remove([logoPath]);
+    if (logos.paths.length) {
+      const { error } = await admin.storage.from("logos").remove(logos.paths);
       if (error) cleanupWarnings.push("logo_file");
+      else removedFiles += logos.paths.length;
     }
 
     return json({
       ok: true,
-      removed_files: materialPaths.length + (logoPath ? 1 : 0),
+      removed_files: removedFiles,
       cleanup_warnings: cleanupWarnings,
     });
   } catch (error) {
