@@ -2,7 +2,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowLeft, Copy, Download, Plus, Printer, X } from "lucide-react";
-import { strToU8, zipSync } from "fflate";
+import { zipSync } from "fflate";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { buildPartnerReferralLink } from "@/lib/partner-branch";
@@ -170,6 +170,11 @@ function AdminVendedores() {
       if (!report) return;
 
       const sellers = (report.vendedores as any[]) ?? [];
+      if (!sellers.length) {
+        toast.info("Nenhum vendedor encontrado para gerar os relatórios.");
+        return;
+      }
+      const { buildPartnerReportPdf } = await import("@/lib/partner-report-pdf");
       const nextDay = new Date(`${toDate}T12:00:00`);
       nextDay.setDate(nextDay.getDate() + 1);
 
@@ -189,15 +194,15 @@ function AdminVendedores() {
       }
 
       const files: Record<string, Uint8Array> = {};
-      for (const seller of sellers) {
+      for (const [index, seller] of sellers.entries()) {
         const sellerIndications = bySeller.get(seller.id) ?? [];
-        const rows = [
-          ["Relatório individual do parceiro", seller.nome],
+        const identity = [
+          ["Vendedor", seller.nome],
           ["Código", seller.codigo],
           ["Link", buildPartnerReferralLink(seller.codigo)],
           ["Período", `${formatDate(fromDate)} a ${formatDate(toDate)}`],
-          [],
-          ["Resumo do período", "Valor"],
+        ];
+        const summary = [
           ["Acessos", seller.acessos ?? 0],
           ["Instalações", seller.instalacoes ?? 0],
           ["Instalações Android", seller.instalacoes_android ?? 0],
@@ -209,8 +214,8 @@ function AdminVendedores() {
           ["Comissão total", `R$ ${fmt(seller.valor_total)}`],
           ["Comissão paga", `R$ ${fmt(seller.valor_pago)}`],
           ["Comissão pendente", `R$ ${fmt(seller.valor_pendente)}`],
-          [],
-          ["Empresa", "Cidade/UF", "Cadastro", "Status do cadastro", "Status da empresa", "Comissão", "Pago"],
+        ];
+        const details = [
           ...sellerIndications.map((item: any) => [
             item.empresas?.nome_empresa || "",
             [item.empresas?.cidade, item.empresas?.estado].filter(Boolean).join("/"),
@@ -221,9 +226,10 @@ function AdminVendedores() {
             item.paga ? "Sim" : "Não",
           ]),
         ];
-        const csv = rows.map(csvRow).join("\r\n");
-        const filename = `${safeFilename(seller.nome)}-${safeFilename(seller.codigo)}.csv`;
-        files[filename] = strToU8(`\uFEFF${csv}`);
+        const filename = `${index + 1}-${safeFilename(seller.nome)}-${safeFilename(seller.codigo)}.pdf`;
+        files[filename] = buildPartnerReportPdf({ identity, summary, details });
+        // Give the interface time to respond between reports.
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
       }
 
       const zip = zipSync(files, { level: 6 });
@@ -233,8 +239,8 @@ function AdminVendedores() {
       anchor.href = url;
       anchor.download = `relatorios-individuais-${fromDate}-a-${toDate}.zip`;
       anchor.click();
-      URL.revokeObjectURL(url);
-      toast.success(`${sellers.length} relatórios individuais preparados.`);
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      toast.success(`${sellers.length} relatórios em PDF preparados.`);
     } catch (error: any) {
       toast.error(error?.message || "Não foi possível baixar os relatórios individuais.");
     } finally {
@@ -295,7 +301,7 @@ function AdminVendedores() {
           onClick={exportIndividualReports}
           className="mt-2 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-primary bg-background px-3 text-xs font-bold text-primary disabled:opacity-50"
         >
-          <Download className="h-4 w-4" /> Baixar todos os relatórios individuais (.zip)
+          <Download className="h-4 w-4" /> Baixar relatórios em PDF (.zip)
         </button>
       </section>
 
@@ -407,10 +413,6 @@ function fmt(value: unknown) {
   return Number(value ?? 0)
     .toFixed(2)
     .replace(".", ",");
-}
-
-function csvRow(row: unknown[]) {
-  return row.map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(";");
 }
 
 function safeFilename(value: unknown) {

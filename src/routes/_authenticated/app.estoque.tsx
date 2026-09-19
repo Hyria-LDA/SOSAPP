@@ -86,10 +86,12 @@ function Estoque() {
         return { data, error: null };
       }
       if (action === "vender") {
-        return supabase
+        const { data, error } = await supabase
           .from("materiais")
           .update({ status: "vendido", valor_vendido: valor ?? null })
           .eq("id", id);
+        if (error) throw error;
+        return { data, error: null };
       }
       const { data, error } = await supabase.rpc("renew_material", { _material_id: id });
       if (error) throw error;

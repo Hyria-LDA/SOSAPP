@@ -32,23 +32,27 @@ function ModeracaoFotos() {
   const [filter, setFilter] = useState<AiStatus | "all">("pending");
   const qc = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: loadError } = useQuery({
     queryKey: ["admin-moderacao-fotos", filter],
     queryFn: async () => {
       let q = supabase
-        .from("fotos_materiais" as any)
+        .from("fotos_materiais")
         .select(
-          "id, url, ordem, created_at, ai_status, ai_score, ai_reason, ai_provider, ai_category, reviewed_at, material_id, empresa_id, materiais(padrao, fabricante), empresas(nome_empresa, cidade, estado)",
+          "id, url, ordem, created_at, ai_status, ai_score, ai_reason, ai_provider, ai_category, reviewed_at, material_id, empresa_id, materiais(padrao, fabricante, empresas(nome_empresa, cidade, estado))",
         )
         .order("created_at", { ascending: false })
         .limit(120);
       if (filter !== "all") q = q.eq("ai_status", filter);
       const { data, error } = await q;
       if (error) throw error;
-      const rows = (data ?? []) as any[];
+      const rows = data ?? [];
       const paths = rows.map((r) => r.url).filter(Boolean) as string[];
       const map = await signMateriaisPaths(paths);
-      return rows.map((r) => ({ ...r, signed_url: r.url?.startsWith("http") ? r.url : map[r.url] ?? "" }));
+      return rows.map((r) => ({
+        ...r,
+        empresas: r.materiais?.empresas,
+        signed_url: r.url?.startsWith("http") ? r.url : map[r.url] ?? "",
+      }));
     },
   });
 
@@ -58,7 +62,7 @@ function ModeracaoFotos() {
       const out: Record<string, number> = {};
       for (const s of ["pending", "approved", "rejected", "manual_review"] as const) {
         const { count } = await supabase
-          .from("fotos_materiais" as any)
+          .from("fotos_materiais")
           .select("id", { count: "exact", head: true })
           .eq("ai_status", s);
         out[s] = count ?? 0;
@@ -69,12 +73,15 @@ function ModeracaoFotos() {
 
   const moderar = useMutation({
     mutationFn: async ({ id, decisao, motivo }: { id: string; decisao: AiStatus; motivo?: string }) => {
-      const { error } = await supabase.rpc("admin_moderar_foto" as any, {
+      const { data: result, error } = await supabase.rpc("admin_moderar_foto", {
         _foto_id: id,
         _decisao: decisao,
-        _motivo: motivo ?? null,
+        _motivo: motivo ?? undefined,
       });
       if (error) throw error;
+      if (!result || typeof result !== "object" || Array.isArray(result) || result.ok !== true) {
+        throw new Error("A moderação não foi confirmada. Verifique sua permissão e tente novamente.");
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-moderacao-fotos"] });
@@ -121,7 +128,11 @@ function ModeracaoFotos() {
         ))}
       </div>
 
-      {isLoading ? (
+      {loadError ? (
+        <p role="alert" className="mt-6 text-center text-sm text-destructive">
+          Não foi possível carregar as fotos. Tente novamente ou confira sua permissão de administrador.
+        </p>
+      ) : isLoading ? (
         <p className="mt-6 text-center text-sm text-muted-foreground">Carregando…</p>
       ) : list.length === 0 ? (
         <p className="mt-10 text-center text-sm text-muted-foreground">Nenhuma foto neste filtro.</p>
