@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BannerImageCropper } from "@/components/banner-image-cropper";
-import type { BannerTargetScope } from "@/lib/banner-targeting";
+import { parseBannerCities, type BannerTargetScope } from "@/lib/banner-targeting";
 
 type Banner = {
   id: string;
@@ -404,8 +404,8 @@ function BannerForm({
       toast.error("Selecione a UF");
       return;
     }
-    if (targetScope === "city" && !targetCity.trim()) {
-      toast.error("Informe a cidade");
+    if (targetScope === "city" && !parseBannerCities(targetCity).length) {
+      toast.error("Informe pelo menos uma cidade");
       return;
     }
     setSaving(true);
@@ -426,7 +426,7 @@ function BannerForm({
         planos_alvo: planosAlvo,
         target_scope: targetScope,
         target_uf: targetScope === "all" ? null : targetUf,
-        target_city: targetScope === "city" ? targetCity.trim().replace(/\s+/g, " ") : null,
+        target_city: targetScope === "city" ? parseBannerCities(targetCity).join(", ") : null,
         banner_format: bannerFormat,
         exibir_abertura: bannerFormat === "vertical" ? true : exibirAbertura,
       };
@@ -713,7 +713,7 @@ function BannerForm({
             >
               <option value="all">Todo o Brasil</option>
               <option value="state">Estado</option>
-              <option value="city">Cidade</option>
+              <option value="city">Uma ou mais cidades</option>
             </select>
           </Field>
 
@@ -735,13 +735,17 @@ function BannerForm({
           )}
 
           {targetScope === "city" && (
-            <Field label="Cidade *">
+            <Field label="Cidades *">
               <input
                 value={targetCity}
                 onChange={(e) => setTargetCity(e.target.value)}
                 className={inputCls}
-                placeholder="Ex: Belo Horizonte"
+                placeholder="Ex: Belo Horizonte, Contagem"
               />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Separe as cidades por vírgula. Todas devem pertencer à UF selecionada.
+                O banner aparece para empresas cadastradas em qualquer uma delas.
+              </p>
             </Field>
           )}
 

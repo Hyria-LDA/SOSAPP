@@ -344,14 +344,10 @@ function AdminVendedores() {
                 {v.ativo ? "ATIVO" : "INATIVO"}
               </button>
             </div>
-            <div className="mt-3 grid grid-cols-4 gap-2 text-center text-[11px]">
-              <Mini value={v.metrics?.acessos ?? v.metrics?.cliques ?? 0} label="Acessos" />
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px]">
+              <Mini value={v.metrics?.instalacoes ?? 0} label="Downloads" />
               <Mini value={v.metrics?.cadastros ?? 0} label="Cadastros" />
               <Mini value={v.metrics?.pagantes ?? v.metrics?.aprovados ?? 0} label="Pagantes" />
-              <Mini
-                value={`R$ ${Number(v.metrics?.valor_pendente ?? 0).toFixed(0)}`}
-                label="A pagar"
-              />
             </div>
           </Link>
         ))}

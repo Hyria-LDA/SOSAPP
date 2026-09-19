@@ -1,41 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type BannerTargetScope = "all" | "state" | "city";
-
-export type BannerTarget = {
-  target_scope?: BannerTargetScope | null;
-  target_uf?: string | null;
-  target_city?: string | null;
-};
-
-export type BannerAudience = {
-  uf: string | null;
-  city: string | null;
-};
-
-export function normalizeCity(value: string | null | undefined): string {
-  return (value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLocaleLowerCase("pt-BR");
-}
-
-export function bannerMatchesAudience(
-  banner: BannerTarget,
-  audience: BannerAudience | null,
-): boolean {
-  const scope = banner.target_scope ?? "all";
-  if (scope === "all") return true;
-  if (
-    !audience?.uf ||
-    audience.uf.trim().toUpperCase() !== banner.target_uf?.trim().toUpperCase()
-  ) {
-    return false;
-  }
-  return scope === "state" || normalizeCity(audience.city) === normalizeCity(banner.target_city);
-}
+import type { BannerAudience } from "./banner-regions";
+export * from "./banner-regions";
 
 export async function getCurrentBannerAudience(): Promise<BannerAudience | null> {
   const { data: auth } = await supabase.auth.getUser();
