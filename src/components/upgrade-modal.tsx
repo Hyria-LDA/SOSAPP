@@ -45,6 +45,7 @@ const PLANOS: Plano[] = [
       "Selo Premium",
       "Possibilidade de aparecer na Home",
       "Sorteio de brindes exclusivos",
+      "Super descontos em lojas parceiras",
     ],
   },
 ];
