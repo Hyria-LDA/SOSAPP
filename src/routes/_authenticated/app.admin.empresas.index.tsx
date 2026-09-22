@@ -47,6 +47,28 @@ function AdminEmpresas() {
     },
   });
 
+  const { data: originData, isError: originError, isPending: originsLoading } = useQuery({
+    queryKey: ["admin-cadastro-origens", data?.empresas.map((e) => e.id)],
+    enabled: !!data,
+    queryFn: async () => {
+      const ids = (data?.empresas ?? []).filter((e) => e.status === "pendente").map((e) => e.id);
+      if (!ids.length) return { origins: new Map<string, { codigo: string; nome: string | null }>(), partners: new Map<string, string>() };
+      const [originsResult, partnersResult] = await Promise.all([
+        supabase.from("cadastro_origens" as any)
+          .select("empresa_id, codigo, vendedores_parceiros(nome)").in("empresa_id", ids),
+        supabase.from("vendedores_parceiros").select("codigo, nome"),
+      ]);
+      if (originsResult.error) throw originsResult.error;
+      if (partnersResult.error) throw partnersResult.error;
+      const origins = new Map<string, { codigo: string; nome: string | null }>();
+      for (const row of (originsResult.data ?? []) as unknown as { empresa_id: string; codigo: string; vendedores_parceiros: { nome: string } | null }[]) {
+        origins.set(row.empresa_id, { codigo: row.codigo, nome: row.vendedores_parceiros?.nome ?? null });
+      }
+      const partners = new Map((partnersResult.data ?? []).map((v) => [v.codigo.toUpperCase(), v.nome]));
+      return { origins, partners };
+    },
+  });
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     return (data?.empresas ?? []).filter((e: any) => {
@@ -221,6 +243,9 @@ function AdminEmpresas() {
       <div className="mt-2 space-y-2">
         {filtered.map((e: any) => {
           const c = data?.counts[e.id] ?? { ativos: 0, total: 0 };
+          const savedOrigin = originData?.origins.get(e.id);
+          const originCode = savedOrigin?.codigo || e.ref_codigo_usado;
+          const originName = savedOrigin?.nome || (originCode ? originData?.partners.get(originCode.toUpperCase()) : null);
           return (
             <Link
               key={e.id}
@@ -234,11 +259,20 @@ function AdminEmpresas() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <div className="truncate font-bold">{e.nome_empresa || "—"}</div>
+                  <div className="flex max-w-[55%] shrink-0 flex-col items-end gap-1 text-right">
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${badge(e.status)}`}
                   >
                     {e.status}
                   </span>
+                  {e.status === "pendente" && (
+                    <div className="max-w-full break-words text-[11px] text-muted-foreground">
+                      {originCode ? (
+                        <><div className="font-semibold text-foreground">{originName || "Parceiro"}</div><div>Link: {originCode}</div></>
+                      ) : originError ? "Origem indisponível" : originsLoading ? "Carregando origem…" : "Origem não identificada"}
+                    </div>
+                  )}
+                  </div>
                 </div>
                 <div className="truncate text-xs text-muted-foreground">{e.responsavel || "—"}</div>
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">

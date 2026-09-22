@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,18 @@ function Onboarding() {
   // Registra o aparelho antes da conclusao do cadastro para que lembretes
   // de onboarding tambem consigam chegar a quem abandonou esta tela.
   usePushNotifications();
+  useEffect(() => {
+    // Registra somente a origem; a indicação comercial continua na conclusão.
+    const recordOrigin = async () => {
+      try {
+        const code = localStorage.getItem("ref_codigo");
+        if (code) await supabase.rpc("registrar_origem_cadastro" as any, { _codigo: code });
+      } catch {
+        // Falha de rastreamento não impede o preenchimento do cadastro.
+      }
+    };
+    void recordOrigin();
+  }, []);
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
