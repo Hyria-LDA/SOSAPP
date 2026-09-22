@@ -18,7 +18,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { BannerImageCropper } from "@/components/banner-image-cropper";
 import { parseBannerCities, type BannerTargetScope } from "@/lib/banner-targeting";
 
+type BannerCompany = { id: string; nome: string };
+
 type Banner = {
+  anunciante_id: string | null;
   id: string;
   titulo: string | null;
   subtitulo: string | null;
@@ -99,8 +102,36 @@ function AdminBanners() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Banner | null>(null);
   const [creating, setCreating] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const [newCompany, setNewCompany] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const companies = useQuery({
+    queryKey: ["admin-banner-companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("banner_empresas" as any).select("id, nome").order("nome");
+      if (error) throw error;
+      return (data ?? []) as unknown as BannerCompany[];
+    },
+  });
+  const createCompany = useMutation({
+    mutationFn: async () => {
+      const nome = companyName.trim().replace(/\s+/g, " ");
+      if (!nome || nome.length > 120) throw new Error("Informe um nome de até 120 caracteres.");
+      const { data, error } = await supabase.from("banner_empresas" as any).insert({ nome }).select("id").single();
+      if (error) throw new Error(error.code === "23505" ? "Já existe uma empresa com esse nome." : error.message);
+      return (data as unknown as { id: string }).id;
+    },
+    onSuccess: (id) => {
+      qc.invalidateQueries({ queryKey: ["admin-banner-companies"] });
+      setSelectedCompany(id);
+      setCompanyName("");
+      setNewCompany(false);
+      toast.success("Empresa criada. Agora adicione os banners.");
+    },
+    onError: (error) => toast.error(error.message),
+  });
 
-  const { data: banners } = useQuery({
+  const { data: banners, isPending: bannersLoading, isError: bannersError } = useQuery({
     queryKey: ["admin-banners"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -166,19 +197,51 @@ function AdminBanners() {
         </Link>
         <h1 className="text-xl font-black">🖼️ Banners</h1>
         <button
-          onClick={() => setCreating(true)}
+          onClick={() => selectedCompany === null ? setNewCompany(true) : setCreating(true)}
           className="ml-auto flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"
         >
-          <Plus className="h-4 w-4" /> Novo
+          <Plus className="h-4 w-4" /> {selectedCompany === null ? "Nova empresa" : "Novo banner"}
         </button>
       </header>
 
-      <p className="mt-2 text-xs text-muted-foreground">
-        Banners ativos dentro da janela de datas aparecem no carrossel da home.
-      </p>
+      {newCompany && (
+        <form className="mt-4 space-y-2 rounded-2xl border border-border bg-card p-4" onSubmit={(event) => { event.preventDefault(); createCompany.mutate(); }}>
+          <label className="block text-sm font-semibold" htmlFor="banner-company-name">Nome da empresa</label>
+          <input id="banner-company-name" autoFocus maxLength={120} required value={companyName} onChange={(event) => setCompanyName(event.target.value)} className="w-full rounded-xl border border-input bg-background px-3 py-2" placeholder="Ex: Madeireira Central" />
+          <div className="flex gap-2">
+            <button disabled={createCompany.isPending || !companyName.trim() || companies.isError} className="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">{createCompany.isPending ? "Criando…" : "Criar empresa"}</button>
+            <button type="button" disabled={createCompany.isPending} onClick={() => setNewCompany(false)} className="rounded-xl bg-secondary px-3 py-2 text-sm">Cancelar</button>
+          </div>
+        </form>
+      )}
+      {(companies.isError || bannersError) && <p role="alert" className="mt-4 text-sm text-destructive">Não foi possível carregar as empresas ou banners. Confira se o SQL desta atualização foi aplicado e tente novamente.</p>}
+      {(companies.isPending || bannersLoading) && <p className="mt-4 text-sm text-muted-foreground">Carregando…</p>}
+      {selectedCompany === null ? (
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {(companies.data ?? []).map((company) => (
+            <button key={company.id} onClick={() => setSelectedCompany(company.id)} className="rounded-2xl border border-border bg-card p-5 text-left shadow-card">
+              <div className="break-words font-bold">📁 {company.nome}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{(banners ?? []).filter((banner) => banner.anunciante_id === company.id).length} banner(s)</div>
+            </button>
+          ))}
+          {(banners ?? []).some((banner) => !banner.anunciante_id) && (
+            <button onClick={() => setSelectedCompany("unassigned")} className="rounded-2xl border border-dashed border-border bg-card p-5 text-left">
+              <div className="font-bold">📁 Sem empresa</div>
+              <p className="mt-1 text-xs text-muted-foreground">Banners existentes. Abra e edite para escolher a empresa.</p>
+            </button>
+          )}
+          {!companies.isPending && !companies.isError && !companies.data?.length && <p className="text-sm text-muted-foreground">Crie uma empresa para organizar seus banners.</p>}
+        </div>
+      ) : (
+        <div className="mt-4 flex items-center gap-2">
+          <button onClick={() => setSelectedCompany(null)} className="rounded-xl bg-secondary px-3 py-2 text-sm">← Empresas</button>
+          <h2 className="min-w-0 break-words font-bold">{selectedCompany === "unassigned" ? "Sem empresa" : companies.data?.find((company) => company.id === selectedCompany)?.nome}</h2>
+        </div>
+      )}
 
       <div className="mt-5 space-y-3">
         {(banners ?? []).map((b, idx) => {
+          if (selectedCompany === null || (selectedCompany === "unassigned" ? !!b.anunciante_id : b.anunciante_id !== selectedCompany)) return null;
           const total = banners?.length ?? 0;
           const ctr = b.views > 0 ? ((b.clicks / b.views) * 100).toFixed(1) + "%" : "—";
           return (
@@ -275,7 +338,7 @@ function AdminBanners() {
             </div>
           );
         })}
-        {banners && banners.length === 0 && (
+        {selectedCompany !== null && banners && !banners.some((b) => selectedCompany === "unassigned" ? !b.anunciante_id : b.anunciante_id === selectedCompany) && (
           <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
             Nenhum banner cadastrado. Crie o primeiro para exibir no app.
           </div>
@@ -285,6 +348,8 @@ function AdminBanners() {
       {(creating || editing) && (
         <BannerForm
           banner={editing}
+          companies={companies.data ?? []}
+          initialCompanyId={selectedCompany === "unassigned" ? "" : selectedCompany ?? ""}
           onClose={() => {
             setCreating(false);
             setEditing(null);
@@ -307,13 +372,18 @@ function fmtDate(s: string) {
 
 function BannerForm({
   banner,
+  companies,
+  initialCompanyId,
   onClose,
   onSaved,
 }: {
   banner: Banner | null;
+  companies: BannerCompany[];
+  initialCompanyId: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const [companyId, setCompanyId] = useState(banner?.anunciante_id ?? initialCompanyId);
   const [titulo, setTitulo] = useState(banner?.titulo ?? "");
   const [subtitulo, setSubtitulo] = useState(banner?.subtitulo ?? "");
   const [link, setLink] = useState(banner?.link ?? "");
@@ -411,6 +481,7 @@ function BannerForm({
     setSaving(true);
     try {
       const payload: any = {
+        anunciante_id: companyId || null,
         titulo: titulo.trim() || null,
         subtitulo: subtitulo.trim() || null,
         imagem_url: imagemUrl,
@@ -471,6 +542,12 @@ function BannerForm({
         </div>
 
         <div className="space-y-4 px-5 pb-6">
+          <Field label="Empresa anunciante">
+            <select value={companyId} onChange={(event) => setCompanyId(event.target.value)} className={inputCls}>
+              <option value="">Sem empresa</option>
+              {companies.map((company) => <option key={company.id} value={company.id}>{company.nome}</option>)}
+            </select>
+          </Field>
           <Field label="Formato do banner">
             <div className="grid grid-cols-2 gap-2">
               <button
