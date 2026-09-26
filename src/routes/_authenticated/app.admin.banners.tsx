@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BannerImageCropper } from "@/components/banner-image-cropper";
-import { parseBannerCities, type BannerTargetScope } from "@/lib/banner-targeting";
+import { parseExcludedCities, parseBannerCities, type BannerTargetScope } from "@/lib/banner-targeting";
 
 type BannerCompany = { id: string; nome: string };
 
@@ -76,6 +76,7 @@ const UFS = [
 ];
 
 function targetLabel(banner: Banner) {
+  if (banner.target_scope === "all_except") return `Brasil, exceto: ${banner.target_city}`;
   if (banner.target_scope === "city") return `${banner.target_city}/${banner.target_uf}`;
   if (banner.target_scope === "state") return `Estado: ${banner.target_uf}`;
   return "Todo o Brasil";
@@ -470,7 +471,7 @@ function BannerForm({
       toast.error("Adicione uma imagem");
       return;
     }
-    if (targetScope !== "all" && !targetUf) {
+    if ((targetScope === "state" || targetScope === "city") && !targetUf) {
       toast.error("Selecione a UF");
       return;
     }
@@ -480,6 +481,12 @@ function BannerForm({
     }
     setSaving(true);
     try {
+      let excludedCities = "";
+      if (targetScope === "all_except") {
+        const excluded = parseExcludedCities(targetCity);
+        if (!excluded.length) throw new Error("Informe pelo menos uma cidade para excluir.");
+        excludedCities = excluded.map(({ city, uf }) => `${city}/${uf}`).join(", ");
+      }
       const payload: any = {
         anunciante_id: companyId || null,
         titulo: titulo.trim() || null,
@@ -496,8 +503,8 @@ function BannerForm({
         intervalo_minutos: Math.max(0, Math.min(1440, Number(intervaloMinutos) || 0)),
         planos_alvo: planosAlvo,
         target_scope: targetScope,
-        target_uf: targetScope === "all" ? null : targetUf,
-        target_city: targetScope === "city" ? parseBannerCities(targetCity).join(", ") : null,
+        target_uf: targetScope === "all" || targetScope === "all_except" ? null : targetUf,
+        target_city: targetScope === "all_except" ? excludedCities : targetScope === "city" ? parseBannerCities(targetCity).join(", ") : null,
         banner_format: bannerFormat,
         exibir_abertura: bannerFormat === "vertical" ? true : exibirAbertura,
       };
@@ -789,12 +796,13 @@ function BannerForm({
               className={inputCls}
             >
               <option value="all">Todo o Brasil</option>
+              <option value="all_except">Todo o Brasil, exceto cidades</option>
               <option value="state">Estado</option>
               <option value="city">Uma ou mais cidades</option>
             </select>
           </Field>
 
-          {targetScope !== "all" && (
+          {(targetScope === "state" || targetScope === "city") && (
             <Field label="UF *">
               <select
                 value={targetUf}
@@ -811,6 +819,12 @@ function BannerForm({
             </Field>
           )}
 
+          {targetScope === "all_except" && (
+            <Field label="Cidades excluídas *">
+              <textarea value={targetCity} onChange={(event) => setTargetCity(event.target.value)} className={inputCls} rows={3} placeholder="Belo Horizonte/MG, Contagem/MG, São Paulo/SP" />
+              <p className="mt-1 text-[11px] text-muted-foreground">Informe Cidade/UF, separando por vírgula ou uma por linha. Usa o endereço cadastrado da empresa. Sem cidade e UF cadastradas, este banner não aparece.</p>
+            </Field>
+          )}
           {targetScope === "city" && (
             <Field label="Cidades *">
               <input
