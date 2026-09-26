@@ -1,0 +1,21 @@
+import ts from 'typescript';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const helper=readFileSync(new URL('../supabase/functions/_shared/push-audience.ts', import.meta.url),'utf8').replaceAll('export ','');
+const endpoint=readFileSync(new URL('../supabase/functions/send-push-regional/index.ts', import.meta.url),'utf8').replace(/import[\s\S]*?from\s+"[^"]+";/g,'');
+let handler; let sends=[];let writes=[];let admin=true;let validUser=true;
+const companies=Array.from({length:501},(_,i)=>({id:`c${i}`,owner_id:`u${i}`,estado:i===0?'SP':'MG',cidade:i===500?'Juíz de Fóra':i===1?'Matias Barbosa':i===0?'Juiz de Fora':'Belo Horizonte'}));
+const tokens=companies.map((c,i)=>({id:`t${i}`,user_id:c.owner_id,token:`tok${i}`,platform:'android'}));
+const client={auth:{getUser:async()=>({data:{user:validUser?{id:'admin'}:null}})},from(table){let data=table==='empresas'?companies:table==='push_tokens'?tokens:table==='user_roles'?(admin?[{role:'admin'}]:[]):[];const q={select(){return q},eq(){return q},order(){return q},range(a,b){data=data.slice(a,b+1);return q},insert(rows){writes.push({table,rows});return q},update(){return q},in(){return q},then(resolve){return Promise.resolve({data,error:null}).then(resolve)}};return q;}};
+vm.runInNewContext(ts.transpileModule(helper+'\n'+endpoint,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText,{Deno:{serve(fn){handler=fn}},createClient:()=>client,getEnv:()=>'',corsHeaders:{},json:(data,status=200)=>new Response(JSON.stringify(data),{status}),sendFirebasePush:async(x)=>{sends.push(x);return {ok:true}},shouldDeactivateToken:()=>false,Request,Response,URL,console});
+async function call(extra){sends=[];writes=[];return handler(new Request('https://example.test',{method:'POST',headers:{Authorization:'Bearer test','Content-Type':'application/json'},body:JSON.stringify({title:'Teste',body:'Mensagem',target:'cities',uf:'MG',cities:['Juiz de Fora','Matias Barbosa'],...extra})}));}
+let r=await call({});assert.equal(r.status,200);assert.deepEqual(sends.map(s=>s.token).sort(),['tok1','tok500']);assert.equal(writes.find(w=>w.table==='notificacoes').rows.length,2);
+r=await call({preview:true});assert.equal((await r.json()).clients,2);assert.equal(sends.length,0);assert.equal(writes.length,0);
+r=await call({cities:[]});assert.equal(r.status,400);assert.equal(sends.length,0);
+r=await call({cities:['Inexistente']});assert.equal((await r.json()).total,0);assert.equal(sends.length,0);
+r=await call({target:'all',uf:undefined,cities:undefined});assert.equal((await r.json()).total,501);assert.equal(sends.length,501);
+r=await call({target:'all'});assert.equal(r.status,400);
+admin=false;r=await call({});assert.equal(r.status,403);assert.equal(sends.length,0);admin=true;
+validUser=false;r=await call({});assert.equal(r.status,401);assert.equal(sends.length,0);
+console.log('Passaram: filtro de UF/cidades/acentos, paginação de 501 clientes, prévia sem envio, zero correspondências, todos, validação e acesso admin. Nenhum push real enviado.');

@@ -31,7 +31,10 @@ export const Route = createFileRoute("/_authenticated/app/admin/notificacoes-pus
   component: AdminPushNotifications,
 });
 
+type PushAudience = { target: "all" | "cities"; uf?: string; cities?: string[] };
+
 type PushResponse = {
+  clients?: number;
   total: number;
   sent: number;
   failed: number;
@@ -83,6 +86,8 @@ async function invokeSendPush(
   body: string,
   path: PushTargetPath,
   externalUrl?: string,
+  audience: PushAudience = { target: "all" },
+  preview = false,
 ) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -91,7 +96,7 @@ async function invokeSendPush(
     throw new Error("Configuracao do Supabase ausente no site.");
   }
 
-  const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/functions/v1/send-push`, {
+  const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/functions/v1/send-push-regional`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -103,7 +108,8 @@ async function invokeSendPush(
       body,
       path,
       external_url: externalUrl,
-      target: "all",
+      ...audience,
+      preview,
     }),
   });
 
@@ -129,6 +135,27 @@ function AdminPushNotifications() {
   const [targetPath, setTargetPath] = useState<PushTargetPath>("/app");
   const [targetType, setTargetType] = useState<PushTargetType>("internal");
   const [externalUrl, setExternalUrl] = useState("");
+  const [audienceMode, setAudienceMode] = useState<"all" | "cities">("all");
+  const [audienceUf, setAudienceUf] = useState("");
+  const [audienceCities, setAudienceCities] = useState("");
+  const audienceKey = JSON.stringify([audienceMode, audienceUf, audienceCities]);
+  function selectedAudience(): PushAudience {
+    if (audienceMode === "all") return { target: "all" };
+    const cities = audienceCities.split(/[,;\n]+/).map((city) => city.trim()).filter(Boolean);
+    if (!audienceUf || !cities.length) throw new Error("Selecione a UF e informe as cidades.");
+    if (cities.length > 100 || cities.some((city) => city.length > 120)) throw new Error("Informe até 100 cidades, com até 120 caracteres cada.");
+    return { target: "cities", uf: audienceUf, cities };
+  }
+  const previewAudience = useMutation({
+    mutationFn: async () => {
+      const audience = selectedAudience();
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) throw new Error("Sessão expirada. Entre novamente.");
+      const result = await invokeSendPush(data.session.access_token, "", "", "/app", undefined, audience, true);
+      return { ...result, key: audienceKey };
+    },
+    onError: (error) => toast.error(readableError(error)),
+  });
 
   const { data: appDiagnostics } = useQuery({
     queryKey: ["admin-push-app-diagnostics"],
@@ -185,7 +212,7 @@ function AdminPushNotifications() {
         }
       }
 
-      return invokeSendPush(accessToken, cleanTitle, cleanBody, targetPath, cleanExternalUrl);
+      return invokeSendPush(accessToken, cleanTitle, cleanBody, targetPath, cleanExternalUrl, selectedAudience());
     },
     onSuccess: (result) => {
       toast.success(`Notificacao enviada para ${result.sent} celular(es).`);
@@ -255,6 +282,24 @@ function AdminPushNotifications() {
       </section>
 
       <section className="mt-4 rounded-2xl bg-card p-4 shadow-card">
+        <div className="mb-4 space-y-2">
+          <label htmlFor="push-audience" className="block text-sm font-bold">Quem vai receber</label>
+          <select id="push-audience" disabled={sendPush.isPending} value={audienceMode} onChange={(event) => setAudienceMode(event.target.value as "all" | "cities")} className="w-full rounded-xl border border-border bg-secondary p-3">
+            <option value="all">Todos os clientes</option><option value="cities">Por cidades</option>
+          </select>
+          {audienceMode === "cities" && <>
+            <label htmlFor="push-uf" className="block text-sm">Estado (UF)</label>
+            <select id="push-uf" disabled={sendPush.isPending} value={audienceUf} onChange={(event) => setAudienceUf(event.target.value)} className="w-full rounded-xl border border-border bg-secondary p-3">
+              <option value="">Selecione</option>
+              {"AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ").map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+            </select>
+            <label htmlFor="push-cities" className="block text-sm">Cidades, separadas por vírgula</label>
+            <input id="push-cities" disabled={sendPush.isPending} value={audienceCities} onChange={(event) => setAudienceCities(event.target.value)} placeholder="Juiz de Fora, Matias Barbosa" className="w-full rounded-xl border border-border bg-secondary p-3" />
+            <p className="text-xs text-muted-foreground">Usa a cidade e o estado cadastrados na empresa. Clientes sem localização cadastrada não recebem este envio regional.</p>
+          </>}
+          <button type="button" disabled={previewAudience.isPending || sendPush.isPending} onClick={() => previewAudience.mutate()} className="rounded-xl bg-secondary px-3 py-2 text-sm font-semibold">{previewAudience.isPending ? "Consultando…" : "Consultar alcance"}</button>
+          {previewAudience.data?.key === audienceKey && <p className="text-xs text-muted-foreground">{previewAudience.data.clients ?? 0} cliente(s) com notificações ativas, em {previewAudience.data.total} aparelho(s). O alcance pode mudar até o envio.</p>}
+        </div>
         <label className="text-sm font-bold" htmlFor="push-title">
           Titulo
         </label>
@@ -347,7 +392,7 @@ function AdminPushNotifications() {
           className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 font-black text-primary-foreground disabled:opacity-60"
         >
           <Send className="h-5 w-5" />
-          {sendPush.isPending ? "Enviando..." : "Enviar para todos"}
+          {sendPush.isPending ? "Enviando..." : audienceMode === "cities" ? "Enviar para as cidades selecionadas" : "Enviar para todos"}
         </button>
       </section>
     </div>
