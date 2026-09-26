@@ -48,7 +48,7 @@ function Home() {
   const [visibleMaterialCount, setVisibleMaterialCount] = useState(7);
   const loadMoreMaterialsRef = useRef<HTMLDivElement>(null);
   const { coords: gpsCoords } = useGeolocation();
-  const { data: companyLocation } = useQuery({
+  const { data: companyLocation, isPending: locationLoading } = useQuery({
     queryKey: ["home-company-location"],
     queryFn: async () => {
       const { data: authData } = await supabase.auth.getUser();
@@ -71,10 +71,10 @@ function Home() {
     companyLocation?.latitude != null &&
     companyLocation?.longitude != null &&
     Number.isFinite(companyLat) &&
-    Number.isFinite(companyLng);
+    Number.isFinite(companyLng) && Math.abs(companyLat) <= 90 && Math.abs(companyLng) <= 180;
   const lat = hasCompanyCoords ? companyLat : Number(gpsCoords?.lat);
   const lng = hasCompanyCoords ? companyLng : Number(gpsCoords?.lng);
-  const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
+  const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
   const geoKey = hasValidCoords ? `${lat.toFixed(4)},${lng.toFixed(4)}` : "no-geo";
 
   const { data: userPlanSlug } = useQuery({
@@ -131,31 +131,25 @@ function Home() {
     staleTime: 50 * 60 * 1000,
   });
 
-  const { data: popularesRaw } = useQuery({
-    queryKey: ["sobras-perto", geoKey, rotationSeedRef.current],
+  const { data: popularesRaw, isFetching: materialsLoading, isError: materialsError } = useQuery({
+    queryKey: ["sobras-perto-regiao", geoKey, rotationSeedRef.current],
+    enabled: !locationLoading && hasValidCoords,
     queryFn: async () => {
-      const hasGeo = hasValidCoords;
-      let response = await supabase.rpc("materiais_perto_de_voce", {
-        _lat: hasGeo ? lat : undefined,
-        _lon: hasGeo ? lng : undefined,
+      if (!hasValidCoords) return [];
+      const response = await supabase.rpc("materiais_perto_de_voce", {
+        _lat: lat,
+        _lon: lng,
         _limit: 12,
-        _raio_km: hasGeo ? 50 : 999999,
+        _raio_km: 50,
         _seed: rotationSeedRef.current,
       });
       if (response.error) throw response.error;
-
-      if (hasGeo && (response.data ?? []).length === 0) {
-        response = await supabase.rpc("materiais_perto_de_voce", {
-          _lat: lat,
-          _lon: lng,
-          _limit: 12,
-          _raio_km: 999999,
-          _seed: rotationSeedRef.current,
-        });
-        if (response.error) throw response.error;
-      }
-
-      const data = response.data ?? [];
+      // A função antiga também pode retornar materiais sem coordenadas.
+      // Só exibe anúncios cuja distância foi comprovada dentro da região.
+      const data = (response.data ?? []).filter((material) =>
+        typeof material.distancia_km === "number" && Number.isFinite(material.distancia_km)
+        && material.distancia_km >= 0 && material.distancia_km <= 50,
+      );
       const ids = (data ?? []).map((m: any) => m.id);
       if (ids.length === 0) return [];
       const [{ data: fotos }, { data: medidas }] = await Promise.all([
@@ -183,7 +177,7 @@ function Home() {
     },
   });
 
-  const populares = popularesRaw ?? [];
+  const populares = !locationLoading && hasValidCoords ? popularesRaw ?? [] : [];
 
   useEffect(() => {
     setVisibleMaterialCount(7);
@@ -325,6 +319,15 @@ function Home() {
             Ver todos
           </Link>
         </div>
+        <p className="mb-2 text-xs text-muted-foreground">Anúncios em até 50 km da sua localização de referência.</p>
+        {populares.length === 0 && (
+          <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground" role="status">
+            {locationLoading || materialsLoading ? "Buscando anúncios da região…"
+              : !hasValidCoords ? "Atualize a localização da sua empresa ou permita o acesso à localização para ver anúncios próximos."
+              : materialsError ? "Não foi possível carregar os anúncios. Tente novamente."
+              : "Ainda não há anúncios em até 50 km de você."}
+          </p>
+        )}
         <div className="space-y-2">
           {visibleMaterials.map((m: any) => (
             <Link
