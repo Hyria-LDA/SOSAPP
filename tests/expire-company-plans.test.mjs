@@ -1,0 +1,26 @@
+const {PGlite} = await import(process.env.PGLITE_MODULE || '@electric-sql/pglite');
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+const db=new PGlite();
+await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;
+CREATE TABLE planos(id uuid PRIMARY KEY,slug text);
+INSERT INTO planos VALUES ('00000000-0000-0000-0000-000000000001','free'),('00000000-0000-0000-0000-000000000002','ultra');
+CREATE TABLE empresas(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),owner_id uuid DEFAULT gen_random_uuid(),plano_id uuid DEFAULT '00000000-0000-0000-0000-000000000002',plano text DEFAULT 'Brilhante',plano_vencimento timestamptz,status text DEFAULT 'ativa');
+CREATE TABLE revenuecat_subscriptions(user_id uuid,status text,expires_at timestamptz);
+CREATE TABLE empresa_historico(empresa_id uuid,autor_id uuid,tipo text,descricao text);
+CREATE SCHEMA cron;CREATE TABLE cron.job(jobname text PRIMARY KEY,schedule text,command text);
+CREATE FUNCTION cron.unschedule(text) RETURNS boolean LANGUAGE sql AS $$ DELETE FROM cron.job WHERE jobname=$1 RETURNING true $$;
+CREATE FUNCTION cron.schedule(text,text,text) RETURNS bigint LANGUAGE sql AS $$ INSERT INTO cron.job VALUES($1,$2,$3) RETURNING 1::bigint $$;
+INSERT INTO empresas(plano,plano_vencimento,status) VALUES
+('expired',now()-interval '1 day','suspensa'),('future',now()+interval '1 day','ativa'),('no-expiry',NULL,'ativa'),('store',now()-interval '1 day','ativa'),('store-expired',now()-interval '1 day','ativa');
+INSERT INTO revenuecat_subscriptions SELECT owner_id,'active',now()+interval '2 days' FROM empresas WHERE plano='store';
+INSERT INTO revenuecat_subscriptions SELECT owner_id,'active',now()-interval '1 day' FROM empresas WHERE plano='store-expired';`);
+const sql=readFileSync(new URL('../supabase/migrations/20260928230000_expire_company_plans.sql', import.meta.url),'utf8').replace('CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA pg_catalog;','');
+await db.exec(sql);
+assert.equal((await db.query("SELECT * FROM empresas WHERE plano='free'")).rows.length,2);
+assert.equal((await db.query("SELECT * FROM empresa_historico")).rows.length,2);
+assert.equal((await db.query("SELECT * FROM empresas WHERE status='suspensa' AND plano='free'")).rows.length,1);
+assert.equal((await db.query("SELECT * FROM empresas WHERE plano IN ('future','no-expiry','store')")).rows.length,3);
+await db.exec(sql);assert.equal((await db.query('SELECT * FROM empresa_historico')).rows.length,2);assert.equal((await db.query('SELECT * FROM cron.job')).rows.length,1);
+await db.exec('SET ROLE authenticated');await assert.rejects(db.query('SELECT public.expire_company_plans()'));await db.exec('RESET ROLE');
+console.log('Verificados: vencimento, preservação de planos válidos/sem data/loja, status da empresa, histórico, reaplicação e permissão. Agendador simulado.');await db.close();
