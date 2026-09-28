@@ -45,7 +45,7 @@ BEGIN
   IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'sos-expire-company-plans') THEN
     PERFORM cron.unschedule('sos-expire-company-plans');
   END IF;
-  PERFORM cron.schedule('sos-expire-company-plans', '* * * * *', 'SELECT public.expire_company_plans();');
+  PERFORM cron.schedule('sos-expire-company-plans', '0 * * * *', 'SELECT public.expire_company_plans();');
 END;
 $$;
 COMMIT;

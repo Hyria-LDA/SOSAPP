@@ -1,8 +1,8 @@
 # Vencimento automático de planos
 
-Executar `supabase/migrations/20260928230000_expire_company_plans.sql` no SQL Editor do Supabase com a conta administrativa do projeto. O SQL é transacional, instala uma rotina do pg_cron a cada minuto e já processa os vencidos existentes. Depois enviar os arquivos ao GitHub para guardar a versão.
+Executar `supabase/migrations/20260928230000_expire_company_plans.sql` no SQL Editor do Supabase com a conta administrativa do projeto. O SQL é transacional, instala uma rotina do pg_cron uma vez por hora, no minuto zero e já processa os vencidos existentes. Depois enviar os arquivos ao GitHub para guardar a versão.
 
-A rotina usa a data e hora `plano_vencimento` da empresa. Quando vencida, troca `plano_id` e `plano` para Free. Preserva as datas como referência e registra em `empresa_historico`. Não altera status da empresa, anúncios, autenticação nem compras nas lojas. Pode levar até o próximo ciclo de um minuto para atualizar o cadastro; telas abertas precisam recarregar. A consulta de limites já aplica Free para vencidos.
+A rotina usa a data e hora `plano_vencimento` da empresa. Quando vencida, troca `plano_id` e `plano` para Free. Preserva as datas como referência e registra em `empresa_historico`. Não altera status da empresa, anúncios, autenticação nem compras nas lojas. Pode levar até uma hora para atualizar o cadastro; telas abertas precisam recarregar. A consulta de limites já aplica Free para vencidos.
 
 Sem data de vencimento, não há redução automática. Assinatura RevenueCat registrada como ativa e ainda válida (ou sem expiração) impede a redução por esta rotina: ela continua sob responsabilidade da sincronização RevenueCat. Esta proteção depende do último estado sincronizado; não consulta a loja em tempo real.
 
@@ -19,3 +19,5 @@ order by start_time desc limit 5;
 ```
 
 Nenhuma alteração foi aplicada em produção automaticamente.
+
+Se já aplicou a versão por minuto, execute `supabase/migrations/20260928233000_hourly_company_plan_expiry.sql` para alterar apenas o agendamento existente.
