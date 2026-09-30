@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { BottomNav } from "@/components/bottom-nav";
 import { PermissionsOnboarding } from "@/components/permissions-onboarding";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
@@ -9,9 +9,10 @@ export const Route = createFileRoute("/_authenticated/app")({
 
 function AppLayout() {
   usePushNotifications();
+  const wide=useRouterState({select:s=>s.location.pathname.startsWith("/app/admin/lojistas")});
 
   return (
-    <div className="mx-auto min-h-screen max-w-md bg-background pb-24">
+    <div className={`mx-auto min-h-screen ${wide?"max-w-6xl":"max-w-md"} bg-background pb-24`}>
       <Outlet />
       <BottomNav />
       <PermissionsOnboarding />

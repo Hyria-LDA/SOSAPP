@@ -93,6 +93,8 @@ function Admin() {
         <span className="text-xl">→</span>
       </Link>
 
+      <a href="/app/admin/lojistas" className="mt-3 block rounded-2xl bg-card p-4 shadow-card"><div className="text-base font-bold">Lojistas</div><div className="text-xs text-muted-foreground">Empresas, contratos, portal e aprovação de banners</div></a>
+
       <Link
         to="/app/admin/banners"
         className="mt-3 flex items-center justify-between rounded-2xl bg-card p-4 shadow-card"

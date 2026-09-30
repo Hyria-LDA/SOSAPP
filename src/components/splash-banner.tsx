@@ -1,3 +1,4 @@
+import {getStoreLiveBanners,trackBanner,bannerInDate} from "@/lib/store-live-banners";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,6 +6,9 @@ import { bannerMatchesAudience, getCurrentBannerAudience } from "@/lib/banner-ta
 
 type SplashBannerData = {
   id: string;
+  store_banner?: boolean;
+  data_inicio?: string;
+  data_fim?: string;
   titulo: string | null;
   subtitulo: string | null;
   imagem_url: string;
@@ -33,11 +37,11 @@ export function SplashBannerGate() {
     };
 
     const showBanner = (b: SplashBannerData) => {
-      if (cancelled) return;
+      if (cancelled || (b.store_banner && !bannerInDate(b))) return;
       setBanner(b);
       setRemaining(b.duracao_segundos ?? 10);
       setOpen(true);
-      supabase.rpc("increment_banner_view" as any, { _banner_id: b.id }).then(() => {});
+      trackBanner(b).then(() => {});
       // agendar próxima exibição se houver intervalo configurado
       const intervaloMs = Math.max(0, Number(b.intervalo_minutos) || 0) * 60 * 1000;
       if (intervaloMs > 0) {
@@ -66,7 +70,8 @@ export function SplashBannerGate() {
         .eq("exibir_abertura", true)
         .order("ordem", { ascending: true })
         .limit(10);
-      const list = (data ?? []).filter((b: any) => {
+      const portalBanners=(await getStoreLiveBanners()).filter(b=>b.exibir_abertura);
+      const list = [...(data ?? []),...portalBanners].filter((b: any) => {
         if (b.data_inicio && b.data_inicio > nowIso) return false;
         if (b.data_fim && b.data_fim < nowIso) return false;
         if (!bannerMatchesAudience(b, audience)) return false;
@@ -107,10 +112,10 @@ export function SplashBannerGate() {
     return () => clearTimeout(t);
   }, [open, remaining]);
 
-  if (!open || !banner) return null;
+  if (!open || !banner || (banner.store_banner && !bannerInDate(banner))) return null;
 
   const trackClick = () => {
-    supabase.rpc("increment_banner_click" as any, { _banner_id: banner.id }).then(() => {});
+    trackBanner(banner,true).then(() => {});
   };
   const isExternal = banner.link?.startsWith("http");
   const isVertical = banner.banner_format === "vertical";

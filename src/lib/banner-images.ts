@@ -20,11 +20,25 @@ export function bannerPath(v: string): string {
   return m ? decodeURIComponent(m[1]) : v;
 }
 
-export async function signBannerPaths(values: string[]): Promise<Record<string, string>> {
+export async function signBannerPaths(
+  values: string[],
+): Promise<Record<string, string>> {
   const unique = Array.from(new Set(values.filter(Boolean)));
   const result: Record<string, string> = {};
   const toSign: string[] = [];
+  const storeValues = unique.filter((v) => v.startsWith("store-media:"));
+  if (storeValues.length) {
+    const { data } = await supabase.storage
+      .from("store-media")
+      .createSignedUrls(
+        storeValues.map((v) => v.slice(12)),
+        300,
+      );
+    for (const d of data ?? [])
+      if (d.path && d.signedUrl) result[`store-media:${d.path}`] = d.signedUrl;
+  }
   for (const v of unique) {
+    if (v.startsWith("store-media:")) continue;
     if (isFullUrl(v)) {
       // Legacy long-lived signed URL: re-sign by path to enforce short TTL.
       const path = bannerPath(v);
@@ -45,6 +59,7 @@ export async function signBannerPaths(values: string[]): Promise<Record<string, 
       if (d?.path && d?.signedUrl) pathToSigned[d.path] = d.signedUrl;
     });
     for (const v of unique) {
+      if (v.startsWith("store-media:")) continue;
       if (isFullUrl(v)) {
         const path = bannerPath(v);
         if (path && path !== v) result[v] = pathToSigned[path] ?? "";

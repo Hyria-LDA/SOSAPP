@@ -1,6 +1,7 @@
+import {getStoreLiveBanners,trackBanner,bannerInDate} from "@/lib/store-live-banners";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Search, Plus, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/use-geolocation";
@@ -26,6 +27,9 @@ export const Route = createFileRoute("/_authenticated/app/")({
 
 type Banner = BannerTarget & {
   id: string;
+  store_banner?: boolean;
+  data_inicio?: string;
+  data_fim?: string;
   titulo: string | null;
   subtitulo: string | null;
   imagem_url: string;
@@ -110,7 +114,8 @@ function Home() {
         .order("ordem", { ascending: true });
       if (error) throw error;
       const slug = userPlanSlug ?? "free";
-      const filtered = (data ?? []).filter((b: any) => {
+      const portalBanners=await getStoreLiveBanners();
+      const filtered = [...(data ?? []),...portalBanners].filter((b: any) => {
         if (b.exibir_abertura) return false; // splash apenas
         if (b.banner_format === "vertical") return false;
         if (b.data_inicio && b.data_inicio > nowIso) return false;
@@ -128,7 +133,8 @@ function Home() {
       })) as unknown as Banner[];
     },
     select: shuffledBanners,
-    staleTime: 50 * 60 * 1000,
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
   });
 
   const { data: popularesRaw, isFetching: materialsLoading, isError: materialsError } = useQuery({
@@ -387,7 +393,11 @@ function Home() {
   );
 }
 
-function BannersCarousel({ banners }: { banners: Banner[] }) {
+function BannersCarousel({ banners: allBanners }: { banners: Banner[] }) {
+  const [clock,setClock]=useState(Date.now());
+  useEffect(()=>{const timer=setInterval(()=>setClock(Date.now()),1000);return()=>clearInterval(timer)},[]);
+  const activeIds=allBanners.filter(b=>!b.store_banner||bannerInDate(b)).map(b=>b.id).join(",");
+  const banners=useMemo(()=>allBanners.filter(b=>activeIds.split(",").includes(b.id)),[allBanners,activeIds]);
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [tracked, setTracked] = useState<Set<string>>(new Set());
@@ -423,7 +433,7 @@ function BannersCarousel({ banners }: { banners: Banner[] }) {
     const b = banners[current];
     if (!b || tracked.has(b.id)) return;
     setTracked((s) => new Set(s).add(b.id));
-    supabase.rpc("increment_banner_view" as any, { _banner_id: b.id }).then(() => {});
+    trackBanner(b).then(() => {});
   }, [current, banners, tracked]);
 
   return (
@@ -455,7 +465,7 @@ function BannersCarousel({ banners }: { banners: Banner[] }) {
 
 function BannerSlide({ banner }: { banner: Banner }) {
   const trackClick = () => {
-    supabase.rpc("increment_banner_click" as any, { _banner_id: banner.id }).then(() => {});
+    trackBanner(banner,true).then(() => {});
   };
   const isExternal = banner.link?.startsWith("http");
 

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as LojistaRouteImport } from './routes/lojista'
 import { Route as ExcluirContaRouteImport } from './routes/excluir-conta'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -36,6 +37,7 @@ import { Route as AuthenticatedAppEmpresaIdRouteImport } from './routes/_authent
 import { Route as AuthenticatedAppAdminPlanosRouteImport } from './routes/_authenticated/app.admin.planos'
 import { Route as AuthenticatedAppAdminNotificacoesPushRouteImport } from './routes/_authenticated/app.admin.notificacoes-push'
 import { Route as AuthenticatedAppAdminModeracaoFotosRouteImport } from './routes/_authenticated/app.admin.moderacao-fotos'
+import { Route as AuthenticatedAppAdminLojistasRouteImport } from './routes/_authenticated/app.admin.lojistas'
 import { Route as AuthenticatedAppAdminDenunciasRouteImport } from './routes/_authenticated/app.admin.denuncias'
 import { Route as AuthenticatedAppAdminBannersRouteImport } from './routes/_authenticated/app.admin.banners'
 import { Route as AuthenticatedAppAdminAtualizacaoRouteImport } from './routes/_authenticated/app.admin.atualizacao'
@@ -52,6 +54,11 @@ const TermosRoute = TermosRouteImport.update({
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
   id: '/privacidade',
   path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LojistaRoute = LojistaRouteImport.update({
+  id: '/lojista',
+  path: '/lojista',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExcluirContaRoute = ExcluirContaRouteImport.update({
@@ -187,6 +194,12 @@ const AuthenticatedAppAdminModeracaoFotosRoute =
     path: '/moderacao-fotos',
     getParentRoute: () => AuthenticatedAppAdminRoute,
   } as any)
+const AuthenticatedAppAdminLojistasRoute =
+  AuthenticatedAppAdminLojistasRouteImport.update({
+    id: '/lojistas',
+    path: '/lojistas',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
 const AuthenticatedAppAdminDenunciasRoute =
   AuthenticatedAppAdminDenunciasRouteImport.update({
     id: '/denuncias',
@@ -234,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/excluir-conta': typeof ExcluirContaRoute
+  '/lojista': typeof LojistaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
@@ -253,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/app/admin/atualizacao': typeof AuthenticatedAppAdminAtualizacaoRoute
   '/app/admin/banners': typeof AuthenticatedAppAdminBannersRoute
   '/app/admin/denuncias': typeof AuthenticatedAppAdminDenunciasRoute
+  '/app/admin/lojistas': typeof AuthenticatedAppAdminLojistasRoute
   '/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
   '/app/admin/notificacoes-push': typeof AuthenticatedAppAdminNotificacoesPushRoute
   '/app/admin/planos': typeof AuthenticatedAppAdminPlanosRoute
@@ -269,6 +284,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/excluir-conta': typeof ExcluirContaRoute
+  '/lojista': typeof LojistaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -286,6 +302,7 @@ export interface FileRoutesByTo {
   '/app/admin/atualizacao': typeof AuthenticatedAppAdminAtualizacaoRoute
   '/app/admin/banners': typeof AuthenticatedAppAdminBannersRoute
   '/app/admin/denuncias': typeof AuthenticatedAppAdminDenunciasRoute
+  '/app/admin/lojistas': typeof AuthenticatedAppAdminLojistasRoute
   '/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
   '/app/admin/notificacoes-push': typeof AuthenticatedAppAdminNotificacoesPushRoute
   '/app/admin/planos': typeof AuthenticatedAppAdminPlanosRoute
@@ -304,6 +321,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
   '/excluir-conta': typeof ExcluirContaRoute
+  '/lojista': typeof LojistaRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
@@ -323,6 +341,7 @@ export interface FileRoutesById {
   '/_authenticated/app/admin/atualizacao': typeof AuthenticatedAppAdminAtualizacaoRoute
   '/_authenticated/app/admin/banners': typeof AuthenticatedAppAdminBannersRoute
   '/_authenticated/app/admin/denuncias': typeof AuthenticatedAppAdminDenunciasRoute
+  '/_authenticated/app/admin/lojistas': typeof AuthenticatedAppAdminLojistasRoute
   '/_authenticated/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
   '/_authenticated/app/admin/notificacoes-push': typeof AuthenticatedAppAdminNotificacoesPushRoute
   '/_authenticated/app/admin/planos': typeof AuthenticatedAppAdminPlanosRoute
@@ -341,6 +360,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/excluir-conta'
+    | '/lojista'
     | '/privacidade'
     | '/termos'
     | '/app'
@@ -360,6 +380,7 @@ export interface FileRouteTypes {
     | '/app/admin/atualizacao'
     | '/app/admin/banners'
     | '/app/admin/denuncias'
+    | '/app/admin/lojistas'
     | '/app/admin/moderacao-fotos'
     | '/app/admin/notificacoes-push'
     | '/app/admin/planos'
@@ -376,6 +397,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/excluir-conta'
+    | '/lojista'
     | '/privacidade'
     | '/termos'
     | '/onboarding'
@@ -393,6 +415,7 @@ export interface FileRouteTypes {
     | '/app/admin/atualizacao'
     | '/app/admin/banners'
     | '/app/admin/denuncias'
+    | '/app/admin/lojistas'
     | '/app/admin/moderacao-fotos'
     | '/app/admin/notificacoes-push'
     | '/app/admin/planos'
@@ -410,6 +433,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/excluir-conta'
+    | '/lojista'
     | '/privacidade'
     | '/termos'
     | '/_authenticated/app'
@@ -429,6 +453,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin/atualizacao'
     | '/_authenticated/app/admin/banners'
     | '/_authenticated/app/admin/denuncias'
+    | '/_authenticated/app/admin/lojistas'
     | '/_authenticated/app/admin/moderacao-fotos'
     | '/_authenticated/app/admin/notificacoes-push'
     | '/_authenticated/app/admin/planos'
@@ -447,6 +472,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   ExcluirContaRoute: typeof ExcluirContaRoute
+  LojistaRoute: typeof LojistaRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   TermosRoute: typeof TermosRoute
   AuthRedefinirRoute: typeof AuthRedefinirRoute
@@ -467,6 +493,13 @@ declare module '@tanstack/react-router' {
       path: '/privacidade'
       fullPath: '/privacidade'
       preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lojista': {
+      id: '/lojista'
+      path: '/lojista'
+      fullPath: '/lojista'
+      preLoaderRoute: typeof LojistaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/excluir-conta': {
@@ -644,6 +677,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminModeracaoFotosRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
+    '/_authenticated/app/admin/lojistas': {
+      id: '/_authenticated/app/admin/lojistas'
+      path: '/lojistas'
+      fullPath: '/app/admin/lojistas'
+      preLoaderRoute: typeof AuthenticatedAppAdminLojistasRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
     '/_authenticated/app/admin/denuncias': {
       id: '/_authenticated/app/admin/denuncias'
       path: '/denuncias'
@@ -700,6 +740,7 @@ interface AuthenticatedAppAdminRouteChildren {
   AuthenticatedAppAdminAtualizacaoRoute: typeof AuthenticatedAppAdminAtualizacaoRoute
   AuthenticatedAppAdminBannersRoute: typeof AuthenticatedAppAdminBannersRoute
   AuthenticatedAppAdminDenunciasRoute: typeof AuthenticatedAppAdminDenunciasRoute
+  AuthenticatedAppAdminLojistasRoute: typeof AuthenticatedAppAdminLojistasRoute
   AuthenticatedAppAdminModeracaoFotosRoute: typeof AuthenticatedAppAdminModeracaoFotosRoute
   AuthenticatedAppAdminNotificacoesPushRoute: typeof AuthenticatedAppAdminNotificacoesPushRoute
   AuthenticatedAppAdminPlanosRoute: typeof AuthenticatedAppAdminPlanosRoute
@@ -714,6 +755,7 @@ const AuthenticatedAppAdminRouteChildren: AuthenticatedAppAdminRouteChildren = {
   AuthenticatedAppAdminAtualizacaoRoute: AuthenticatedAppAdminAtualizacaoRoute,
   AuthenticatedAppAdminBannersRoute: AuthenticatedAppAdminBannersRoute,
   AuthenticatedAppAdminDenunciasRoute: AuthenticatedAppAdminDenunciasRoute,
+  AuthenticatedAppAdminLojistasRoute: AuthenticatedAppAdminLojistasRoute,
   AuthenticatedAppAdminModeracaoFotosRoute:
     AuthenticatedAppAdminModeracaoFotosRoute,
   AuthenticatedAppAdminNotificacoesPushRoute:
@@ -795,6 +837,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   ExcluirContaRoute: ExcluirContaRoute,
+  LojistaRoute: LojistaRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   TermosRoute: TermosRoute,
   AuthRedefinirRoute: AuthRedefinirRoute,

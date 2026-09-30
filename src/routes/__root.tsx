@@ -224,6 +224,8 @@ function InAppPurchaseSync({ queryClient }: { queryClient: QueryClient }) {
     const sixHours = 6 * 60 * 60 * 1000;
 
     const syncForUser = async (userId: string, force = false) => {
+      const {data:roles,error:roleError}=await supabase.from("user_roles").select("role").eq("user_id",userId);
+      if(roleError || roles?.some(r=>String(r.role)==="store_partner")) return;
       const storageKey = `sos:revenuecat-sync:${userId}`;
       const lastSync = Number(window.localStorage.getItem(storageKey) ?? 0);
       if (!force && Date.now() - lastSync < sixHours) return;

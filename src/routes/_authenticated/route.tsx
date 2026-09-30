@@ -47,6 +47,10 @@ export const Route = createFileRoute("/_authenticated")({
     // deixar o app em branco se a rede estiver lenta durante a inicializacao.
     if (publicPath) {
       const { data } = await supabase.auth.getSession();
+      if (data.session?.user) {
+        const {data: roles} = await supabase.from("user_roles").select("role").eq("user_id",data.session.user.id);
+        if (roles?.some(r=>String(r.role)==="store_partner") && !roles.some(r=>r.role==="admin")) throw redirect({to:"/lojista",search:{store:undefined}});
+      }
       return { user: data.session?.user ?? null };
     }
 
@@ -63,6 +67,7 @@ export const Route = createFileRoute("/_authenticated")({
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id);
+      if (roles?.some(r=>String(r.role)==="store_partner") && !roles.some(r=>r.role==="admin")) throw redirect({to:"/lojista",search:{store:undefined}});
       const isVendedor = (roles ?? []).some((r: any) => r.role === "vendedor");
 
       if (isVendedor) {

@@ -5,3 +5,7 @@ verify_jwt = false
 
 [functions.send-onboarding-reminders]
 verify_jwt = false
+
+# JWT validado explicitamente por getUser; role admin conferida no servidor.
+[functions.store-admin]
+verify_jwt = false
