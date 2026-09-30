@@ -324,7 +324,7 @@ function badge(s: string) {
 }
 
 function planKey(value: unknown) {
-  const plan = String(value || "free").toLowerCase();
-  if (plan === "brilhante") return "premium";
+  const plan = String(value || "free").trim().toLowerCase();
+  if (plan === "brilhante") return "ultra";
   return plan;
 }

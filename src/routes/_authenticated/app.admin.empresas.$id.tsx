@@ -150,7 +150,10 @@ function EmpresaDetail() {
       .insert({ empresa_id: id, tipo, descricao, autor_id: u.user?.id });
   };
 
-  const reload = () => qc.invalidateQueries({ queryKey: ["admin-empresa", id] });
+  const reload = () => Promise.all([
+    qc.invalidateQueries({ queryKey: ["admin-empresa", id] }),
+    qc.invalidateQueries({ queryKey: ["admin-empresas-full"] }),
+  ]);
 
   const updateEmpresa = async (
     patch: Record<string, any>,

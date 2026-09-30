@@ -18,6 +18,18 @@ function getEnv(name: string) {
   return value;
 }
 
+function failureInfo(error: unknown) {
+  // PostgREST pode devolver um objeto comum, sem instanceof Error.
+  const value = error && typeof error === "object" ? error as {message?:unknown;code?:unknown} : null;
+  const message = typeof value?.message === "string" && value.message.trim()
+    ? value.message.slice(0, 500)
+    : typeof error === "string" && error.trim()
+      ? error.slice(0, 500)
+      : "Não foi possível concluir a operação";
+  const code = typeof value?.code === "string" ? value.code.slice(0, 80) : undefined;
+  return {message, code};
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS")
     return new Response("ok", { headers: corsHeaders });
@@ -28,6 +40,7 @@ Deno.serve(async (request) => {
     getEnv("SUPABASE_SERVICE_ROLE_KEY"),
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
+  let stage = "validar_acesso";
   try {
     const jwt = (request.headers.get("Authorization") ?? "").replace(
       /^Bearer\s+/i,
@@ -71,6 +84,7 @@ Deno.serve(async (request) => {
         .maybeSingle();
       if (storeRoleError || adminRoleError || !role || privileged)
         return json({ error: "Conta não exclusiva de lojista" }, 409);
+      stage = "redefinir_senha";
       const { error: resetError } = await admin.auth.admin.updateUserById(
         store.user_id,
         { password: input.password },
@@ -91,6 +105,7 @@ Deno.serve(async (request) => {
       !/^[-A-Z0-9_]{3,40}$/.test(code)
     )
       return json({ error: "Confira nome, login e código do link" }, 400);
+    stage = "criar_login";
     const { data: created, error: createError } =
       await admin.auth.admin.createUser({
         email,
@@ -100,6 +115,7 @@ Deno.serve(async (request) => {
       });
     if (createError) throw createError;
     const userId = created.user.id;
+    stage = "vincular_loja";
     const { data: storeId, error: provisionError } = await admin.rpc(
       "store_provision",
       {
@@ -118,14 +134,10 @@ Deno.serve(async (request) => {
     }
     return json({ ok: true, store_id: storeId });
   } catch (error) {
-    return json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Não foi possível concluir a operação",
-      },
-      400,
-    );
+    const failure = failureInfo(error);
+    // Não registrar corpo da requisição, senha, token nem detalhes internos do SQL.
+    console.error("store-admin failed", {stage, code: failure.code});
+    const label = stage === "criar_login" ? "Criar login" : stage === "vincular_loja" ? "Vincular loja" : stage === "redefinir_senha" ? "Redefinir senha" : "Validar acesso";
+    return json({error: `${label}: ${failure.message}`, stage, code: failure.code}, 400);
   }
 });
