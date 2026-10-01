@@ -31,6 +31,7 @@ INSERT INTO auth.users(id,raw_app_meta_data) VALUES ('${A}','{"store_provisionin
 INSERT INTO user_roles VALUES ('${ADM}','admin'),('${USER}','user');`);
 await db.exec(readFileSync('supabase/migrations/20260930100000_store_partner_role.sql','utf8'));
 await db.exec(readFileSync('supabase/migrations/20260930101000_store_portal.sql','utf8'));
+await db.exec(readFileSync('supabase/migrations/20261001100000_store_multiple_referrals.sql','utf8'));
 // Freeze São Paulo business date for deterministic boundary checks.
 await db.exec("CREATE OR REPLACE FUNCTION store_today() RETURNS date LANGUAGE sql STABLE AS $$SELECT '2026-10-01'::date$$");
 async function who(id,role='authenticated'){await db.exec('RESET ROLE');await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[id||'']);await db.exec(`SET ROLE ${role}`)}
@@ -82,4 +83,26 @@ await who(ADM);await call('SELECT store_save_contract($1,$2) v',[sa,{...contract
 await who(A);await fails('SELECT store_snapshot()');await fails('SELECT store_reserve_banner($1,2)',[ca]);assert.equal((await db.query('SELECT * FROM storage.objects')).rows.length,0);
 await who(ADM);await call('SELECT store_admin_settings($1,$2,$3,$4) v',[sa,'Loja A','active',['phone']]);await db.exec('RESET ROLE');await db.exec("CREATE OR REPLACE FUNCTION store_today() RETURNS date LANGUAGE sql STABLE AS $$SELECT '2026-11-01'::date$$");assert.equal(await call('SELECT store_banner_live($1) v',[b.id]),false);
 await who(A);await fails('SELECT store_reserve_banner($1,2)',[ca]);assert.equal((await call('SELECT store_snapshot() v')).banners.find(x=>x.id===b.id).effective_status,'expired');
+
+// Multiple referral links: isolated reports and distinct combined registrations.
+await db.exec('RESET ROLE');
+const p2=await call("INSERT INTO vendedores_parceiros(codigo,nome,ativo) VALUES('EXTRA2','Filial 2',true) RETURNING id v");
+const p3=await call("INSERT INTO vendedores_parceiros(codigo,nome,ativo) VALUES('EXTRA3','Filial 3',true) RETURNING id v");
+const eb=await call("INSERT INTO empresas(owner_id,onboarded) VALUES(gen_random_uuid(),true) RETURNING id v");
+await db.query("INSERT INTO cadastro_origens VALUES($1,$2,'2026-10-01T12:00:00Z'),($3,$2,'2026-10-01T12:00:00Z')",[eid,p2,eb]);
+await db.query("INSERT INTO vendedor_cliques VALUES($1,'2026-10-01T12:00:00Z'),($2,'2026-10-01T12:00:00Z')",[p2,p3]);
+await who(A);await fails('SELECT store_link_referral($1,$2)',[sa,'EXTRA2']);
+await who(ADM);await call('SELECT store_link_referral($1,$2) v',[sa,'EXTRA2']);await call('SELECT store_link_referral($1,$2) v',[sa,'EXTRA3']);
+await fails('SELECT store_link_referral($1,$2)',[sb,'EXTRA2']);await fails('SELECT store_link_referral($1,$2)',[sa,'LOJAB']);await fails('SELECT store_link_referral($1,$2,true)',[sa,'LOJAA']);
+await who(A);assert.equal((await call('SELECT store_referrals($1) v',[sa])).length,3);assert.equal((await db.query('SELECT * FROM store_referral_links')).rows.length,2);
+const allLinks=await call('SELECT store_metrics($1) v',[sa]);assert.equal(allLinks.clicks,3);assert.equal(allLinks.registrations,2);
+const oneLink=await call('SELECT store_referral_metrics($1,$2) v',[sa,p2]);assert.equal(oneLink.clicks,1);assert.equal(oneLink.registrations,2);
+assert.equal((await call('SELECT store_snapshot() v')).metrics.clicks,3);
+await who(B);await fails('SELECT store_referrals($1)',[sa]);await fails('SELECT store_referral_metrics($1,$2)',[sb,p2]);assert.equal((await db.query('SELECT * FROM store_referral_links')).rows.length,0);
+await who(null,'anon');await fails('SELECT store_referrals($1)',[sa]);
+await who(ADM);await call('SELECT store_link_referral($1,$2,true) v',[sa,'EXTRA2']);
+await who(A);await fails('SELECT store_referral_metrics($1,$2)',[sa,p2]);assert.equal((await call('SELECT store_metrics($1) v',[sa])).clicks,2);
+await db.exec('RESET ROLE');assert.equal(await call('SELECT count(*)::int v FROM vendedor_cliques WHERE vendedor_id=$1',[p2]),1);
+console.log('PASS: três links por loja, relatório individual/consolidado, cadastros sem duplicação, vínculo exclusivo, bloqueio entre lojas e desvínculo sem apagar histórico.');
+
 console.log('PASS: migrações executadas em PostgreSQL/PGlite; provisionamento, RLS, isolamento, arquivos, permissões, quotas, semanas, substituição, aprovação, região, suspensão e expiração.');await db.close();

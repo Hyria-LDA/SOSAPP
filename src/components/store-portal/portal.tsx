@@ -22,21 +22,8 @@ import {
   type Week,
   type Metrics,
 } from "@/lib/store-portal";
-import {
-  Panel,
-  Stats,
-  Badge,
-  StoreImage,
-  buttonClass,
-  secondaryClass,
-} from "./ui";
-import {
-  ProfileForm,
-  SettingsForm,
-  ContractForm,
-  UploadForm,
-  ReviewForm,
-} from "./forms";
+import { Panel, Stats, Badge, StoreImage, buttonClass, secondaryClass, inputClass } from "./ui";
+import { ProfileForm, SettingsForm, ContractForm, UploadForm, ReviewForm } from "./forms";
 const tabs = [
   ["dashboard", "Visão geral"],
   ["profile", "Minha Empresa"],
@@ -45,17 +32,15 @@ const tabs = [
   ["history", "Campanhas anteriores"],
   ["library", "Biblioteca"],
 ];
-export function Referral({
-  code,
-  metrics,
-}: {
-  code: string;
-  metrics: Metrics;
-}) {
-  const link = `https://sosmarceneiros.com.br/r/${encodeURIComponent(code)}`;
+export function Referral({ code, metrics }: { code?: string; metrics: Metrics }) {
+  const link = `https://sosmarceneiros.com.br/r/${encodeURIComponent(code || "")}`;
   const [qr, setQr] = useState("");
   useEffect(() => {
     let alive = true;
+    if (!code) {
+      setQr("");
+      return;
+    }
     QRCode.toDataURL(link, { width: 240, margin: 2 })
       .then((v) => {
         if (alive) setQr(v);
@@ -64,51 +49,40 @@ export function Referral({
     return () => {
       alive = false;
     };
-  }, [link]);
+  }, [link, code]);
   return (
     <div className="space-y-5">
-      <Panel title="Seu link de divulgação">
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm text-muted-foreground">
-              Código da loja: {code}
-            </p>
-            <p className="my-4 break-all font-bold">{link}</p>
-            <button
-              className={buttonClass}
-              onClick={() =>
-                navigator.clipboard
-                  .writeText(link)
-                  .then(() => toast.success("Link copiado."))
-                  .catch(() =>
-                    toast.error(
-                      "Não foi possível copiar. Selecione o link acima.",
-                    ),
-                  )
-              }
-            >
-              Copiar link
-            </button>
-            {qr && (
-              <a
-                href={qr}
-                download={`qr-${code}.png`}
-                className="ml-3 inline-block text-sm font-semibold underline"
+      {code && (
+        <Panel title="Seu link de divulgação">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-muted-foreground">Código da loja: {code}</p>
+              <p className="my-4 break-all font-bold">{link}</p>
+              <button
+                className={buttonClass}
+                onClick={() =>
+                  navigator.clipboard
+                    .writeText(link)
+                    .then(() => toast.success("Link copiado."))
+                    .catch(() => toast.error("Não foi possível copiar. Selecione o link acima."))
+                }
               >
-                Baixar QR Code
-              </a>
-            )}
+                Copiar link
+              </button>
+              {qr && (
+                <a
+                  href={qr}
+                  download={`qr-${code}.png`}
+                  className="ml-3 inline-block text-sm font-semibold underline"
+                >
+                  Baixar QR Code
+                </a>
+              )}
+            </div>
+            {qr && <img src={qr} width={180} height={180} alt="QR Code do link da loja" />}
           </div>
-          {qr && (
-            <img
-              src={qr}
-              width={180}
-              height={180}
-              alt="QR Code do link da loja"
-            />
-          )}
-        </div>
-      </Panel>
+        </Panel>
+      )}
       <Stats
         items={[
           ["Cliques", metrics.clicks],
@@ -152,15 +126,165 @@ export function Referral({
           </ResponsiveContainer>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          Cliques seguem a contagem do link existente: um visitante por dia.
-          Cadastros concluídos e publicações mostram a situação atual dos
-          cadastros atribuídos. Assinaturas usam a primeira conversão
-          registrada.
+          Cliques seguem a contagem do link existente: um visitante por dia. Cadastros concluídos e
+          publicações mostram a situação atual dos cadastros atribuídos. Assinaturas usam a primeira
+          conversão registrada.
         </p>
       </Panel>
     </div>
   );
 }
+type ReferralLink = { id: string; code: string; name: string; primary: boolean };
+function StoreReferrals({
+  storeId,
+  userId,
+  admin,
+}: {
+  storeId: string;
+  userId: string;
+  admin: boolean;
+}) {
+  const qc = useQueryClient();
+  const [selected, setSelected] = useState("all"),
+    [code, setCode] = useState(""),
+    [busy, setBusy] = useState(false);
+  const links = useQuery({
+    queryKey: ["store-referrals", userId, storeId],
+    queryFn: () => storeRpc<ReferralLink[]>("store_referrals", { _store: storeId }),
+    refetchInterval: 60000,
+  });
+  const report = useQuery({
+    queryKey: ["store-referral-report", userId, storeId, selected],
+    queryFn: () =>
+      storeRpc<Metrics>("store_referral_metrics", {
+        _store: storeId,
+        _partner: selected === "all" ? null : selected,
+      }),
+    enabled: !!links.data,
+    refetchInterval: 60000,
+  });
+  async function change(value: string, remove = false) {
+    setBusy(true);
+    try {
+      let parsed = value.trim();
+      if (/^https?:\/\//i.test(parsed)) {
+        const url = new URL(parsed);
+        const match = url.pathname.match(/^\/r\/([^/]+)\/?$/);
+        if (!match) throw new Error("Use um link de indicação no formato /r/CODIGO.");
+        parsed = decodeURIComponent(match[1]);
+      }
+      await storeRpc("store_link_referral", { _store: storeId, _code: parsed, _remove: remove });
+      setCode("");
+      setSelected("all");
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["store-referrals"] }),
+        qc.invalidateQueries({ queryKey: ["store-referral-report"] }),
+        qc.invalidateQueries({ queryKey: ["store-portal"] }),
+        qc.invalidateQueries({ queryKey: ["store-admin-list"] }),
+      ]);
+      toast.success(
+        remove
+          ? "Link desvinculado. O histórico do parceiro foi preservado."
+          : "Link vinculado à loja.",
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível alterar o vínculo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  const chosen = links.data?.find((l) => l.id === selected);
+  return (
+    <div className="space-y-5">
+      <Panel title="Links de indicação">
+        {links.isPending && <p>Carregando links…</p>}
+        {links.error && (
+          <p role="alert">Não foi possível carregar os links: {links.error.message}</p>
+        )}
+        {links.data && (
+          <>
+            <label className="text-sm font-semibold">
+              Relatório
+              <select
+                className={inputClass}
+                value={selected}
+                onChange={(e) => setSelected(e.target.value)}
+              >
+                <option value="all">Todos os links — consolidado</option>
+                {links.data.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.code} — {l.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Escolha um link para ver seus números e QR Code. O consolidado conta cada cadastro uma
+              vez, mesmo que apareça em mais de um link. Cliques são somados por link.
+            </p>
+            {admin && (
+              <>
+                <div className="mt-4 space-y-2">
+                  {links.data.map((l) => (
+                    <div
+                      key={l.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border p-3 text-sm"
+                    >
+                      <span>
+                        <strong>{l.code}</strong> · {l.name}
+                        {l.primary ? " · Principal" : ""}
+                      </span>
+                      {!l.primary && (
+                        <button
+                          className={secondaryClass}
+                          disabled={busy}
+                          onClick={() => void change(l.code, true)}
+                        >
+                          Desvincular
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <form
+                  className="mt-4 space-y-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void change(code);
+                  }}
+                >
+                  <label className="text-sm font-semibold">
+                    Adicionar link existente
+                    <input
+                      className={inputClass}
+                      required
+                      placeholder="Código ou https://sosmarceneiros.com.br/r/CODIGO"
+                      value={code}
+                      onChange={(e) => setCode(e.target.value)}
+                    />
+                  </label>
+                  <button className={buttonClass} disabled={busy}>
+                    {busy ? "Salvando…" : "Vincular link"}
+                  </button>
+                  <p className="text-xs text-muted-foreground">
+                    O lojista terá acesso também ao histórico desse link. Apenas a administração
+                    pode adicionar ou remover vínculos.
+                  </p>
+                </form>
+              </>
+            )}
+          </>
+        )}
+      </Panel>
+      {report.isPending && links.data && <p>Carregando relatório…</p>}
+      {report.error && (
+        <p role="alert">Não foi possível carregar o relatório: {report.error.message}</p>
+      )}
+      {!report.error && report.data && <Referral code={chosen?.code} metrics={report.data} />}
+    </div>
+  );
+}
+
 export function StorePortal({
   storeId,
   userId,
@@ -183,8 +307,7 @@ export function StorePortal({
     [review, setReview] = useState<string>();
   const query = useQuery({
     queryKey: ["store-portal", userId, storeId || "self"],
-    queryFn: () =>
-      storeRpc<Snapshot>("store_snapshot", { _store: storeId || null }),
+    queryFn: () => storeRpc<Snapshot>("store_snapshot", { _store: storeId || null }),
     refetchInterval: 60_000,
   });
   async function refresh() {
@@ -196,8 +319,7 @@ export function StorePortal({
     qc.clear();
     window.location.assign("/auth");
   }
-  if (query.isPending)
-    return <div className="p-8 text-center">Abrindo Portal do Lojista…</div>;
+  if (query.isPending) return <div className="p-8 text-center">Abrindo Portal do Lojista…</div>;
   if (query.error || !query.data)
     return (
       <main className="mx-auto max-w-xl space-y-4 p-8">
@@ -227,19 +349,12 @@ export function StorePortal({
     tab === "history"
       ? s.banners.filter((b) =>
           s.contracts.some(
-            (c) =>
-              c.id === b.contract_id &&
-              ["ended", "cancelled"].includes(c.effective_status),
+            (c) => c.id === b.contract_id && ["ended", "cancelled"].includes(c.effective_status),
           ),
         )
       : s.banners;
   const days = current
-    ? Math.max(
-        0,
-        Math.ceil(
-          (Date.parse(current.end_date) - Date.parse(s.today)) / 86400000,
-        ) + 1,
-      )
+    ? Math.max(0, Math.ceil((Date.parse(current.end_date) - Date.parse(s.today)) / 86400000) + 1)
     : 0;
   function weeks(c: Contract) {
     return (
@@ -249,16 +364,12 @@ export function StorePortal({
             (b) => b.contract_id === c.id && b.week_number === w.number,
           );
           const open =
-            c.effective_status === "active" &&
-            s.store.status === "active" &&
-            w.end_date >= s.today;
+            c.effective_status === "active" && s.store.status === "active" && w.end_date >= s.today;
           return (
             <div key={w.number} className="rounded-xl border border-border p-4">
               <p className="font-bold">
                 Semana {w.number}
-                {w.start_date <= s.today && w.end_date >= s.today
-                  ? " · Atual"
-                  : ""}
+                {w.start_date <= s.today && w.end_date >= s.today ? " · Atual" : ""}
               </p>
               <p className="my-1 text-xs text-muted-foreground">
                 {dateLabel(w.start_date)} — {dateLabel(w.end_date)}
@@ -294,8 +405,7 @@ export function StorePortal({
                         setUpload({ contract: c, week: w, banner: b });
                       }}
                     >
-                      {b.submitted ? "Substituir" : "Continuar envio"}:{" "}
-                      {b.title || "Banner"}
+                      {b.submitted ? "Substituir" : "Continuar envio"}: {b.title || "Banner"}
                     </button>
                   ))}
             </div>
@@ -320,31 +430,18 @@ export function StorePortal({
           {dateLabel(c.start_date)} até {dateLabel(c.end_date)} · {c.segment}
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          {c.region || "Campanha"} ·{" "}
-          {[...c.cities, ...c.states].join("; ") || "Todo o Brasil"}
+          {c.region || "Campanha"} · {[...c.cities, ...c.states].join("; ") || "Todo o Brasil"}
         </p>
-        {c.notes && (
-          <p className="mt-2 whitespace-pre-wrap text-sm">{c.notes}</p>
-        )}
+        {c.notes && <p className="mt-2 whitespace-pre-wrap text-sm">{c.notes}</p>}
         <div className="mt-4">
           <Stats
             items={[
               ["Banners contratados", c.weeks.length * c.banners_per_week],
               ["Enviados", bs.filter((b) => b.submitted).length],
               ["Aprovados", bs.filter((b) => b.approval === "approved").length],
-              [
-                "Pendentes",
-                bs.filter((b) => b.submitted && b.approval === "pending")
-                  .length,
-              ],
-              [
-                "Reprovados",
-                bs.filter((b) => b.approval === "rejected").length,
-              ],
-              [
-                "Expirados",
-                bs.filter((b) => b.effective_status === "expired").length,
-              ],
+              ["Pendentes", bs.filter((b) => b.submitted && b.approval === "pending").length],
+              ["Reprovados", bs.filter((b) => b.approval === "rejected").length],
+              ["Expirados", bs.filter((b) => b.effective_status === "expired").length],
               ["Visualizações", bs.reduce((n, b) => n + b.views, 0)],
               ["Cliques nos banners", bs.reduce((n, b) => n + b.clicks, 0)],
             ]}
@@ -352,9 +449,8 @@ export function StorePortal({
         </div>
         {["ended", "cancelled"].includes(c.effective_status) && (
           <p className="mt-4 text-sm">
-            Cadastros pelo link no período:{" "}
-            <strong>{c.metrics.registrations}</strong>. Esta contagem é por loja
-            e período; campanhas simultâneas podem compartilhar os mesmos
+            Cadastros pelo link no período: <strong>{c.metrics.registrations}</strong>. Esta
+            contagem é por loja e período; campanhas simultâneas podem compartilhar os mesmos
             cadastros.
           </p>
         )}
@@ -368,10 +464,7 @@ export function StorePortal({
         {viewAs && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-amber-100 p-4 text-amber-950">
             <strong>Visualizando como: {s.store.nome}</strong>
-            <a
-              href={`/app/admin/lojistas?store=${s.store.id}`}
-              className="font-bold underline"
-            >
+            <a href={`/app/admin/lojistas?store=${s.store.id}`} className="font-bold underline">
               Voltar para Administração
             </a>
           </div>
@@ -394,29 +487,20 @@ export function StorePortal({
                 <a className={secondaryClass} href="/app/admin/lojistas">
                   Todas as lojas
                 </a>
-                <a
-                  className={buttonClass}
-                  href={`/lojista?store=${s.store.id}`}
-                >
+                <a className={buttonClass} href={`/lojista?store=${s.store.id}`}>
                   Acessar visão da empresa
                 </a>
               </>
             ) : (
               !viewAs && (
-                <button
-                  className={secondaryClass}
-                  onClick={() => void logout()}
-                >
+                <button className={secondaryClass} onClick={() => void logout()}>
                   Sair
                 </button>
               )
             )}
           </div>
         </header>
-        <nav
-          className="flex gap-2 overflow-x-auto pb-2"
-          aria-label="Portal do Lojista"
-        >
+        <nav className="flex gap-2 overflow-x-auto pb-2" aria-label="Portal do Lojista">
           {tabs.map(([key, label]) => (
             <button
               key={key}
@@ -433,8 +517,7 @@ export function StorePortal({
         </nav>
         {query.isRefetchError && (
           <p role="alert" className="text-sm text-destructive">
-            Falha ao atualizar. As informações exibidas podem estar
-            desatualizadas.
+            Falha ao atualizar. As informações exibidas podem estar desatualizadas.
           </p>
         )}
         {tab === "dashboard" && (
@@ -457,9 +540,8 @@ export function StorePortal({
             {!active.length && (
               <Panel>
                 <p>
-                  Você não possui uma campanha de publicidade ativa no momento.
-                  Entre em contato com o SOS Marceneiros para contratar uma nova
-                  campanha.
+                  Você não possui uma campanha de publicidade ativa no momento. Entre em contato com
+                  o SOS Marceneiros para contratar uma nova campanha.
                 </p>
               </Panel>
             )}
@@ -479,16 +561,13 @@ export function StorePortal({
             )}
             <div className="space-y-4">
               {s.contracts
-                .filter(
-                  (c) => !["ended", "cancelled"].includes(c.effective_status),
-                )
+                .filter((c) => !["ended", "cancelled"].includes(c.effective_status))
                 .map(contractPanel)}
             </div>
             {admin && (
               <Panel title="Ficha da empresa">
                 <p className="text-sm">
-                  Login: {s.store.login} · Criada em{" "}
-                  {dateLabel(s.store.created_at)}
+                  Login: {s.store.login} · Criada em {dateLabel(s.store.created_at)}
                 </p>
                 <p className="mt-2 text-sm">
                   Responsável: {s.store.profile.responsible_name || "—"} · CNPJ:{" "}
@@ -509,27 +588,22 @@ export function StorePortal({
                 <StoreImage path={s.store.profile.logo_path} />
               </div>
             )}
-            <ProfileForm
-              key={s.store.id}
-              store={s.store}
-              admin={admin}
-              done={refresh}
-            />
+            <ProfileForm key={s.store.id} store={s.store} admin={admin} done={refresh} />
             {admin && <SettingsForm store={s.store} done={refresh} />}
-            <Referral code={s.code} metrics={s.metrics} />
+            <StoreReferrals storeId={s.store.id} userId={userId} admin={admin} />
           </>
         )}
-        {tab === "referral" && <Referral code={s.code} metrics={s.metrics} />}
+        {tab === "referral" && (
+          <StoreReferrals storeId={s.store.id} userId={userId} admin={admin} />
+        )}
         {tab === "history" && (
           <>
             {s.contracts
-              .filter((c) =>
-                ["ended", "cancelled"].includes(c.effective_status),
-              )
+              .filter((c) => ["ended", "cancelled"].includes(c.effective_status))
               .map(contractPanel)}
-            {!s.contracts.some((c) =>
-              ["ended", "cancelled"].includes(c.effective_status),
-            ) && <Panel>Nenhuma campanha encerrada.</Panel>}
+            {!s.contracts.some((c) => ["ended", "cancelled"].includes(c.effective_status)) && (
+              <Panel>Nenhuma campanha encerrada.</Panel>
+            )}
           </>
         )}
         {tab === "banners" && (
@@ -551,9 +625,8 @@ export function StorePortal({
             </div>
             {!active.length && (
               <Panel>
-                Você não possui uma campanha de publicidade ativa no momento.
-                Entre em contato com o SOS Marceneiros para contratar uma nova
-                campanha.
+                Você não possui uma campanha de publicidade ativa no momento. Entre em contato com o
+                SOS Marceneiros para contratar uma nova campanha.
               </Panel>
             )}
           </>
@@ -568,8 +641,7 @@ export function StorePortal({
                   <Badge status={b.effective_status} />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {s.contracts.find((c) => c.id === b.contract_id)?.name} ·
-                  Semana {b.week_number}
+                  {s.contracts.find((c) => c.id === b.contract_id)?.name} · Semana {b.week_number}
                 </p>
                 <p className="mt-2 text-sm">
                   {dateLabel(b.start_date)} até {dateLabel(b.end_date)} ·{" "}
@@ -598,19 +670,12 @@ export function StorePortal({
                   </p>
                 )}
                 {admin && b.submitted && (
-                  <button
-                    className={`${secondaryClass} mt-3`}
-                    onClick={() => setReview(b.id)}
-                  >
+                  <button className={`${secondaryClass} mt-3`} onClick={() => setReview(b.id)}>
                     Avaliar banner
                   </button>
                 )}
                 {admin && review === b.id && (
-                  <ReviewForm
-                    banner={b}
-                    done={refresh}
-                    cancel={() => setReview(undefined)}
-                  />
+                  <ReviewForm banner={b} done={refresh} cancel={() => setReview(undefined)} />
                 )}
               </Panel>
             ))}
@@ -623,9 +688,7 @@ export function StorePortal({
             </p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {s.history
-                .filter(
-                  (h) => h.action === "replacement" && h.snapshot.image_path,
-                )
+                .filter((h) => h.action === "replacement" && h.snapshot.image_path)
                 .map((h) => (
                   <div key={h.id}>
                     <StoreImage path={h.snapshot.image_path} />
