@@ -9,61 +9,50 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TermosRouteImport } from './routes/termos'
-import { Route as PrivacidadeRouteImport } from './routes/privacidade'
-import { Route as LojistaRouteImport } from './routes/lojista'
-import { Route as ExcluirContaRouteImport } from './routes/excluir-conta'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as RCodigoRouteImport } from './routes/r.$codigo'
-import { Route as AuthRedefinirRouteImport } from './routes/auth_.redefinir'
-import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
-import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ExcluirContaRouteImport } from './routes/excluir-conta'
+import { Route as LojistaRouteImport } from './routes/lojista'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as AuthRedefinirRouteImport } from './routes/auth_.redefinir'
+import { Route as RCodigoRouteImport } from './routes/r.$codigo'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
-import { Route as AuthenticatedAppPerfilRouteImport } from './routes/_authenticated/app.perfil'
-import { Route as AuthenticatedAppPedidosRouteImport } from './routes/_authenticated/app.pedidos'
-import { Route as AuthenticatedAppNotificacoesRouteImport } from './routes/_authenticated/app.notificacoes'
-import { Route as AuthenticatedAppEstoqueRouteImport } from './routes/_authenticated/app.estoque'
-import { Route as AuthenticatedAppBuscarRouteImport } from './routes/_authenticated/app.buscar'
-import { Route as AuthenticatedAppAnunciarRouteImport } from './routes/_authenticated/app.anunciar'
-import { Route as AuthenticatedAppAlertasRouteImport } from './routes/_authenticated/app.alertas'
 import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
-import { Route as AuthenticatedAppVendedorIndexRouteImport } from './routes/_authenticated/app.vendedor.index'
+import { Route as AuthenticatedAppAlertasRouteImport } from './routes/_authenticated/app.alertas'
+import { Route as AuthenticatedAppAnunciarRouteImport } from './routes/_authenticated/app.anunciar'
+import { Route as AuthenticatedAppBuscarRouteImport } from './routes/_authenticated/app.buscar'
+import { Route as AuthenticatedAppEstoqueRouteImport } from './routes/_authenticated/app.estoque'
+import { Route as AuthenticatedAppNotificacoesRouteImport } from './routes/_authenticated/app.notificacoes'
+import { Route as AuthenticatedAppPedidosRouteImport } from './routes/_authenticated/app.pedidos'
+import { Route as AuthenticatedAppPerfilRouteImport } from './routes/_authenticated/app.perfil'
 import { Route as AuthenticatedAppAdminIndexRouteImport } from './routes/_authenticated/app.admin.index'
-import { Route as AuthenticatedAppMaterialIdRouteImport } from './routes/_authenticated/app.material.$id'
-import { Route as AuthenticatedAppEmpresaIdRouteImport } from './routes/_authenticated/app.empresa.$id'
-import { Route as AuthenticatedAppAdminPlanosRouteImport } from './routes/_authenticated/app.admin.planos'
-import { Route as AuthenticatedAppAdminNotificacoesPushRouteImport } from './routes/_authenticated/app.admin.notificacoes-push'
-import { Route as AuthenticatedAppAdminModeracaoFotosRouteImport } from './routes/_authenticated/app.admin.moderacao-fotos'
-import { Route as AuthenticatedAppAdminLojistasRouteImport } from './routes/_authenticated/app.admin.lojistas'
-import { Route as AuthenticatedAppAdminDenunciasRouteImport } from './routes/_authenticated/app.admin.denuncias'
-import { Route as AuthenticatedAppAdminBannersRouteImport } from './routes/_authenticated/app.admin.banners'
 import { Route as AuthenticatedAppAdminAtualizacaoRouteImport } from './routes/_authenticated/app.admin.atualizacao'
-import { Route as AuthenticatedAppAdminVendedoresIndexRouteImport } from './routes/_authenticated/app.admin.vendedores.index'
+import { Route as AuthenticatedAppAdminBannersRouteImport } from './routes/_authenticated/app.admin.banners'
+import { Route as AuthenticatedAppAdminDenunciasRouteImport } from './routes/_authenticated/app.admin.denuncias'
+import { Route as AuthenticatedAppAdminLojistasRouteImport } from './routes/_authenticated/app.admin.lojistas'
+import { Route as AuthenticatedAppAdminModeracaoFotosRouteImport } from './routes/_authenticated/app.admin.moderacao-fotos'
+import { Route as AuthenticatedAppAdminNotificacoesPushRouteImport } from './routes/_authenticated/app.admin.notificacoes-push'
+import { Route as AuthenticatedAppAdminPlanosRouteImport } from './routes/_authenticated/app.admin.planos'
+import { Route as AuthenticatedAppEmpresaIdRouteImport } from './routes/_authenticated/app.empresa.$id'
+import { Route as AuthenticatedAppMaterialIdRouteImport } from './routes/_authenticated/app.material.$id'
+import { Route as AuthenticatedAppVendedorIndexRouteImport } from './routes/_authenticated/app.vendedor.index'
 import { Route as AuthenticatedAppAdminEmpresasIndexRouteImport } from './routes/_authenticated/app.admin.empresas.index'
-import { Route as AuthenticatedAppAdminVendedoresIdRouteImport } from './routes/_authenticated/app.admin.vendedores.$id'
 import { Route as AuthenticatedAppAdminEmpresasIdRouteImport } from './routes/_authenticated/app.admin.empresas.$id'
+import { Route as AuthenticatedAppAdminVendedoresIndexRouteImport } from './routes/_authenticated/app.admin.vendedores.index'
+import { Route as AuthenticatedAppAdminVendedoresIdRouteImport } from './routes/_authenticated/app.admin.vendedores.$id'
 
-const TermosRoute = TermosRouteImport.update({
-  id: '/termos',
-  path: '/termos',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PrivacidadeRoute = PrivacidadeRouteImport.update({
-  id: '/privacidade',
-  path: '/privacidade',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LojistaRoute = LojistaRouteImport.update({
-  id: '/lojista',
-  path: '/lojista',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExcluirContaRoute = ExcluirContaRouteImport.update({
-  id: '/excluir-conta',
-  path: '/excluir-conta',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -71,13 +60,44 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const ExcluirContaRoute = ExcluirContaRouteImport.update({
+  id: '/excluir-conta',
+  path: '/excluir-conta',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const LojistaRoute = LojistaRouteImport.update({
+  id: '/lojista',
+  path: '/lojista',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthRedefinirRoute = AuthRedefinirRouteImport.update({
+  id: '/auth_/redefinir',
+  path: '/auth/redefinir',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RCodigoRoute = RCodigoRouteImport.update({
@@ -85,55 +105,19 @@ const RCodigoRoute = RCodigoRouteImport.update({
   path: '/r/$codigo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthRedefinirRoute = AuthRedefinirRouteImport.update({
-  id: '/auth_/redefinir',
-  path: '/auth/redefinir',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthCallbackRoute = AuthCallbackRouteImport.update({
-  id: '/callback',
-  path: '/callback',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
-  id: '/app',
-  path: '/app',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
-const AuthenticatedAppPerfilRoute = AuthenticatedAppPerfilRouteImport.update({
-  id: '/perfil',
-  path: '/perfil',
+const AuthenticatedAppAdminRoute = AuthenticatedAppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
-const AuthenticatedAppPedidosRoute = AuthenticatedAppPedidosRouteImport.update({
-  id: '/pedidos',
-  path: '/pedidos',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
-const AuthenticatedAppNotificacoesRoute =
-  AuthenticatedAppNotificacoesRouteImport.update({
-    id: '/notificacoes',
-    path: '/notificacoes',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppEstoqueRoute = AuthenticatedAppEstoqueRouteImport.update({
-  id: '/estoque',
-  path: '/estoque',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
-const AuthenticatedAppBuscarRoute = AuthenticatedAppBuscarRouteImport.update({
-  id: '/buscar',
-  path: '/buscar',
+const AuthenticatedAppAlertasRoute = AuthenticatedAppAlertasRouteImport.update({
+  id: '/alertas',
+  path: '/alertas',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
 const AuthenticatedAppAnunciarRoute =
@@ -142,74 +126,36 @@ const AuthenticatedAppAnunciarRoute =
     path: '/anunciar',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppAlertasRoute = AuthenticatedAppAlertasRouteImport.update({
-  id: '/alertas',
-  path: '/alertas',
+const AuthenticatedAppBuscarRoute = AuthenticatedAppBuscarRouteImport.update({
+  id: '/buscar',
+  path: '/buscar',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
-const AuthenticatedAppAdminRoute = AuthenticatedAppAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AuthenticatedAppEstoqueRoute = AuthenticatedAppEstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
-const AuthenticatedAppVendedorIndexRoute =
-  AuthenticatedAppVendedorIndexRouteImport.update({
-    id: '/vendedor/',
-    path: '/vendedor/',
+const AuthenticatedAppNotificacoesRoute =
+  AuthenticatedAppNotificacoesRouteImport.update({
+    id: '/notificacoes',
+    path: '/notificacoes',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppPedidosRoute = AuthenticatedAppPedidosRouteImport.update({
+  id: '/pedidos',
+  path: '/pedidos',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppPerfilRoute = AuthenticatedAppPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppAdminIndexRoute =
   AuthenticatedAppAdminIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthenticatedAppAdminRoute,
-  } as any)
-const AuthenticatedAppMaterialIdRoute =
-  AuthenticatedAppMaterialIdRouteImport.update({
-    id: '/material/$id',
-    path: '/material/$id',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppEmpresaIdRoute =
-  AuthenticatedAppEmpresaIdRouteImport.update({
-    id: '/empresa/$id',
-    path: '/empresa/$id',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
-const AuthenticatedAppAdminPlanosRoute =
-  AuthenticatedAppAdminPlanosRouteImport.update({
-    id: '/planos',
-    path: '/planos',
-    getParentRoute: () => AuthenticatedAppAdminRoute,
-  } as any)
-const AuthenticatedAppAdminNotificacoesPushRoute =
-  AuthenticatedAppAdminNotificacoesPushRouteImport.update({
-    id: '/notificacoes-push',
-    path: '/notificacoes-push',
-    getParentRoute: () => AuthenticatedAppAdminRoute,
-  } as any)
-const AuthenticatedAppAdminModeracaoFotosRoute =
-  AuthenticatedAppAdminModeracaoFotosRouteImport.update({
-    id: '/moderacao-fotos',
-    path: '/moderacao-fotos',
-    getParentRoute: () => AuthenticatedAppAdminRoute,
-  } as any)
-const AuthenticatedAppAdminLojistasRoute =
-  AuthenticatedAppAdminLojistasRouteImport.update({
-    id: '/lojistas',
-    path: '/lojistas',
-    getParentRoute: () => AuthenticatedAppAdminRoute,
-  } as any)
-const AuthenticatedAppAdminDenunciasRoute =
-  AuthenticatedAppAdminDenunciasRouteImport.update({
-    id: '/denuncias',
-    path: '/denuncias',
-    getParentRoute: () => AuthenticatedAppAdminRoute,
-  } as any)
-const AuthenticatedAppAdminBannersRoute =
-  AuthenticatedAppAdminBannersRouteImport.update({
-    id: '/banners',
-    path: '/banners',
     getParentRoute: () => AuthenticatedAppAdminRoute,
   } as any)
 const AuthenticatedAppAdminAtualizacaoRoute =
@@ -218,11 +164,59 @@ const AuthenticatedAppAdminAtualizacaoRoute =
     path: '/atualizacao',
     getParentRoute: () => AuthenticatedAppAdminRoute,
   } as any)
-const AuthenticatedAppAdminVendedoresIndexRoute =
-  AuthenticatedAppAdminVendedoresIndexRouteImport.update({
-    id: '/vendedores/',
-    path: '/vendedores/',
+const AuthenticatedAppAdminBannersRoute =
+  AuthenticatedAppAdminBannersRouteImport.update({
+    id: '/banners',
+    path: '/banners',
     getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
+const AuthenticatedAppAdminDenunciasRoute =
+  AuthenticatedAppAdminDenunciasRouteImport.update({
+    id: '/denuncias',
+    path: '/denuncias',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
+const AuthenticatedAppAdminLojistasRoute =
+  AuthenticatedAppAdminLojistasRouteImport.update({
+    id: '/lojistas',
+    path: '/lojistas',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
+const AuthenticatedAppAdminModeracaoFotosRoute =
+  AuthenticatedAppAdminModeracaoFotosRouteImport.update({
+    id: '/moderacao-fotos',
+    path: '/moderacao-fotos',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
+const AuthenticatedAppAdminNotificacoesPushRoute =
+  AuthenticatedAppAdminNotificacoesPushRouteImport.update({
+    id: '/notificacoes-push',
+    path: '/notificacoes-push',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
+const AuthenticatedAppAdminPlanosRoute =
+  AuthenticatedAppAdminPlanosRouteImport.update({
+    id: '/planos',
+    path: '/planos',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
+const AuthenticatedAppEmpresaIdRoute =
+  AuthenticatedAppEmpresaIdRouteImport.update({
+    id: '/empresa/$id',
+    path: '/empresa/$id',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppMaterialIdRoute =
+  AuthenticatedAppMaterialIdRouteImport.update({
+    id: '/material/$id',
+    path: '/material/$id',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppVendedorIndexRoute =
+  AuthenticatedAppVendedorIndexRouteImport.update({
+    id: '/vendedor/',
+    path: '/vendedor/',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppAdminEmpresasIndexRoute =
   AuthenticatedAppAdminEmpresasIndexRouteImport.update({
@@ -230,16 +224,22 @@ const AuthenticatedAppAdminEmpresasIndexRoute =
     path: '/empresas/',
     getParentRoute: () => AuthenticatedAppAdminRoute,
   } as any)
-const AuthenticatedAppAdminVendedoresIdRoute =
-  AuthenticatedAppAdminVendedoresIdRouteImport.update({
-    id: '/vendedores/$id',
-    path: '/vendedores/$id',
-    getParentRoute: () => AuthenticatedAppAdminRoute,
-  } as any)
 const AuthenticatedAppAdminEmpresasIdRoute =
   AuthenticatedAppAdminEmpresasIdRouteImport.update({
     id: '/empresas/$id',
     path: '/empresas/$id',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
+const AuthenticatedAppAdminVendedoresIndexRoute =
+  AuthenticatedAppAdminVendedoresIndexRouteImport.update({
+    id: '/vendedores/',
+    path: '/vendedores/',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
+const AuthenticatedAppAdminVendedoresIdRoute =
+  AuthenticatedAppAdminVendedoresIdRouteImport.update({
+    id: '/vendedores/$id',
+    path: '/vendedores/$id',
     getParentRoute: () => AuthenticatedAppAdminRoute,
   } as any)
 
@@ -481,39 +481,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/termos': {
-      id: '/termos'
-      path: '/termos'
-      fullPath: '/termos'
-      preLoaderRoute: typeof TermosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacidade': {
-      id: '/privacidade'
-      path: '/privacidade'
-      fullPath: '/privacidade'
-      preLoaderRoute: typeof PrivacidadeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lojista': {
-      id: '/lojista'
-      path: '/lojista'
-      fullPath: '/lojista'
-      preLoaderRoute: typeof LojistaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/excluir-conta': {
-      id: '/excluir-conta'
-      path: '/excluir-conta'
-      fullPath: '/excluir-conta'
-      preLoaderRoute: typeof ExcluirContaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -523,11 +495,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/excluir-conta': {
+      id: '/excluir-conta'
+      path: '/excluir-conta'
+      fullPath: '/excluir-conta'
+      preLoaderRoute: typeof ExcluirContaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lojista': {
+      id: '/lojista'
+      path: '/lojista'
+      fullPath: '/lojista'
+      preLoaderRoute: typeof LojistaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/app': {
+      id: '/_authenticated/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AuthenticatedAppRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth_/redefinir': {
+      id: '/auth_/redefinir'
+      path: '/auth/redefinir'
+      fullPath: '/auth/redefinir'
+      preLoaderRoute: typeof AuthRedefinirRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/r/$codigo': {
@@ -537,88 +565,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RCodigoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth_/redefinir': {
-      id: '/auth_/redefinir'
-      path: '/auth/redefinir'
-      fullPath: '/auth/redefinir'
-      preLoaderRoute: typeof AuthRedefinirRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/callback': {
-      id: '/auth/callback'
-      path: '/callback'
-      fullPath: '/auth/callback'
-      preLoaderRoute: typeof AuthCallbackRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/_authenticated/onboarding': {
-      id: '/_authenticated/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app': {
-      id: '/_authenticated/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AuthenticatedAppRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/app/': {
       id: '/_authenticated/app/'
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/perfil': {
-      id: '/_authenticated/app/perfil'
-      path: '/perfil'
-      fullPath: '/app/perfil'
-      preLoaderRoute: typeof AuthenticatedAppPerfilRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/pedidos': {
-      id: '/_authenticated/app/pedidos'
-      path: '/pedidos'
-      fullPath: '/app/pedidos'
-      preLoaderRoute: typeof AuthenticatedAppPedidosRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/notificacoes': {
-      id: '/_authenticated/app/notificacoes'
-      path: '/notificacoes'
-      fullPath: '/app/notificacoes'
-      preLoaderRoute: typeof AuthenticatedAppNotificacoesRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/estoque': {
-      id: '/_authenticated/app/estoque'
-      path: '/estoque'
-      fullPath: '/app/estoque'
-      preLoaderRoute: typeof AuthenticatedAppEstoqueRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/buscar': {
-      id: '/_authenticated/app/buscar'
-      path: '/buscar'
-      fullPath: '/app/buscar'
-      preLoaderRoute: typeof AuthenticatedAppBuscarRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/anunciar': {
-      id: '/_authenticated/app/anunciar'
-      path: '/anunciar'
-      fullPath: '/app/anunciar'
-      preLoaderRoute: typeof AuthenticatedAppAnunciarRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/alertas': {
-      id: '/_authenticated/app/alertas'
-      path: '/alertas'
-      fullPath: '/app/alertas'
-      preLoaderRoute: typeof AuthenticatedAppAlertasRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/admin': {
@@ -628,11 +579,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/vendedor/': {
-      id: '/_authenticated/app/vendedor/'
-      path: '/vendedor'
-      fullPath: '/app/vendedor/'
-      preLoaderRoute: typeof AuthenticatedAppVendedorIndexRouteImport
+    '/_authenticated/app/alertas': {
+      id: '/_authenticated/app/alertas'
+      path: '/alertas'
+      fullPath: '/app/alertas'
+      preLoaderRoute: typeof AuthenticatedAppAlertasRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/anunciar': {
+      id: '/_authenticated/app/anunciar'
+      path: '/anunciar'
+      fullPath: '/app/anunciar'
+      preLoaderRoute: typeof AuthenticatedAppAnunciarRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/buscar': {
+      id: '/_authenticated/app/buscar'
+      path: '/buscar'
+      fullPath: '/app/buscar'
+      preLoaderRoute: typeof AuthenticatedAppBuscarRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/estoque': {
+      id: '/_authenticated/app/estoque'
+      path: '/estoque'
+      fullPath: '/app/estoque'
+      preLoaderRoute: typeof AuthenticatedAppEstoqueRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/notificacoes': {
+      id: '/_authenticated/app/notificacoes'
+      path: '/notificacoes'
+      fullPath: '/app/notificacoes'
+      preLoaderRoute: typeof AuthenticatedAppNotificacoesRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/pedidos': {
+      id: '/_authenticated/app/pedidos'
+      path: '/pedidos'
+      fullPath: '/app/pedidos'
+      preLoaderRoute: typeof AuthenticatedAppPedidosRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/perfil': {
+      id: '/_authenticated/app/perfil'
+      path: '/perfil'
+      fullPath: '/app/perfil'
+      preLoaderRoute: typeof AuthenticatedAppPerfilRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/admin/': {
@@ -642,53 +635,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
-    '/_authenticated/app/material/$id': {
-      id: '/_authenticated/app/material/$id'
-      path: '/material/$id'
-      fullPath: '/app/material/$id'
-      preLoaderRoute: typeof AuthenticatedAppMaterialIdRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/empresa/$id': {
-      id: '/_authenticated/app/empresa/$id'
-      path: '/empresa/$id'
-      fullPath: '/app/empresa/$id'
-      preLoaderRoute: typeof AuthenticatedAppEmpresaIdRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
-    '/_authenticated/app/admin/planos': {
-      id: '/_authenticated/app/admin/planos'
-      path: '/planos'
-      fullPath: '/app/admin/planos'
-      preLoaderRoute: typeof AuthenticatedAppAdminPlanosRouteImport
-      parentRoute: typeof AuthenticatedAppAdminRoute
-    }
-    '/_authenticated/app/admin/notificacoes-push': {
-      id: '/_authenticated/app/admin/notificacoes-push'
-      path: '/notificacoes-push'
-      fullPath: '/app/admin/notificacoes-push'
-      preLoaderRoute: typeof AuthenticatedAppAdminNotificacoesPushRouteImport
-      parentRoute: typeof AuthenticatedAppAdminRoute
-    }
-    '/_authenticated/app/admin/moderacao-fotos': {
-      id: '/_authenticated/app/admin/moderacao-fotos'
-      path: '/moderacao-fotos'
-      fullPath: '/app/admin/moderacao-fotos'
-      preLoaderRoute: typeof AuthenticatedAppAdminModeracaoFotosRouteImport
-      parentRoute: typeof AuthenticatedAppAdminRoute
-    }
-    '/_authenticated/app/admin/lojistas': {
-      id: '/_authenticated/app/admin/lojistas'
-      path: '/lojistas'
-      fullPath: '/app/admin/lojistas'
-      preLoaderRoute: typeof AuthenticatedAppAdminLojistasRouteImport
-      parentRoute: typeof AuthenticatedAppAdminRoute
-    }
-    '/_authenticated/app/admin/denuncias': {
-      id: '/_authenticated/app/admin/denuncias'
-      path: '/denuncias'
-      fullPath: '/app/admin/denuncias'
-      preLoaderRoute: typeof AuthenticatedAppAdminDenunciasRouteImport
+    '/_authenticated/app/admin/atualizacao': {
+      id: '/_authenticated/app/admin/atualizacao'
+      path: '/atualizacao'
+      fullPath: '/app/admin/atualizacao'
+      preLoaderRoute: typeof AuthenticatedAppAdminAtualizacaoRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
     '/_authenticated/app/admin/banners': {
@@ -698,11 +649,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminBannersRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
-    '/_authenticated/app/admin/atualizacao': {
-      id: '/_authenticated/app/admin/atualizacao'
-      path: '/atualizacao'
-      fullPath: '/app/admin/atualizacao'
-      preLoaderRoute: typeof AuthenticatedAppAdminAtualizacaoRouteImport
+    '/_authenticated/app/admin/denuncias': {
+      id: '/_authenticated/app/admin/denuncias'
+      path: '/denuncias'
+      fullPath: '/app/admin/denuncias'
+      preLoaderRoute: typeof AuthenticatedAppAdminDenunciasRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
+    '/_authenticated/app/admin/lojistas': {
+      id: '/_authenticated/app/admin/lojistas'
+      path: '/lojistas'
+      fullPath: '/app/admin/lojistas'
+      preLoaderRoute: typeof AuthenticatedAppAdminLojistasRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
+    '/_authenticated/app/admin/moderacao-fotos': {
+      id: '/_authenticated/app/admin/moderacao-fotos'
+      path: '/moderacao-fotos'
+      fullPath: '/app/admin/moderacao-fotos'
+      preLoaderRoute: typeof AuthenticatedAppAdminModeracaoFotosRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
+    '/_authenticated/app/admin/notificacoes-push': {
+      id: '/_authenticated/app/admin/notificacoes-push'
+      path: '/notificacoes-push'
+      fullPath: '/app/admin/notificacoes-push'
+      preLoaderRoute: typeof AuthenticatedAppAdminNotificacoesPushRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
+    '/_authenticated/app/admin/planos': {
+      id: '/_authenticated/app/admin/planos'
+      path: '/planos'
+      fullPath: '/app/admin/planos'
+      preLoaderRoute: typeof AuthenticatedAppAdminPlanosRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
+    '/_authenticated/app/empresa/$id': {
+      id: '/_authenticated/app/empresa/$id'
+      path: '/empresa/$id'
+      fullPath: '/app/empresa/$id'
+      preLoaderRoute: typeof AuthenticatedAppEmpresaIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/material/$id': {
+      id: '/_authenticated/app/material/$id'
+      path: '/material/$id'
+      fullPath: '/app/material/$id'
+      preLoaderRoute: typeof AuthenticatedAppMaterialIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/vendedor/': {
+      id: '/_authenticated/app/vendedor/'
+      path: '/vendedor'
+      fullPath: '/app/vendedor/'
+      preLoaderRoute: typeof AuthenticatedAppVendedorIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/admin/empresas/': {
+      id: '/_authenticated/app/admin/empresas/'
+      path: '/empresas'
+      fullPath: '/app/admin/empresas/'
+      preLoaderRoute: typeof AuthenticatedAppAdminEmpresasIndexRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
+    '/_authenticated/app/admin/empresas/$id': {
+      id: '/_authenticated/app/admin/empresas/$id'
+      path: '/empresas/$id'
+      fullPath: '/app/admin/empresas/$id'
+      preLoaderRoute: typeof AuthenticatedAppAdminEmpresasIdRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
     '/_authenticated/app/admin/vendedores/': {
@@ -712,25 +726,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminVendedoresIndexRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
-    '/_authenticated/app/admin/empresas/': {
-      id: '/_authenticated/app/admin/empresas/'
-      path: '/empresas'
-      fullPath: '/app/admin/empresas/'
-      preLoaderRoute: typeof AuthenticatedAppAdminEmpresasIndexRouteImport
-      parentRoute: typeof AuthenticatedAppAdminRoute
-    }
     '/_authenticated/app/admin/vendedores/$id': {
       id: '/_authenticated/app/admin/vendedores/$id'
       path: '/vendedores/$id'
       fullPath: '/app/admin/vendedores/$id'
       preLoaderRoute: typeof AuthenticatedAppAdminVendedoresIdRouteImport
-      parentRoute: typeof AuthenticatedAppAdminRoute
-    }
-    '/_authenticated/app/admin/empresas/$id': {
-      id: '/_authenticated/app/admin/empresas/$id'
-      path: '/empresas/$id'
-      fullPath: '/app/admin/empresas/$id'
-      preLoaderRoute: typeof AuthenticatedAppAdminEmpresasIdRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
   }
