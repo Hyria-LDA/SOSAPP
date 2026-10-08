@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, Search, Download, MapPin, Building2, Package, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeCity } from "@/lib/banner-regions";
 
 export const Route = createFileRoute("/_authenticated/app/admin/empresas/")({
   beforeLoad: async () => {
@@ -21,6 +22,8 @@ function AdminEmpresas() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [planFilter, setPlanFilter] = useState<string>("all");
+  const [stateFilter, setStateFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
 
   const { data } = useQuery({
     queryKey: ["admin-empresas-full"],
@@ -69,9 +72,34 @@ function AdminEmpresas() {
     },
   });
 
+  const regionOptions = useMemo(() => {
+    const states = new Set<string>();
+    const cities = new Map<string, string>();
+    let missingState = false;
+    let missingCity = false;
+    for (const e of data?.empresas ?? []) {
+      const uf = (e.estado ?? "").trim().toUpperCase();
+      if (uf) states.add(uf); else missingState = true;
+      if (stateFilter !== "all" && (stateFilter === "missing" ? !!uf : uf !== stateFilter)) continue;
+      const city = (e.cidade ?? "").trim().replace(/\s+/g, " ");
+      if (!city) { missingCity = true; continue; }
+      const key = JSON.stringify([uf, normalizeCity(city)]);
+      if (!cities.has(key)) cities.set(key, `${city} / ${uf || "UF não informada"}`);
+    }
+    return {
+      states: [...states].sort((a,b) => a.localeCompare(b, "pt-BR")),
+      cities: [...cities.entries()].sort((a,b) => a[1].localeCompare(b[1], "pt-BR")),
+      missingState, missingCity,
+    };
+  }, [data, stateFilter]);
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     return (data?.empresas ?? []).filter((e: any) => {
+      const uf = String(e.estado ?? "").trim().toUpperCase();
+      if (stateFilter !== "all" && (stateFilter === "missing" ? !!uf : uf !== stateFilter)) return false;
+      const city = normalizeCity(e.cidade);
+      if (cityFilter !== "all" && (cityFilter === "missing" ? !!city : JSON.stringify([uf, city]) !== cityFilter)) return false;
       if (statusFilter !== "all" && e.status !== statusFilter) return false;
       if (planFilter !== "all" && planKey(e.plano) !== planFilter) {
         return false;
@@ -91,7 +119,7 @@ function AdminEmpresas() {
         .filter(Boolean)
         .some((v: string) => String(v).toLowerCase().includes(term));
     });
-  }, [data, q, statusFilter, planFilter]);
+  }, [data, q, statusFilter, planFilter, stateFilter, cityFilter]);
 
   const exportCsv = () => {
     const rows = filtered;
@@ -237,6 +265,29 @@ function AdminEmpresas() {
           <option value="ultra">Brilhante</option>
         </select>
       </label>
+
+      <fieldset className="mt-3">
+        <legend className="mb-1 text-[11px] font-semibold text-muted-foreground">Filtrar por região</legend>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="min-w-0 text-[11px] font-semibold text-muted-foreground">
+            Estado
+            <select value={stateFilter} onChange={(event) => { setStateFilter(event.target.value); setCityFilter("all"); }} className="mt-1 h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none">
+              <option value="all">Todos os estados</option>
+              {regionOptions.states.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+              {regionOptions.missingState && <option value="missing">Estado não informado</option>}
+            </select>
+          </label>
+          <label className="min-w-0 text-[11px] font-semibold text-muted-foreground">
+            Cidade
+            <select value={cityFilter} onChange={(event) => setCityFilter(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none">
+              <option value="all">Todas as cidades</option>
+              {regionOptions.cities.map(([key,label]) => <option key={key} value={key}>{label}</option>)}
+              {regionOptions.missingCity && <option value="missing">Cidade não informada</option>}
+            </select>
+          </label>
+        </div>
+        {(stateFilter !== "all" || cityFilter !== "all") && <button type="button" onClick={() => { setStateFilter("all"); setCityFilter("all"); }} className="mt-2 text-xs font-semibold text-primary underline">Limpar região</button>}
+      </fieldset>
 
       <div className="mt-2 text-[11px] text-muted-foreground">{filtered.length} resultado(s)</div>
 
