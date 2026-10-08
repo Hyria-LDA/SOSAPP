@@ -17,6 +17,9 @@ const FILTERS: { key: AiStatus | "all"; label: string }[] = [
 ];
 
 export const Route = createFileRoute("/_authenticated/app/admin/moderacao-fotos")({
+  validateSearch: (s: Record<string, unknown>): { material?: string } => ({
+    material: typeof s.material === "string" && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(s.material) ? s.material : undefined,
+  }),
   beforeLoad: async () => {
     const { data: u } = await supabase.auth.getUser();
     const { data: roles } = await supabase
@@ -29,11 +32,12 @@ export const Route = createFileRoute("/_authenticated/app/admin/moderacao-fotos"
 });
 
 function ModeracaoFotos() {
-  const [filter, setFilter] = useState<AiStatus | "all">("pending");
+  const { material } = Route.useSearch();
+  const [filter, setFilter] = useState<AiStatus | "all">(material ? "all" : "pending");
   const qc = useQueryClient();
 
   const { data, isLoading, error: loadError } = useQuery({
-    queryKey: ["admin-moderacao-fotos", filter],
+    queryKey: ["admin-moderacao-fotos", filter, material],
     queryFn: async () => {
       let q = supabase
         .from("fotos_materiais")
@@ -42,6 +46,7 @@ function ModeracaoFotos() {
         )
         .order("created_at", { ascending: false })
         .limit(120);
+      if (material) q = q.eq("material_id", material);
       if (filter !== "all") q = q.eq("ai_status", filter);
       const { data, error } = await q;
       if (error) throw error;
@@ -57,14 +62,17 @@ function ModeracaoFotos() {
   });
 
   const counts = useQuery({
-    queryKey: ["admin-moderacao-fotos-counts"],
+    queryKey: ["admin-moderacao-fotos-counts", material],
     queryFn: async () => {
       const out: Record<string, number> = {};
       for (const s of ["pending", "approved", "rejected", "manual_review"] as const) {
-        const { count } = await supabase
+        let query = supabase
           .from("fotos_materiais")
           .select("id", { count: "exact", head: true })
           .eq("ai_status", s);
+        if (material) query = query.eq("material_id", material);
+        const { count, error } = await query;
+        if (error) throw error;
         out[s] = count ?? 0;
       }
       return out;
@@ -107,6 +115,7 @@ function ModeracaoFotos() {
         </div>
       </header>
 
+      {material && <div className="mt-4 rounded-xl bg-secondary p-3 text-sm">Mostrando somente as fotos do anúncio selecionado. <Link to="/app/admin/ultimas-sobras" className="font-bold underline">Voltar às últimas sobras</Link></div>}
       <div className="mt-4 grid grid-cols-4 gap-2 text-center">
         <Card label="Pendentes" value={counts.data?.pending ?? "—"} />
         <Card label="Aprovadas" value={counts.data?.approved ?? "—"} />

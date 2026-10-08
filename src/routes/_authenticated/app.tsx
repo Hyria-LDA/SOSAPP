@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/app")({
 
 function AppLayout() {
   usePushNotifications();
-  const wide=useRouterState({select:s=>s.location.pathname.startsWith("/app/admin/lojistas")});
+  const wide=useRouterState({select:s=>s.location.pathname.startsWith("/app/admin/lojistas") || s.location.pathname.startsWith("/app/admin/ultimas-sobras")});
 
   return (
     <div className={`mx-auto min-h-screen ${wide?"max-w-6xl":"max-w-md"} bg-background pb-24`}>

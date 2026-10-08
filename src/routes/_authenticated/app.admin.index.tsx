@@ -95,6 +95,8 @@ function Admin() {
 
       <a href="/app/admin/lojistas" className="mt-3 block rounded-2xl bg-card p-4 shadow-card"><div className="text-base font-bold">Lojistas</div><div className="text-xs text-muted-foreground">Empresas, contratos, portal e aprovação de banners</div></a>
 
+      <Link to="/app/admin/ultimas-sobras" className="mt-3 block rounded-2xl bg-card p-4 shadow-card"><div className="text-base font-bold">Últimas sobras</div><div className="text-xs text-muted-foreground">Ver fotos dos anúncios recentes por região e empresa</div></Link>
+
       <Link
         to="/app/admin/banners"
         className="mt-3 flex items-center justify-between rounded-2xl bg-card p-4 shadow-card"

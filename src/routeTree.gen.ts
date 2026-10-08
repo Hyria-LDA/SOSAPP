@@ -38,6 +38,7 @@ import { Route as AuthenticatedAppAdminLojistasRouteImport } from './routes/_aut
 import { Route as AuthenticatedAppAdminModeracaoFotosRouteImport } from './routes/_authenticated/app.admin.moderacao-fotos'
 import { Route as AuthenticatedAppAdminNotificacoesPushRouteImport } from './routes/_authenticated/app.admin.notificacoes-push'
 import { Route as AuthenticatedAppAdminPlanosRouteImport } from './routes/_authenticated/app.admin.planos'
+import { Route as AuthenticatedAppAdminUltimasSobrasRouteImport } from './routes/_authenticated/app.admin.ultimas-sobras'
 import { Route as AuthenticatedAppEmpresaIdRouteImport } from './routes/_authenticated/app.empresa.$id'
 import { Route as AuthenticatedAppMaterialIdRouteImport } from './routes/_authenticated/app.material.$id'
 import { Route as AuthenticatedAppVendedorIndexRouteImport } from './routes/_authenticated/app.vendedor.index'
@@ -200,6 +201,12 @@ const AuthenticatedAppAdminPlanosRoute =
     path: '/planos',
     getParentRoute: () => AuthenticatedAppAdminRoute,
   } as any)
+const AuthenticatedAppAdminUltimasSobrasRoute =
+  AuthenticatedAppAdminUltimasSobrasRouteImport.update({
+    id: '/ultimas-sobras',
+    path: '/ultimas-sobras',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
 const AuthenticatedAppEmpresaIdRoute =
   AuthenticatedAppEmpresaIdRouteImport.update({
     id: '/empresa/$id',
@@ -271,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
   '/app/admin/notificacoes-push': typeof AuthenticatedAppAdminNotificacoesPushRoute
   '/app/admin/planos': typeof AuthenticatedAppAdminPlanosRoute
+  '/app/admin/ultimas-sobras': typeof AuthenticatedAppAdminUltimasSobrasRoute
   '/app/empresa/$id': typeof AuthenticatedAppEmpresaIdRoute
   '/app/material/$id': typeof AuthenticatedAppMaterialIdRoute
   '/app/admin/': typeof AuthenticatedAppAdminIndexRoute
@@ -306,6 +314,7 @@ export interface FileRoutesByTo {
   '/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
   '/app/admin/notificacoes-push': typeof AuthenticatedAppAdminNotificacoesPushRoute
   '/app/admin/planos': typeof AuthenticatedAppAdminPlanosRoute
+  '/app/admin/ultimas-sobras': typeof AuthenticatedAppAdminUltimasSobrasRoute
   '/app/empresa/$id': typeof AuthenticatedAppEmpresaIdRoute
   '/app/material/$id': typeof AuthenticatedAppMaterialIdRoute
   '/app/admin': typeof AuthenticatedAppAdminIndexRoute
@@ -345,6 +354,7 @@ export interface FileRoutesById {
   '/_authenticated/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
   '/_authenticated/app/admin/notificacoes-push': typeof AuthenticatedAppAdminNotificacoesPushRoute
   '/_authenticated/app/admin/planos': typeof AuthenticatedAppAdminPlanosRoute
+  '/_authenticated/app/admin/ultimas-sobras': typeof AuthenticatedAppAdminUltimasSobrasRoute
   '/_authenticated/app/empresa/$id': typeof AuthenticatedAppEmpresaIdRoute
   '/_authenticated/app/material/$id': typeof AuthenticatedAppMaterialIdRoute
   '/_authenticated/app/admin/': typeof AuthenticatedAppAdminIndexRoute
@@ -384,6 +394,7 @@ export interface FileRouteTypes {
     | '/app/admin/moderacao-fotos'
     | '/app/admin/notificacoes-push'
     | '/app/admin/planos'
+    | '/app/admin/ultimas-sobras'
     | '/app/empresa/$id'
     | '/app/material/$id'
     | '/app/admin/'
@@ -419,6 +430,7 @@ export interface FileRouteTypes {
     | '/app/admin/moderacao-fotos'
     | '/app/admin/notificacoes-push'
     | '/app/admin/planos'
+    | '/app/admin/ultimas-sobras'
     | '/app/empresa/$id'
     | '/app/material/$id'
     | '/app/admin'
@@ -457,6 +469,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin/moderacao-fotos'
     | '/_authenticated/app/admin/notificacoes-push'
     | '/_authenticated/app/admin/planos'
+    | '/_authenticated/app/admin/ultimas-sobras'
     | '/_authenticated/app/empresa/$id'
     | '/_authenticated/app/material/$id'
     | '/_authenticated/app/admin/'
@@ -684,6 +697,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminPlanosRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
+    '/_authenticated/app/admin/ultimas-sobras': {
+      id: '/_authenticated/app/admin/ultimas-sobras'
+      path: '/ultimas-sobras'
+      fullPath: '/app/admin/ultimas-sobras'
+      preLoaderRoute: typeof AuthenticatedAppAdminUltimasSobrasRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
     '/_authenticated/app/empresa/$id': {
       id: '/_authenticated/app/empresa/$id'
       path: '/empresa/$id'
@@ -744,6 +764,7 @@ interface AuthenticatedAppAdminRouteChildren {
   AuthenticatedAppAdminModeracaoFotosRoute: typeof AuthenticatedAppAdminModeracaoFotosRoute
   AuthenticatedAppAdminNotificacoesPushRoute: typeof AuthenticatedAppAdminNotificacoesPushRoute
   AuthenticatedAppAdminPlanosRoute: typeof AuthenticatedAppAdminPlanosRoute
+  AuthenticatedAppAdminUltimasSobrasRoute: typeof AuthenticatedAppAdminUltimasSobrasRoute
   AuthenticatedAppAdminIndexRoute: typeof AuthenticatedAppAdminIndexRoute
   AuthenticatedAppAdminEmpresasIdRoute: typeof AuthenticatedAppAdminEmpresasIdRoute
   AuthenticatedAppAdminVendedoresIdRoute: typeof AuthenticatedAppAdminVendedoresIdRoute
@@ -761,6 +782,8 @@ const AuthenticatedAppAdminRouteChildren: AuthenticatedAppAdminRouteChildren = {
   AuthenticatedAppAdminNotificacoesPushRoute:
     AuthenticatedAppAdminNotificacoesPushRoute,
   AuthenticatedAppAdminPlanosRoute: AuthenticatedAppAdminPlanosRoute,
+  AuthenticatedAppAdminUltimasSobrasRoute:
+    AuthenticatedAppAdminUltimasSobrasRoute,
   AuthenticatedAppAdminIndexRoute: AuthenticatedAppAdminIndexRoute,
   AuthenticatedAppAdminEmpresasIdRoute: AuthenticatedAppAdminEmpresasIdRoute,
   AuthenticatedAppAdminVendedoresIdRoute:

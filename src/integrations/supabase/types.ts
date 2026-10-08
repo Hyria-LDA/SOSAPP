@@ -587,6 +587,7 @@ export type Database = {
           ordem: number
           reviewed_at: string | null
           reviewed_by: string | null
+          thumbnail_url: string | null
           url: string
         }
         Insert: {
@@ -603,6 +604,7 @@ export type Database = {
           ordem?: number
           reviewed_at?: string | null
           reviewed_by?: string | null
+          thumbnail_url?: string | null
           url: string
         }
         Update: {
@@ -619,6 +621,7 @@ export type Database = {
           ordem?: number
           reviewed_at?: string | null
           reviewed_by?: string | null
+          thumbnail_url?: string | null
           url?: string
         }
         Relationships: [
