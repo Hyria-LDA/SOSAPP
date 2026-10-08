@@ -1,19 +1,22 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ArrowLeft, Search, Download, MapPin, Building2, Package, Copy } from "lucide-react";
+import { ArrowLeft, Search, Download, MapPin, Building2, Package, Copy, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { loadCompanyMaterialCounts } from "@/lib/admin-company-material-counts";
 import { normalizeCity } from "@/lib/banner-regions";
 
 export const Route = createFileRoute("/_authenticated/app/admin/empresas/")({
   beforeLoad: async () => {
     const { data: u } = await supabase.auth.getUser();
+    if (!u.user) throw redirect({ to: "/auth" });
     const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", u.user!.id);
     if (!(roles ?? []).some((r: any) => r.role === "admin")) throw redirect({ to: "/app" });
+    return { adminId: u.user.id };
   },
   component: AdminEmpresas,
 });
@@ -25,29 +28,32 @@ function AdminEmpresas() {
   const [stateFilter, setStateFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
 
-  const { data } = useQuery({
-    queryKey: ["admin-empresas-full"],
-    queryFn: async () => {
-      const { data: empresas } = await supabase
-        .from("empresas")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      const ids = (empresas ?? []).map((e: any) => e.id);
-      const counts: Record<string, { ativos: number; total: number }> = {};
-      if (ids.length) {
-        const { data: mats } = await supabase
-          .from("materiais")
-          .select("empresa_id,status")
-          .in("empresa_id", ids);
-        (mats ?? []).forEach((m: any) => {
-          const c = (counts[m.empresa_id] ??= { ativos: 0, total: 0 });
-          c.total++;
-          if (m.status === "ativo") c.ativos++;
-        });
+  const { adminId } = Route.useRouteContext();
+  const { data, error, isPending, isFetching, refetch } = useQuery({
+    queryKey: ["admin-empresas-full", adminId],
+    queryFn: async ({ signal }) => {
+      const empresas = [];
+      let cursor: string | undefined;
+      for (;;) {
+        let query = supabase.from("empresas").select("*").order("id").limit(500);
+        if (cursor) query = query.gt("id", cursor);
+        const { data: page, error } = await query.abortSignal(signal);
+        if (error) throw error;
+        if (!page?.length) break;
+        empresas.push(...page);
+        cursor = page[page.length - 1].id;
       }
-      return { empresas: empresas ?? [], counts };
+      empresas.sort((a, b) => b.created_at.localeCompare(a.created_at));
+      return { empresas };
     },
+  });
+  const counts = useQuery({
+    queryKey: ["admin-company-material-counts", adminId],
+    queryFn: ({ signal }) => loadCompanyMaterialCounts(supabase, signal),
+    enabled: !!data,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
   });
 
   const { data: originData, isError: originError, isPending: originsLoading } = useQuery({
@@ -289,11 +295,19 @@ function AdminEmpresas() {
         {(stateFilter !== "all" || cityFilter !== "all") && <button type="button" onClick={() => { setStateFilter("all"); setCityFilter("all"); }} className="mt-2 text-xs font-semibold text-primary underline">Limpar região</button>}
       </fieldset>
 
-      <div className="mt-2 text-[11px] text-muted-foreground">{filtered.length} resultado(s)</div>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <span className="text-[11px] text-muted-foreground">{filtered.length} resultado(s)</span>
+        <button type="button" disabled={isFetching || counts.isFetching} onClick={() => { void refetch(); void counts.refetch(); }} className="inline-flex items-center gap-1 rounded-xl bg-secondary px-3 py-2 text-xs font-bold disabled:opacity-50">
+          <RefreshCw className="h-3 w-3" /> {isFetching || counts.isFetching ? "Atualizando…" : "Atualizar"}
+        </button>
+      </div>
+      {isPending && <p className="mt-3 text-sm">Carregando empresas…</p>}
+      {error && <p role="alert" className="mt-3 text-sm text-destructive">Não foi possível atualizar as empresas. Tente novamente em Atualizar.</p>}
+      {counts.isError && <p role="alert" className="mt-3 text-sm text-destructive">Não foi possível atualizar a contagem de sobras. Tente novamente em Atualizar.</p>}
 
       <div className="mt-2 space-y-2">
         {filtered.map((e: any) => {
-          const c = data?.counts[e.id] ?? { ativos: 0, total: 0 };
+          const c = counts.data?.[e.id] ?? { ativos: 0, total: 0 };
           const savedOrigin = originData?.origins.get(e.id);
           const originCode = savedOrigin?.codigo || e.ref_codigo_usado;
           const originName = savedOrigin?.nome || (originCode ? originData?.partners.get(originCode.toUpperCase()) : null);
@@ -326,14 +340,14 @@ function AdminEmpresas() {
                   </div>
                 </div>
                 <div className="truncate text-xs text-muted-foreground">{e.responsavel || "—"}</div>
+                <div className="mt-2 flex items-center gap-2 rounded-xl bg-secondary px-3 py-2 text-xs" aria-label="Sobras da empresa">
+                  <Package className="h-4 w-4 shrink-0" />
+                  {counts.isError ? <span>Contagem indisponível</span> : !counts.data ? <span>Carregando sobras…</span> : <div><div className="font-bold">{c.ativos} {c.ativos === 1 ? "sobra ativa" : "sobras ativas"}</div><div className="text-muted-foreground">{c.total} {c.total === 1 ? "anúncio cadastrado no total" : "anúncios cadastrados no total"}</div></div>}
+                </div>
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
                     {[e.cidade, e.estado].filter(Boolean).join("/") || "—"}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Package className="h-3 w-3" />
-                    {c.ativos} ativos · {c.total} total
                   </span>
                   <span className="inline-flex items-center gap-1">
                     Plano: <b>{e.plano || "Free"}</b>
@@ -349,7 +363,7 @@ function AdminEmpresas() {
             </Link>
           );
         })}
-        {!filtered.length && (
+        {!isPending && !error && !filtered.length && (
           <div className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground shadow-card">
             Nenhuma empresa encontrada.
           </div>
