@@ -24,6 +24,8 @@ import {
 } from "@/lib/store-portal";
 import { Panel, Stats, Badge, StoreImage, buttonClass, secondaryClass, inputClass } from "./ui";
 import { ProfileForm, SettingsForm, ContractForm, UploadForm, ReviewForm } from "./forms";
+import { SimpleStorePortal, BannerMetrics } from "./simple-portal";
+import { BannerSettings, DeleteStoreUser } from "./banner-settings";
 const tabs = [
   ["dashboard", "Visão geral"],
   ["profile", "Minha Empresa"],
@@ -32,12 +34,20 @@ const tabs = [
   ["history", "Campanhas anteriores"],
   ["library", "Biblioteca"],
 ];
-export function Referral({ code, metrics }: { code?: string; metrics: Metrics }) {
+export function Referral({
+  code,
+  metrics,
+  compact = false,
+}: {
+  code?: string;
+  metrics: Metrics;
+  compact?: boolean;
+}) {
   const link = `https://sosmarceneiros.com.br/r/${encodeURIComponent(code || "")}`;
   const [qr, setQr] = useState("");
   useEffect(() => {
     let alive = true;
-    if (!code) {
+    if (!code || compact) {
       setQr("");
       return;
     }
@@ -49,7 +59,7 @@ export function Referral({ code, metrics }: { code?: string; metrics: Metrics })
     return () => {
       alive = false;
     };
-  }, [link, code]);
+  }, [link, code, compact]);
   return (
     <div className="space-y-5">
       {code && (
@@ -79,21 +89,32 @@ export function Referral({ code, metrics }: { code?: string; metrics: Metrics })
                 </a>
               )}
             </div>
-            {qr && <img src={qr} width={180} height={180} alt="QR Code do link da loja" />}
+            {!compact && qr && (
+              <img src={qr} width={180} height={180} alt="QR Code do link da loja" />
+            )}
           </div>
         </Panel>
       )}
       <Stats
-        items={[
-          ["Cliques", metrics.clicks],
-          ["Hoje", metrics.today],
-          ["Últimos 7 dias", metrics.last7],
-          ["Últimos 30 dias", metrics.last30],
-          ["Cadastros iniciados", metrics.registrations],
-          ["Cadastros concluídos", metrics.completed],
-          ["Publicaram anúncios", metrics.publishers],
-          ["Assinaturas", metrics.subscriptions],
-        ]}
+        items={
+          compact
+            ? [
+                ["Cliques", metrics.clicks],
+                ["Cadastros", metrics.registrations],
+                ["Cadastros concluídos", metrics.completed],
+                ["Assinaturas", metrics.subscriptions],
+              ]
+            : [
+                ["Cliques", metrics.clicks],
+                ["Hoje", metrics.today],
+                ["Últimos 7 dias", metrics.last7],
+                ["Últimos 30 dias", metrics.last30],
+                ["Cadastros iniciados", metrics.registrations],
+                ["Cadastros concluídos", metrics.completed],
+                ["Publicaram anúncios", metrics.publishers],
+                ["Assinaturas", metrics.subscriptions],
+              ]
+        }
       />
       <Panel title="Evolução nos últimos 30 dias">
         <div className="h-64 w-full">
@@ -125,11 +146,13 @@ export function Referral({ code, metrics }: { code?: string; metrics: Metrics })
             </AreaChart>
           </ResponsiveContainer>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Cliques seguem a contagem do link existente: um visitante por dia. Cadastros concluídos e
-          publicações mostram a situação atual dos cadastros atribuídos. Assinaturas usam a primeira
-          conversão registrada.
-        </p>
+        {!compact && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Cliques seguem a contagem do link existente: um visitante por dia. Cadastros concluídos
+            e publicações mostram a situação atual dos cadastros atribuídos. Assinaturas usam a
+            primeira conversão registrada.
+          </p>
+        )}
       </Panel>
     </div>
   );
@@ -139,10 +162,12 @@ function StoreReferrals({
   storeId,
   userId,
   admin,
+  compact = false,
 }: {
   storeId: string;
   userId: string;
   admin: boolean;
+  compact?: boolean;
 }) {
   const qc = useQueryClient();
   const [selected, setSelected] = useState("all"),
@@ -193,7 +218,9 @@ function StoreReferrals({
       setBusy(false);
     }
   }
-  const chosen = links.data?.find((l) => l.id === selected);
+  const chosen =
+    links.data?.find((l) => l.id === selected) ||
+    (links.data?.length === 1 ? links.data[0] : undefined);
   return (
     <div className="space-y-5">
       <Panel title="Links de indicação">
@@ -218,10 +245,12 @@ function StoreReferrals({
                 ))}
               </select>
             </label>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Escolha um link para ver seus números e QR Code. O consolidado conta cada cadastro uma
-              vez, mesmo que apareça em mais de um link. Cliques são somados por link.
-            </p>
+            {!compact && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Escolha um link para ver seus números e QR Code. O consolidado conta cada cadastro
+                uma vez, mesmo que apareça em mais de um link. Cliques são somados por link.
+              </p>
+            )}
             {admin && (
               <>
                 <div className="mt-4 space-y-2">
@@ -280,7 +309,9 @@ function StoreReferrals({
       {report.error && (
         <p role="alert">Não foi possível carregar o relatório: {report.error.message}</p>
       )}
-      {!report.error && report.data && <Referral code={chosen?.code} metrics={report.data} />}
+      {!report.error && report.data && (
+        <Referral code={chosen?.code} metrics={report.data} compact={compact} />
+      )}
     </div>
   );
 }
@@ -342,6 +373,17 @@ export function StorePortal({
     admin = manage && s.admin,
     active = s.contracts.filter((c) => c.effective_status === "active"),
     current = active[0] || s.contracts[0];
+  if (!admin)
+    return (
+      <SimpleStorePortal
+        snapshot={s}
+        refresh={refresh}
+        logout={logout}
+        viewAs={viewAs}
+        refreshError={query.isRefetchError}
+        reports={<StoreReferrals storeId={s.store.id} userId={userId} admin={false} compact />}
+      />
+    );
   const conversion = s.metrics.clicks
     ? `${((s.metrics.registrations / s.metrics.clicks) * 100).toFixed(1)}%`
     : "0%";
@@ -589,7 +631,13 @@ export function StorePortal({
               </div>
             )}
             <ProfileForm key={s.store.id} store={s.store} admin={admin} done={refresh} />
-            {admin && <SettingsForm store={s.store} done={refresh} />}
+            {admin && (
+              <>
+                <BannerSettings store={s.store} done={refresh} />
+                <SettingsForm store={s.store} done={refresh} />
+                <DeleteStoreUser store={s.store} />
+              </>
+            )}
             <StoreReferrals storeId={s.store.id} userId={userId} admin={admin} />
           </>
         )}
@@ -661,9 +709,7 @@ export function StorePortal({
                     {b.destination_url}
                   </a>
                 )}
-                <p className="mt-3 text-sm">
-                  {b.views} visualizações · {b.clicks} cliques
-                </p>
+                <BannerMetrics banner={b} />
                 {b.rejection_reason && (
                   <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-900">
                     Motivo: {b.rejection_reason}
@@ -695,6 +741,7 @@ export function StorePortal({
                     <p className="mt-2 text-sm">
                       {h.snapshot.title || "Banner"} · {dateLabel(h.created_at)}
                     </p>
+                    <BannerMetrics banner={h.snapshot} />
                   </div>
                 ))}
             </div>

@@ -9,9 +9,9 @@ async function invoke(input={},options={}){
  let handler;const operations=[];
  const admin={auth:{getUser:async()=>({data:{user:options.invalid?null:{id:'admin'}},error:options.invalid?'invalid':null}),admin:{
  createUser:async v=>{operations.push(['create',v]);return {data:{user:{id:'new-store-user'}},error:options.duplicate?'existing login':null}},
- deleteUser:async id=>{operations.push(['delete',id]);return {}},
+ deleteUser:async id=>{operations.push(['delete',id]);return {error:options.deleteError?'failed':null}},
  updateUserById:async(id,v)=>{operations.push(['reset',id,v]);return {}}
- }},rpc:async(name,args)=>{operations.push(['rpc',name,args]);return {data:options.provisionError?null:'new-store',error:options.provisionError||null}},
+ }},rpc:async(name,args)=>{operations.push(['rpc',name,args]);return {data:options.provisionError?null:(options.rpcTarget || 'new-store'),error:options.provisionError||null}},
  from(table){const filters={};let single=false;const q={select:()=>q,eq:(k,v)=>{filters[k]=v;return q},single:()=>{single=true;return q},maybeSingle:()=>{single=true;return q},then(resolve,reject){let data;if(table==='banner_empresas')data={user_id:'existing-store-user'};else if(filters.user_id==='admin')data=options.notAdmin?[]:[{role:'admin'}];else data=filters.role==='store_partner'?{role:'store_partner'}:options.targetAdmin?{role:'admin'}:null;return Promise.resolve({data,error:options.roleError&&table==='user_roles'&&filters.user_id!=='admin'?'unavailable':null}).then(resolve,reject)}};return q}};
  vm.runInNewContext(outputText,{exports:{},Response,console:{error(){}},Deno:{env:{get:()=> 'test-only'},serve:cb=>handler=cb},require:()=>({createClient:()=>admin})});
  const response=await handler(new Request('https://local.test',{method:'POST',headers:{Authorization:'Bearer test'},body:JSON.stringify({action:'create',name:'Loja',email:'loja@example.com',password:'Test-password-123!',code:'LOJA001',...input})}));
@@ -26,3 +26,20 @@ test('password reset is restricted to exclusive store accounts and fails closed'
 
 test('preserves structured PostgREST failures and identifies the failed step',async()=>{const r=await invoke({},{provisionError:{code:'23502',message:'null value in column user_id violates not-null constraint',details:'private details'}});assert.equal(r.status,400);assert.equal(r.body.stage,'vincular_loja');assert.equal(r.body.code,'23502');assert.match(r.body.error,/null value in column user_id/);assert.equal(JSON.stringify(r.body).includes('private details'),false);assert.deepEqual(r.operations.at(-1),['delete','new-store-user'])});
 test('preserves string errors from credential creation',async()=>{const r=await invoke({},{duplicate:true});assert.equal(r.body.stage,'criar_login');assert.match(r.body.error,/existing login/)});
+
+test('delete login requires server authorization and successful preparation',async()=>{
+ for(const opts of [{invalid:true},{notAdmin:true},{provisionError:{message:'Protected account'}}]) {
+  const r=await invoke({action:'delete_user',store_id:'store',confirmation:'loja@example.com',password:undefined},opts);
+  assert.ok(r.status>=400);assert.equal(r.operations.some(x=>x[0]==='delete'),false);
+ }
+ const r=await invoke({action:'delete_user',store_id:'store',confirmation:'loja@example.com',password:undefined});
+ assert.equal(r.status,200);assert.equal(r.operations[0][1],'store_prepare_user_deletion');assert.equal(r.operations[0][2]._actor,'admin');
+ assert.deepEqual(r.operations[1],['delete','new-store']);
+});
+
+test('deletion never targets the requesting admin and reports Auth failures honestly',async()=>{
+ const self=await invoke({action:'delete_user',store_id:'store',confirmation:'loja@example.com'},{rpcTarget:'admin'});
+ assert.equal(self.status,409);assert.equal(self.operations.some(x=>x[0]==='delete'),false);
+ const failed=await invoke({action:'delete_user',store_id:'store',confirmation:'loja@example.com'},{deleteError:true});
+ assert.equal(failed.status,400);assert.match(failed.body.error,/acesso foi desativado/);
+});

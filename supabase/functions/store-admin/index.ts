@@ -56,6 +56,19 @@ Deno.serve(async (request) => {
     if (roleError || !roles?.length)
       return json({ error: "Acesso negado" }, 403);
     const input = await request.json();
+    if (input.action === "delete_user") {
+      stage = "excluir_login";
+      const { data: target, error: prepareError } = await admin.rpc("store_prepare_user_deletion", {
+        _store: input.store_id,
+        _actor: auth.user.id,
+        _confirmation: input.confirmation,
+      });
+      if (prepareError) throw prepareError;
+      if (!target || target === auth.user.id) return json({ error: "Conta protegida" }, 409);
+      const { error: deleteError } = await admin.auth.admin.deleteUser(target);
+      if (deleteError) return json({ error: "O acesso foi desativado, mas não foi possível excluir o login. Tente novamente.", stage }, 400);
+      return json({ ok: true });
+    }
     if (
       typeof input.password !== "string" ||
       input.password.length < 12 ||
@@ -137,7 +150,7 @@ Deno.serve(async (request) => {
     const failure = failureInfo(error);
     // Não registrar corpo da requisição, senha, token nem detalhes internos do SQL.
     console.error("store-admin failed", {stage, code: failure.code});
-    const label = stage === "criar_login" ? "Criar login" : stage === "vincular_loja" ? "Vincular loja" : stage === "redefinir_senha" ? "Redefinir senha" : "Validar acesso";
+    const label = stage === "excluir_login" ? "Excluir login" : stage === "criar_login" ? "Criar login" : stage === "vincular_loja" ? "Vincular loja" : stage === "redefinir_senha" ? "Redefinir senha" : "Validar acesso";
     return json({error: `${label}: ${failure.message}`, stage, code: failure.code}, 400);
   }
 });

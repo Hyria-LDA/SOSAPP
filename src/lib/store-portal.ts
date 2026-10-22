@@ -6,6 +6,9 @@ export type Store = {
   status: string;
   created_at: string;
   editable_fields: string[];
+  whatsapp_phone?: string;
+  whatsapp_intro?: string;
+  banner_format?: string;
   profile: Record<string, string>;
 };
 export type Metrics = {
@@ -48,6 +51,7 @@ export type StoreBanner = {
   week_number: number;
   title: string;
   destination_url: string;
+  whatsapp_message?: string;
   image_path: string;
   start_date: string;
   end_date: string;
