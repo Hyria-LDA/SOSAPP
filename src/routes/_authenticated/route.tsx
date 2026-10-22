@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Rotas que podem ser acessadas sem login (visitantes)
 function isPublicPath(pathname: string): boolean {
-  if (pathname === "/app" || pathname === "/app/") return true;
   if (pathname.startsWith("/app/buscar")) return true;
   if (pathname.startsWith("/app/material/")) return true;
   return false;
@@ -43,7 +42,7 @@ export const Route = createFileRoute("/_authenticated")({
     const path = location.pathname;
     const publicPath = isPublicPath(path);
 
-    // A home e as telas de consulta sao publicas. Ler a sessao local evita
+    // Apenas as telas de consulta por link continuam públicas. Ler a sessão local evita
     // deixar o app em branco se a rede estiver lenta durante a inicializacao.
     if (publicPath) {
       const { data } = await supabase.auth.getSession();
@@ -63,11 +62,12 @@ export const Route = createFileRoute("/_authenticated")({
     // Empresa onboarding gate apenas para áreas autenticadas
     if (!publicPath) {
       // Vendedores parceiros não precisam de onboarding de empresa
-      const { data: roles } = await supabase
+      const { data: roles, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id);
       if (roles?.some(r=>String(r.role)==="store_partner") && !roles.some(r=>r.role==="admin")) throw redirect({to:"/lojista",search:{store:undefined}});
+      if (roleError) throw roleError;
       const isVendedor = (roles ?? []).some((r: any) => r.role === "vendedor");
 
       if (isVendedor) {
@@ -75,12 +75,13 @@ export const Route = createFileRoute("/_authenticated")({
         return { user };
       }
 
-      const { data: empresa } = await supabase
+      const { data: empresa, error: empresaError } = await supabase
         .from("empresas")
         .select("onboarded")
         .eq("owner_id", user.id)
         .maybeSingle();
 
+      if (empresaError) throw empresaError;
       const needsOnboarding = !empresa?.onboarded;
       const onOnboarding = path.startsWith("/onboarding");
       if (needsOnboarding && !onOnboarding) throw redirect({ to: "/onboarding" });
