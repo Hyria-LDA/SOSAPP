@@ -20,7 +20,7 @@ type PushRequest = {
   body?: string;
   path?: string;
   external_url?: string;
-  target?: "all" | "cities";
+  target?: "all" | "cities" | "no_registration";
   uf?: string;
   cities?: string[];
   preview?: boolean;
@@ -33,7 +33,7 @@ type PushFailure = {
   message: string;
 };
 
-const ALLOWED_PATHS = new Set(["/app", "/app/anunciar", "/app/buscar", "/app/perfil?upgrade=1"]);
+const ALLOWED_PATHS = new Set(["/app", "/app/anunciar", "/app/buscar", "/app/perfil?upgrade=1", "/onboarding"]);
 
 function validExternalUrl(value: string) {
   if (!value || value.length > 2048) return null;
@@ -77,8 +77,9 @@ Deno.serve(async (request) => {
     if (payload.preview !== undefined && typeof payload.preview !== "boolean") return json({ error: "invalid_preview" }, 400);
     const title = payload.title?.trim().slice(0, 80);
     const body = payload.body?.trim().slice(0, 180);
-    const path = payload.path?.trim() || "/app";
+    const path = audience.target === "no_registration" ? "/onboarding" : payload.path?.trim() || "/app";
     const requestedExternalUrl = payload.external_url?.trim() ?? "";
+    if (audience.target === "no_registration" && requestedExternalUrl) return json({ error: "invalid_external_url" }, 400);
     const externalUrl = requestedExternalUrl ? validExternalUrl(requestedExternalUrl) : null;
     if (!payload.preview && (!title || !body)) return json({ error: "missing_title_or_body" }, 400);
     if (requestedExternalUrl && !externalUrl) return json({ error: "invalid_external_url" }, 400);
@@ -96,13 +97,32 @@ Deno.serve(async (request) => {
         if ((companies ?? []).length < 500) break;
       }
     }
+    // Completed companies and special roles must never receive a completion reminder.
+    const excludedUsers = new Set<string>();
+    if (audience.target === "no_registration") {
+      for (let offset = 0; ; offset += 500) {
+        const { data: companies, error } = await adminClient.from("empresas")
+          .select("id, owner_id, onboarded").eq("onboarded", true).order("id").range(offset, offset + 499);
+        if (error) throw error;
+        for (const company of companies ?? []) excludedUsers.add(company.owner_id);
+        if (!companies?.length) break;
+      }
+      for (let offset = 0; ; offset += 500) {
+        const { data: roles, error } = await adminClient.from("user_roles")
+          .select("user_id, role").in("role", ["admin", "vendedor", "store_partner"])
+          .order("user_id").order("role").range(offset, offset + 499);
+        if (error) throw error;
+        for (const role of roles ?? []) excludedUsers.add(role.user_id);
+        if (!roles?.length) break;
+      }
+    }
     const tokens: PushToken[] = [];
     for (let offset = 0; ; offset += 500) {
       const { data: page, error } = await adminClient.from("push_tokens")
         .select("id, token, platform, user_id").eq("active", true).order("id").range(offset, offset + 499);
       if (error) throw error;
       for (const token of (page ?? []) as PushToken[]) {
-        if (!eligibleUsers || eligibleUsers.has(token.user_id)) tokens.push(token);
+        if ((!eligibleUsers || eligibleUsers.has(token.user_id)) && !excludedUsers.has(token.user_id)) tokens.push(token);
       }
       if ((page ?? []).length < 500) break;
     }
@@ -173,7 +193,7 @@ Deno.serve(async (request) => {
     await adminClient.from("push_broadcasts").insert({
       title,
       body,
-      target: audience.target === "all" ? "all" : `cities:${audience.uf}:${audience.cities.join(";")}`,
+      target: audience.target !== "cities" ? audience.target : `cities:${audience.uf}:${audience.cities.join(";")}`,
       sent_by: userData.user.id,
       image_url: null,
       total_tokens: tokens?.length ?? 0,

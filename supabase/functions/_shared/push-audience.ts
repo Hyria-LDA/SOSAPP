@@ -1,12 +1,12 @@
-export type PushAudience = { target: "all" | "cities"; uf: string; cities: string[] };
+export type PushAudience = { target: "all" | "cities" | "no_registration"; uf: string; cities: string[] };
 const UFS = new Set("AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" "));
 export function normalizeCity(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, " ").toLowerCase();
 }
 export function parseAudience(payload: Record<string, unknown>): PushAudience {
-  if (payload.target === "all") {
+  if (payload.target === "all" || payload.target === "no_registration") {
     if (payload.uf || (payload.cities !== undefined && (!Array.isArray(payload.cities) || payload.cities.length > 0))) throw new Error("invalid_audience");
-    return { target: "all", uf: "", cities: [] };
+    return { target: payload.target, uf: "", cities: [] };
   }
   if (payload.target !== "cities" || typeof payload.uf !== "string" || !Array.isArray(payload.cities)) throw new Error("invalid_audience");
   const uf = payload.uf.trim().toUpperCase();

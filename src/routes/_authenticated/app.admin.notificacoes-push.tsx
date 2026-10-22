@@ -31,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/app/admin/notificacoes-pus
   component: AdminPushNotifications,
 });
 
-type PushAudience = { target: "all" | "cities"; uf?: string; cities?: string[] };
+type PushAudience = { target: "all" | "cities" | "no_registration"; uf?: string; cities?: string[] };
 
 type PushResponse = {
   clients?: number;
@@ -47,6 +47,7 @@ type PushResponse = {
 };
 
 const PUSH_TARGETS = [
+  { label: "Finalizar cadastro", path: "/onboarding", icon: Plus },
   { label: "Pagina inicial", path: "/app", icon: Home },
   { label: "Anunciar sobra", path: "/app/anunciar", icon: Plus },
   { label: "Buscar material", path: "/app/buscar", icon: Search },
@@ -135,12 +136,12 @@ function AdminPushNotifications() {
   const [targetPath, setTargetPath] = useState<PushTargetPath>("/app");
   const [targetType, setTargetType] = useState<PushTargetType>("internal");
   const [externalUrl, setExternalUrl] = useState("");
-  const [audienceMode, setAudienceMode] = useState<"all" | "cities">("all");
+  const [audienceMode, setAudienceMode] = useState<"all" | "cities" | "no_registration">("all");
   const [audienceUf, setAudienceUf] = useState("");
   const [audienceCities, setAudienceCities] = useState("");
   const audienceKey = JSON.stringify([audienceMode, audienceUf, audienceCities]);
   function selectedAudience(): PushAudience {
-    if (audienceMode === "all") return { target: "all" };
+    if (audienceMode !== "cities") return { target: audienceMode };
     const cities = audienceCities.split(/[,;\n]+/).map((city) => city.trim()).filter(Boolean);
     if (!audienceUf || !cities.length) throw new Error("Selecione a UF e informe as cidades.");
     if (cities.length > 100 || cities.some((city) => city.length > 120)) throw new Error("Informe até 100 cidades, com até 120 caracteres cada.");
@@ -203,7 +204,7 @@ function AdminPushNotifications() {
       if (!accessToken) throw new Error("Sessao expirada. Entre novamente.");
 
       let cleanExternalUrl: string | undefined;
-      if (targetType === "external") {
+      if (targetType === "external" && audienceMode !== "no_registration") {
         if (!externalUrl.trim()) throw new Error("Digite o link externo da notificacao.");
         try {
           cleanExternalUrl = normalizeExternalUrl(externalUrl);
@@ -212,7 +213,10 @@ function AdminPushNotifications() {
         }
       }
 
-      return invokeSendPush(accessToken, cleanTitle, cleanBody, targetPath, cleanExternalUrl, selectedAudience());
+      if (audienceMode === "no_registration" && (previewAudience.isError || previewAudience.data?.key !== audienceKey || !previewAudience.data.total)) {
+        throw new Error("Consulte o alcance antes de enviar para cadastros incompletos.");
+      }
+      return invokeSendPush(accessToken, cleanTitle, cleanBody, audienceMode === "no_registration" ? "/onboarding" : targetPath, cleanExternalUrl, selectedAudience());
     },
     onSuccess: (result) => {
       toast.success(`Notificacao enviada para ${result.sent} celular(es).`);
@@ -262,8 +266,6 @@ function AdminPushNotifications() {
         </div>
       </section>
 
-      <AutomationSettings />
-
       <section className="mt-4 rounded-2xl bg-card p-4 shadow-card">
         <div className="text-sm font-bold">Diagnostico do app</div>
         <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
@@ -282,11 +284,14 @@ function AdminPushNotifications() {
       </section>
 
       <section className="mt-4 rounded-2xl bg-card p-4 shadow-card">
+        <h2 className="mb-1 text-lg font-bold">Enviar notificação manual</h2>
+        <p className="mb-4 text-xs text-muted-foreground">Escreva uma mensagem e envie agora para o público escolhido.</p>
         <div className="mb-4 space-y-2">
           <label htmlFor="push-audience" className="block text-sm font-bold">Quem vai receber</label>
-          <select id="push-audience" disabled={sendPush.isPending} value={audienceMode} onChange={(event) => setAudienceMode(event.target.value as "all" | "cities")} className="w-full rounded-xl border border-border bg-secondary p-3">
-            <option value="all">Todos os clientes</option><option value="cities">Por cidades</option>
+          <select id="push-audience" disabled={sendPush.isPending} value={audienceMode} onChange={(event) => setAudienceMode(event.target.value as "all" | "cities" | "no_registration")} className="w-full rounded-xl border border-border bg-secondary p-3">
+            <option value="all">Todos os clientes</option><option value="cities">Por cidades</option><option value="no_registration">Cadastro não finalizado</option>
           </select>
+          {audienceMode === "no_registration" && <p className="text-xs text-muted-foreground">Envia somente para quem ainda não concluiu o cadastro e tem notificações ativas no celular. Administradores, vendedores e lojistas não entram neste público. Ao tocar na mensagem, a pessoa vai para finalizar o cadastro.</p>}
           {audienceMode === "cities" && <>
             <label htmlFor="push-uf" className="block text-sm">Estado (UF)</label>
             <select id="push-uf" disabled={sendPush.isPending} value={audienceUf} onChange={(event) => setAudienceUf(event.target.value)} className="w-full rounded-xl border border-border bg-secondary p-3">
@@ -325,7 +330,7 @@ function AdminPushNotifications() {
           placeholder="Escreva a mensagem que vai aparecer no celular."
         />
 
-        <div className="mt-4">
+        {audienceMode !== "no_registration" && <div className="mt-4">
           <div className="text-sm font-bold">Ao clicar na notificacao</div>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {PUSH_TARGETS.map((target) => {
@@ -383,18 +388,19 @@ function AdminPushNotifications() {
               </p>
             </div>
           ) : null}
-        </div>
+        </div>}
 
         <button
           type="button"
           onClick={() => sendPush.mutate()}
-          disabled={sendPush.isPending || !tokenCount}
+          disabled={sendPush.isPending || previewAudience.isPending || !tokenCount || (audienceMode === "no_registration" && (previewAudience.isError || previewAudience.data?.key !== audienceKey || !previewAudience.data.total))}
           className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 font-black text-primary-foreground disabled:opacity-60"
         >
           <Send className="h-5 w-5" />
-          {sendPush.isPending ? "Enviando..." : audienceMode === "cities" ? "Enviar para as cidades selecionadas" : "Enviar para todos"}
+          {sendPush.isPending ? "Enviando..." : audienceMode === "cities" ? "Enviar para as cidades selecionadas" : audienceMode === "no_registration" ? "Enviar para cadastros não finalizados" : "Enviar para todos"}
         </button>
       </section>
+      <AutomationSettings />
     </div>
   );
 }
