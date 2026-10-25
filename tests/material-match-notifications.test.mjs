@@ -138,3 +138,22 @@ test("migracao pode ser reaplicada e funcoes permanecem privadas", async () => {
   assert.equal(await scalar("SELECT has_function_privilege('authenticated','public.is_brilhante_user(uuid)','EXECUTE')"), false);
   assert.equal(await scalar("SELECT has_function_privilege('anon','public.match_pedidos_on_material()','EXECUTE')"), false);
 });
+
+
+test("aceita a funcao exata exportada do Supabase e preserva os filtros", async () => {
+  await db.exec(await readFile(new URL("./fixtures/material-match-production.sql", import.meta.url), "utf8"));
+  await db.exec(await fix());
+  await scenario(async () => {
+    await material({comprimento_cm:99});
+    assert.equal(await scalar("SELECT count(*) FROM notificacoes"), 0);
+    const id = await material({status:"em_revisao"});
+    await db.query("UPDATE materiais SET status='ativo' WHERE id=$1", [id]);
+    await db.query("UPDATE materiais SET status='ativo' WHERE id=$1", [id]);
+    assert.equal(await scalar("SELECT count(*) FROM notificacoes"), 1);
+    await db.exec(`UPDATE empresas SET plano_id=null,plano='free' WHERE owner_id='${buyer}'`);
+    await material();
+    assert.equal(await scalar("SELECT count(*) FROM match_notifications_queue"), 1);
+    assert.equal(await scalar("SELECT bool_and(deliver_at=created_at+interval '30 minutes') FROM match_notifications_queue"), true);
+  });
+  await db.exec(await fix());
+});

@@ -110,6 +110,27 @@ function RecentMaterials() {
       ],
     };
   }, [companies.data, uf, city]);
+  // Count all matching ads without downloading their rows or photos.
+  const total = useQuery({
+    queryKey: [
+      "admin-recent-materials-total", adminId, uf, city, company, status,
+      options.rawStates, options.rawCities,
+    ],
+    enabled: !!companies.data,
+    queryFn: async ({ signal }) => {
+      let query = supabase
+        .from("materiais")
+        .select("id,empresas!inner(id)", { count: "exact", head: true });
+      if (uf) query = query.in("empresas.estado", options.rawStates);
+      if (city) query = query.in("empresas.cidade", options.rawCities);
+      if (company) query = query.eq("empresa_id", company);
+      if (status) query = query.eq("status", status as Material["status"]);
+      const { count, error } = await query.abortSignal(signal);
+      if (error) throw error;
+      if (count === null) throw new Error("Contagem indisponível.");
+      return count;
+    },
+  });
   const ads = useInfiniteQuery({
     queryKey: [
       "admin-recent-materials",
@@ -200,10 +221,11 @@ function RecentMaterials() {
         </div>
         <button
           className={button}
-          disabled={ads.isFetching || companies.isFetching}
+          disabled={ads.isFetching || companies.isFetching || total.isFetching}
           onClick={() => {
             void companies.refetch();
             void ads.refetch();
+            void total.refetch();
           }}
         >
           <RefreshCw size={15} className="mr-2 inline" />
@@ -287,9 +309,23 @@ function RecentMaterials() {
         )}
       </section>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {rows.length} anúncios carregados · mais recentes primeiro
-        </p>
+        <div aria-live="polite" className="space-y-1">
+          <p className="font-semibold">
+            {total.error
+              ? "Não foi possível consultar o total de sobras."
+              : total.data === undefined
+                ? "Consultando total de sobras…"
+                : `${total.data.toLocaleString("pt-BR")} ${total.data === 1 ? "sobra encontrada" : "sobras encontradas"}${uf || city || company || status ? " com os filtros selecionados" : " no total"}`}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {rows.length.toLocaleString("pt-BR")} anúncios carregados · mais recentes primeiro
+          </p>
+          {total.error && (
+            <button className={button} onClick={() => void total.refetch()} disabled={total.isFetching}>
+              Tentar consultar total novamente
+            </button>
+          )}
+        </div>
         <label className="text-xs font-bold">
           Organizar anúncios carregados
           <select className={field} value={group} onChange={(e) => setGroup(e.target.value)}>

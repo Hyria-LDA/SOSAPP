@@ -29,4 +29,8 @@ O diagnóstico não retorna tokens, chaves ou conteúdo de mensagens. Ele també
 
 ## Validação local
 
-`node --test tests/material-match-notifications.test.mjs`: 10 testes passaram em PostgreSQL local (PGlite), com reprodução das duas falhas antes da correção. Inclui dimensões iguais/maiores/menores, giro, aprovação, renovação, vencimento de plano, fila de 30 minutos, busca nova, raio, exclusão do próprio anunciante e permissões das funções. O agendador pg_cron e o Firebase não são executados nesse ambiente de teste.
+`node --test tests/material-match-notifications.test.mjs`: 11 testes passaram em PostgreSQL local (PGlite), com reprodução das duas falhas antes da correção. Inclui dimensões iguais/maiores/menores, giro, aprovação, renovação, vencimento de plano, fila de 30 minutos, busca nova, raio, exclusão do próprio anunciante e permissões das funções. O agendador pg_cron e o Firebase não são executados nesse ambiente de teste.
+
+## Compatibilidade com o banco publicado
+
+O CSV enviado em 25/10 confirmou que a função publicada ainda usa a proteção anterior à migração de renovação. O arquivo de correção agora aceita ambas as versões conhecidas. O teste adicional executa a função exata exportada, aplica a correção e valida ativação, medidas, ausência de repetição em edição e fila de 30 minutos. A versão publicada já compara medidas iguais ou maiores; a definição isolada não comprova o estado dos gatilhos, da fila nem da entrega push.
