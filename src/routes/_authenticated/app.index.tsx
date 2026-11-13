@@ -1,3 +1,4 @@
+import { selectHomeSlots } from "@/lib/banner-slots";
 import {getStoreLiveBanners,trackBanner,bannerInDate} from "@/lib/store-live-banners";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/_authenticated/app/")({
 type Banner = BannerTarget & {
   id: string;
   store_banner?: boolean;
+  campaign_kind?: string;
   data_inicio?: string;
   data_fim?: string;
   titulo: string | null;
@@ -108,13 +110,18 @@ function Home() {
       const { data, error } = await supabase
         .from("banners" as any)
         .select(
-          "id, titulo, subtitulo, imagem_url, link, botao_texto, duracao_segundos, planos_alvo, data_inicio, data_fim, exibir_abertura, target_scope, target_uf, target_city, banner_format",
+          "*",
         )
         .eq("ativo", true)
         .order("ordem", { ascending: true });
       if (error) throw error;
       const slug = userPlanSlug ?? "free";
       const portalBanners=await getStoreLiveBanners();
+      const { data: delivery, error: deliveryError } = await supabase
+        .from("banner_delivery_settings" as never).select("enabled,fallback,fallback_banner").single();
+      if (deliveryError && !["42P01", "PGRST205"].includes(deliveryError.code))
+        throw new Error("Não foi possível consultar a configuração dos banners.");
+      const config = (delivery ?? { enabled: false, fallback: "hide", fallback_banner: null }) as { enabled: boolean; fallback: string; fallback_banner: string | null };
       const filtered = [...(data ?? []),...portalBanners].filter((b: any) => {
         if (b.exibir_abertura) return false; // splash apenas
         if (b.banner_format === "vertical") return false;
@@ -125,14 +132,17 @@ function Home() {
         if (alvo.length === 0) return true;
         return alvo.includes(slug);
       });
+      const ordered = shuffledBanners(filtered as Banner[]);
+      const selected = config.enabled
+        ? selectHomeSlots(ordered, config.fallback === "institutional" ? config.fallback_banner : null)
+        : ordered.filter(b => b.campaign_kind !== "institutional");
       const { signBannerPaths } = await import("@/lib/banner-images");
-      const map = await signBannerPaths(filtered.map((b: any) => b.imagem_url));
-      return filtered.map((b: any) => ({
+      const map = await signBannerPaths(selected.map((b: any) => b.imagem_url));
+      return selected.map((b: any) => ({
         ...b,
         imagem_url: map[b.imagem_url] ?? b.imagem_url,
       })) as unknown as Banner[];
     },
-    select: shuffledBanners,
     staleTime: 60 * 1000,
     refetchInterval: 60 * 1000,
   });
@@ -396,7 +406,7 @@ function Home() {
 function BannersCarousel({ banners: allBanners }: { banners: Banner[] }) {
   const [clock,setClock]=useState(Date.now());
   useEffect(()=>{const timer=setInterval(()=>setClock(Date.now()),1000);return()=>clearInterval(timer)},[]);
-  const activeIds=allBanners.filter(b=>!b.store_banner||bannerInDate(b)).map(b=>b.id).join(",");
+  const activeIds=allBanners.filter(b=>bannerInDate(b)).map(b=>b.id).join(",");
   const banners=useMemo(()=>allBanners.filter(b=>activeIds.split(",").includes(b.id)),[allBanners,activeIds]);
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);

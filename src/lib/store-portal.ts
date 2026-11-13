@@ -29,6 +29,7 @@ export type Week = {
   used: number;
 };
 export type Contract = {
+  campaign_kind?: string;
   id: string;
   store_id: string;
   name: string;
@@ -144,6 +145,7 @@ export const profileFields: Record<string, string> = {
 };
 export const statusNames: Record<string, string> = {
   active: "Ativo",
+  paused: "Pausado",
   inactive: "Inativo",
   waiting: "Aguardando início",
   ended: "Encerrado",

@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import ts from 'typescript';
+import { readFileSync } from 'node:fs';
+const code=ts.transpileModule(readFileSync('src/lib/banner-slots.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext}}).outputText;
+const {selectHomeSlots}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+const regional=Array.from({length:6},(_,i)=>({id:'r'+i,target_scope:'state'}));
+const global=[{id:'g',target_scope:'all'},{id:'g2',target_scope:'all_except'}];
+assert.equal(selectHomeSlots([...regional,...global]).length,5);
+assert.deepEqual(selectHomeSlots(global),[global[0]]);
+assert.equal(selectHomeSlots([regional[0],regional[0],...global]).length,2);
+assert.deepEqual(selectHomeSlots([{id:'fallback',campaign_kind:'institutional'}]),[]);
+assert.equal(selectHomeSlots([{id:'fallback',campaign_kind:'institutional'}],'fallback').length,1);
+assert.deepEqual(selectHomeSlots([]),[]);
+assert.equal(selectHomeSlots([{id:'store',store_banner:true,target_scope:'all',campaign_kind:'regional'}])[0].id,'store');
+console.log('PASS: quatro regionais, um nacional, sem repetição, fallback e origem do portal.');

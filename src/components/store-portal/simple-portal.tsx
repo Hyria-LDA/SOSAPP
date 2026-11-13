@@ -1,3 +1,4 @@
+import { CampaignRequests } from "./campaign-requests";
 import { useState, type ReactNode } from "react";
 import type { Snapshot, Contract, StoreBanner, Week } from "@/lib/store-portal";
 import { dateLabel } from "@/lib/store-portal";
@@ -130,6 +131,11 @@ export function SimpleStorePortal({
             </button>
           </p>
         )}
+        <section className="rounded-2xl border bg-card p-4 space-y-2" aria-label="Regiões e datas autorizadas">
+          <h2 className="font-bold">Suas campanhas e regiões autorizadas</h2>
+          {s.contracts.map(c=><p key={c.id} className="text-sm">{c.name}: {[...c.states,...c.cities].join("; ")||"Todo o Brasil"} · {c.start_date} até {c.end_date}</p>)}
+        </section>
+        <CampaignRequests storeId={s.store.id}/>
         <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-bold">Seus banners</h2>

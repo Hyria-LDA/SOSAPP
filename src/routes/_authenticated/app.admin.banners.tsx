@@ -1,3 +1,4 @@
+import { AdvertisingCentral } from "@/components/store-portal/advertising-central";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef } from "react";
@@ -101,6 +102,7 @@ export const Route = createFileRoute("/_authenticated/app/admin/banners")({
 
 function AdminBanners() {
   const qc = useQueryClient();
+  const [section, setSection] = useState("campaigns");
   const [editing, setEditing] = useState<Banner | null>(null);
   const [creating, setCreating] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
@@ -198,13 +200,20 @@ function AdminBanners() {
         </Link>
         <h1 className="text-xl font-black">🖼️ Banners</h1>
         <button
-          onClick={() => selectedCompany === null ? setNewCompany(true) : setCreating(true)}
+          onClick={() => { setSection("legacy"); if (selectedCompany === null) setNewCompany(true); else setCreating(true); }}
           className="ml-auto flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"
         >
           <Plus className="h-4 w-4" /> {selectedCompany === null ? "Nova empresa" : "Novo banner"}
         </button>
       </header>
 
+      <nav className="my-4 flex flex-wrap gap-3" aria-label="Central de banners">
+        <button className="rounded-xl border px-4 py-2" onClick={()=>setSection("campaigns")}>Campanhas</button>
+        <button className="rounded-xl border px-4 py-2" onClick={()=>setSection("legacy")}>Banners existentes</button>
+        <a className="rounded-xl border px-4 py-2" href="/app/admin/lojistas">Clientes e contratos</a>
+      </nav>
+      {section === "campaigns" && <AdvertisingCentral />}
+      <div hidden={section !== "legacy"}>
       {newCompany && (
         <form className="mt-4 space-y-2 rounded-2xl border border-border bg-card p-4" onSubmit={(event) => { event.preventDefault(); createCompany.mutate(); }}>
           <label className="block text-sm font-semibold" htmlFor="banner-company-name">Nome da empresa</label>
@@ -237,6 +246,13 @@ function AdminBanners() {
         <div className="mt-4 flex items-center gap-2">
           <button onClick={() => setSelectedCompany(null)} className="rounded-xl bg-secondary px-3 py-2 text-sm">← Empresas</button>
           <h2 className="min-w-0 break-words font-bold">{selectedCompany === "unassigned" ? "Sem empresa" : companies.data?.find((company) => company.id === selectedCompany)?.nome}</h2>
+          {selectedCompany !== "unassigned" && <button className="rounded-xl border px-3 py-2 text-sm" onClick={async()=>{
+            const nome=window.prompt("Nome do anunciante",companies.data?.find(c=>c.id===selectedCompany)?.nome);
+            if(!nome?.trim())return;
+            const {error}=await supabase.from("banner_empresas" as never).update({nome:nome.trim()} as never).eq("id",selectedCompany);
+            if(error){toast.error(error.code==='23505'?"Já existe um anunciante com esse nome.":"Não foi possível salvar o nome.");return;}
+            await companies.refetch();void qc.invalidateQueries({queryKey:["advertising-central"]});toast.success("Nome atualizado.");
+          }}>Editar nome</button>}
         </div>
       )}
 
@@ -362,6 +378,7 @@ function AdminBanners() {
           }}
         />
       )}
+      </div>
     </div>
   );
 }

@@ -245,6 +245,7 @@ export function ContractForm({
 }) {
   const [values, setValues] = useState({
     id: contract?.id,
+    campaign_kind: contract?.campaign_kind || (contract ? "legacy" : "regional"),
     name: contract?.name || "",
     start_date: contract?.start_date || "",
     end_date: contract?.end_date || "",
@@ -306,6 +307,13 @@ export function ContractForm({
               />
             </Field>
           ))}
+          <Field label="Abrangência da campanha">
+            <select className={inputClass} value={values.campaign_kind} onChange={e=>setValues({...values,campaign_kind:e.target.value})}>
+              {contract && <option value="legacy">Manter classificação existente</option>}
+              <option value="regional">Regional · posições 1 a 4</option>
+              <option value="global">Nacional · posição 5</option>
+            </select>
+          </Field>
           <Field label="Banners por semana">
             <input
               type="number"

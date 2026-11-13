@@ -124,7 +124,7 @@ export function SimpleUpload({
         {!link && <p role="alert">Solicite ao administrador a configuração do WhatsApp da loja.</p>}
         <p className="text-xs text-muted-foreground">
           {banner?.submitted
-            ? "O banner anterior sairá de exibição e ficará no histórico com seus resultados. "
+            ? "O banner aprovado continuará em exibição, dentro da validade, enquanto o novo aguarda aprovação. "
             : ""}
           O novo banner será publicado após aprovação.
         </p>
