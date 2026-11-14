@@ -2,7 +2,7 @@
 @source "../src";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *, .brilhante-grafite *));
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -137,4 +137,38 @@
   input, select, textarea {
     font-size: 16px !important;
   }
+}
+
+/* Brilhante: graphite surfaces only; never desaturate photos or advertisements. */
+:root.brilhante-grafite {
+  color-scheme: dark;
+  --background: #181a1d;
+  --foreground: #f3f4f6;
+  --card: #24272b;
+  --card-foreground: #f3f4f6;
+  --popover: #292c31;
+  --popover-foreground: #f3f4f6;
+  --primary: #d4d7dc;
+  --primary-foreground: #181a1d;
+  --secondary: #30343a;
+  --secondary-foreground: #f3f4f6;
+  --muted: #30343a;
+  --muted-foreground: #b7bdc7;
+  --accent: #3b4149;
+  --accent-foreground: #f3f4f6;
+  --success: #4ade80;
+  --success-foreground: #102418;
+  --destructive: #f87171;
+  --destructive-foreground: #281010;
+  --border: #4b515a;
+  --input: #4b515a;
+  --ring: #d4d7dc;
+  --sidebar: #24272b;
+  --sidebar-foreground: #f3f4f6;
+  --sidebar-primary: #d4d7dc;
+  --sidebar-primary-foreground: #181a1d;
+  --sidebar-accent: #30343a;
+  --sidebar-accent-foreground: #f3f4f6;
+  --sidebar-border: #4b515a;
+  --sidebar-ring: #d4d7dc;
 }

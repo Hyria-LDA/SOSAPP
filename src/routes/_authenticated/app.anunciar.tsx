@@ -584,7 +584,7 @@ function Anunciar() {
             <button
               type="button"
               onClick={() => setShowFabPicker(true)}
-              className={`group flex h-12 w-full items-center justify-between gap-2 rounded-2xl border-2 bg-white px-4 text-sm font-semibold shadow-sm transition hover:border-primary focus:border-primary focus:outline-none active:border-primary ${
+              className={`group flex h-12 w-full items-center justify-between gap-2 rounded-2xl border-2 bg-card px-4 text-sm font-semibold shadow-sm transition hover:border-primary focus:border-primary focus:outline-none active:border-primary ${
                 fabSelected ? "border-primary/60 text-foreground" : "border-border text-foreground"
               }`}
             >
@@ -860,8 +860,8 @@ function PadraoPicker({
           disabled
             ? "cursor-not-allowed border-dashed border-border bg-secondary/40 text-muted-foreground hover:border-border"
             : selected
-              ? "border-primary/60 bg-white text-foreground"
-              : "border-border bg-white text-foreground"
+              ? "border-primary/60 bg-card text-foreground"
+              : "border-border bg-card text-foreground"
         }`}
       >
         <span className="truncate">
@@ -1001,7 +1001,7 @@ function FabricantePicker({
 }
 
 const inputCls =
-  "h-12 w-full rounded-2xl border-2 border-border bg-white px-4 text-sm font-semibold shadow-sm outline-none transition focus:border-primary";
+  "h-12 w-full rounded-2xl border-2 border-border bg-card px-4 text-sm font-semibold shadow-sm outline-none transition focus:border-primary";
 
 function FieldLabel({ label, children }: { label: string; children: React.ReactNode }) {
   return (

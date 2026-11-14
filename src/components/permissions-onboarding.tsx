@@ -90,9 +90,9 @@ function PermissionRow({
   onAction?: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-white p-3">
+    <div className="rounded-2xl border border-border bg-card p-3">
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-primary">
+        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-orange-50 dark:bg-secondary text-primary">
           {icon}
         </div>
         <div className="min-w-0 flex-1">

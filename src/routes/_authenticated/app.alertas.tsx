@@ -368,7 +368,7 @@ function NovoAlertaSheet({
           <Field label="Fabricante">
             <button
               onClick={() => setPickFab(true)}
-              className={`flex h-12 w-full items-center justify-between gap-2 rounded-2xl border-2 bg-white px-4 text-sm font-semibold shadow-sm ${
+              className={`flex h-12 w-full items-center justify-between gap-2 rounded-2xl border-2 bg-card px-4 text-sm font-semibold shadow-sm ${
                 form.fabricante_nome ? "border-primary/60" : "border-border"
               }`}
             >
@@ -387,8 +387,8 @@ function NovoAlertaSheet({
                 !form.fabricante_id
                   ? "cursor-not-allowed border-dashed bg-secondary/40 text-muted-foreground"
                   : form.padrao_nome
-                    ? "border-primary/60 bg-white"
-                    : "border-border bg-white"
+                    ? "border-primary/60 bg-card"
+                    : "border-border bg-card"
               }`}
             >
               <span className={form.padrao_nome ? "" : "text-muted-foreground font-medium"}>
@@ -576,4 +576,4 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const inputCls =
-  "h-12 w-full rounded-2xl border-2 border-border bg-white px-4 text-sm font-semibold shadow-sm outline-none transition focus:border-primary";
+  "h-12 w-full rounded-2xl border-2 border-border bg-card px-4 text-sm font-semibold shadow-sm outline-none transition focus:border-primary";

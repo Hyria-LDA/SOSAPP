@@ -1,3 +1,4 @@
+import { BrilhanteTheme } from "@/components/brilhante-theme";
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { BottomNav } from "@/components/bottom-nav";
 import { PermissionsOnboarding } from "@/components/permissions-onboarding";
@@ -13,6 +14,7 @@ function AppLayout() {
 
   return (
     <div className={`mx-auto min-h-screen ${wide?"max-w-6xl":"max-w-md"} bg-background pb-24`}>
+      <BrilhanteTheme />
       <Outlet />
       <BottomNav />
       <PermissionsOnboarding />

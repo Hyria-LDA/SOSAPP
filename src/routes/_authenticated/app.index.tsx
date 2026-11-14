@@ -286,7 +286,7 @@ function Home() {
           }}
           className="col-span-2 flex items-center gap-3 rounded-[20px] bg-black p-3 text-white shadow-[0_10px_24px_-10px_rgba(0,0,0,0.65)] transition active:scale-[0.98]"
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff2e8]">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff2e8] dark:bg-secondary">
             <Bell className="h-4 w-4 text-primary" />
           </div>
           <div className="min-w-0 flex-1">
