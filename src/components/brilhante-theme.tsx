@@ -40,10 +40,10 @@ export function BrilhanteTheme() {
     const root = document.documentElement;
     const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     const previous = meta?.content;
-    root.classList.add("brilhante-grafite");
-    if (meta) meta.content = "#181a1d";
+    root.classList.add("brilhante-cinza");
+    if (meta) meta.content = "#eceef1";
     return () => {
-      root.classList.remove("brilhante-grafite");
+      root.classList.remove("brilhante-cinza");
       if (meta && previous !== undefined) meta.content = previous;
     };
   }, [active]);
