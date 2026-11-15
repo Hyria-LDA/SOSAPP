@@ -1,9 +1,10 @@
+import { animateHomeAction } from "@/lib/home-action-feedback";
 import { selectHomeSlots } from "@/lib/banner-slots";
 import {getStoreLiveBanners,trackBanner,bannerInDate} from "@/lib/store-live-banners";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState, useMemo } from "react";
-import { Search, Plus, Bell } from "lucide-react";
+import { Search, Plus, Bell, ArrowUpRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { Logo } from "@/components/logo";
@@ -256,24 +257,34 @@ function Home() {
             larg_min: 0,
             aceitar_giro: 0,
           }}
-          className="flex h-20 flex-col items-start justify-between rounded-2xl bg-primary p-3 text-primary-foreground shadow-card transition active:scale-[0.98]"
+          className="home-action home-action-search"
+          onPointerDown={e => { if (e.button === 0) animateHomeAction(e.currentTarget, e.clientX, e.clientY); }}
+          onKeyDown={e => { if (e.key === "Enter" && !e.repeat) animateHomeAction(e.currentTarget); }}
         >
-          <Search className="h-5 w-5" />
-          <span className="text-sm font-semibold leading-tight">
-            Buscar
-            <br />
-            Material
+          <span className="home-action-ripple" aria-hidden="true" />
+          <span className="home-action-top" aria-hidden="true">
+            <span className="home-action-icon"><Search size={25} strokeWidth={2.5} /></span>
+            <ArrowUpRight className="home-action-arrow" size={21} />
+          </span>
+          <span className="home-action-copy">
+            <span className="home-action-title">Buscar material</span>
+            <span className="home-action-description">Encontre o que precisa</span>
           </span>
         </Link>
         <Link
           to="/app/anunciar"
-          className="flex h-20 flex-col items-start justify-between rounded-2xl bg-accent p-3 text-accent-foreground shadow-card transition active:scale-[0.98]"
+          className="home-action home-action-publish"
+          onPointerDown={e => { if (e.button === 0) animateHomeAction(e.currentTarget, e.clientX, e.clientY); }}
+          onKeyDown={e => { if (e.key === "Enter" && !e.repeat) animateHomeAction(e.currentTarget); }}
         >
-          <Plus className="h-5 w-5" />
-          <span className="text-sm font-semibold leading-tight">
-            Anunciar
-            <br />
-            Sobra
+          <span className="home-action-ripple" aria-hidden="true" />
+          <span className="home-action-top" aria-hidden="true">
+            <span className="home-action-icon"><Plus size={27} strokeWidth={2.5} /></span>
+            <ArrowUpRight className="home-action-arrow" size={21} />
+          </span>
+          <span className="home-action-copy">
+            <span className="home-action-title">Anunciar sobra</span>
+            <span className="home-action-description">Dê valor ao que sobrou</span>
           </span>
         </Link>
         <Link
