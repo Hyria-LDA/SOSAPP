@@ -221,7 +221,11 @@ function Home() {
     <div className="safe-top px-5 pt-3">
       <SplashBannerGate />
       <div className="flex items-center justify-between">
-        <Logo size="sm" />
+        {/* The logo asset has transparent padding. Keep the artwork at its
+            current size while removing that empty space from the home header. */}
+        <div className="h-24 overflow-hidden">
+          <Logo size="sm" className="-translate-y-10" />
+        </div>
       </div>
 
       {banners && banners.length > 0 && (
