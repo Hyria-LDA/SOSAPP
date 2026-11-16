@@ -149,7 +149,7 @@ function Home() {
     refetchInterval: 60 * 1000,
   });
 
-  const { data: popularesRaw, isFetching: materialsLoading, isError: materialsError } = useQuery({
+  const { data: popularesRaw, isFetching: materialsLoading, isError: materialsError, isSuccess: materialsReady } = useQuery({
     queryKey: ["sobras-perto-regiao", geoKey, rotationSeedRef.current],
     enabled: !locationLoading && hasValidCoords,
     queryFn: async () => {
@@ -353,12 +353,23 @@ function Home() {
         </div>
         <p className="mb-2 text-xs text-muted-foreground">Anúncios em até 50 km da sua localização de referência.</p>
         {populares.length === 0 && (
-          <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground" role="status">
-            {locationLoading || materialsLoading ? "Buscando anúncios da região…"
-              : !hasValidCoords ? "Atualize a localização da sua empresa ou permita o acesso à localização para ver anúncios próximos."
-              : materialsError ? "Não foi possível carregar os anúncios. Tente novamente."
-              : "Ainda não há anúncios em até 50 km de você."}
-          </p>
+          <div className="rounded-2xl border border-border bg-card p-5 text-sm shadow-card">
+            <p className="text-muted-foreground" role="status">
+              {locationLoading || materialsLoading ? "Buscando anúncios da região…"
+                : !hasValidCoords ? "Atualize a localização da sua empresa ou permita o acesso à localização para ver anúncios próximos."
+                : materialsError ? "Não foi possível carregar os anúncios. Tente novamente."
+                : "Ainda não há anúncios em até 50 km de você."}
+            </p>
+            {!locationLoading && !materialsLoading && hasValidCoords && materialsReady && !materialsError && (
+              <Link
+                to="/app/anunciar"
+                className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-center font-bold text-primary-foreground shadow-sm transition active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <Plus size={20} className="shrink-0" aria-hidden="true" />
+                Seja o primeiro a anunciar
+              </Link>
+            )}
+          </div>
         )}
         <div className="space-y-2">
           {visibleMaterials.map((m: any) => (
