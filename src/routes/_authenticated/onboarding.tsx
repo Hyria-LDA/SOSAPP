@@ -51,7 +51,7 @@ function Onboarding() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!endereco.latitude || !endereco.longitude) {
+    if (endereco.latitude == null || endereco.longitude == null) {
       toast.error("Localize o endereço da empresa no mapa antes de continuar.");
       return;
     }
@@ -104,8 +104,8 @@ function Onboarding() {
     form.nome_empresa &&
     form.responsavel &&
     form.whatsapp &&
-    endereco.latitude &&
-    endereco.longitude
+    endereco.latitude != null &&
+    endereco.longitude != null
   );
 
   return (
@@ -165,7 +165,7 @@ function Onboarding() {
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Endereço da empresa
             </h2>
-            <EnderecoEmpresaForm value={endereco} onChange={setEndereco} />
+            <EnderecoEmpresaForm automaticLocation value={endereco} onChange={setEndereco} />
           </div>
 
           <button

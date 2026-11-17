@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Loader2, MapPin, Search, Check, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { geocodeAddress, lookupCep, osmEmbedUrl, type Coords } from "@/lib/geocode";
+import { geocodeAddress, lookupCep, osmEmbedUrl } from "@/lib/geocode";
 
 export type EnderecoValue = {
   endereco: string;
@@ -50,53 +50,110 @@ const inputCls =
 export function EnderecoEmpresaForm({
   value,
   onChange,
+  automaticLocation = false,
 }: {
+  automaticLocation?: boolean;
   value: EnderecoValue;
   onChange: (v: EnderecoValue) => void;
 }) {
   const v = value;
-  const set = <K extends keyof EnderecoValue>(k: K, val: EnderecoValue[K]) =>
-    onChange({ ...v, [k]: val });
-
+  const latest = useRef(value);
+  latest.current = value;
+  const change = useRef(onChange);
+  change.current = onChange;
+  const lookupId = useRef(0);
+  const locationId = useRef(0);
+  const cepPending = useRef(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
-  const [confirmed, setConfirmed] = useState(!!(v.latitude && v.longitude));
-
-  // Sempre que o endereço muda, a confirmação cai
+  const [confirmed, setConfirmed] = useState(v.latitude != null && v.longitude != null);
+  const [cepState, setCepState] = useState<"idle" | "found" | "failed">("idle");
+  const [locationFailed, setLocationFailed] = useState(false);
+  const set = <K extends keyof EnderecoValue>(k: K, val: EnderecoValue[K]) => {
+    locationId.current++;
+    setGeoLoading(false);
+    setLocationFailed(false);
+    if (k === "cep") {
+      lookupId.current++;
+      cepPending.current = false;
+      setCepLoading(false);
+      setCepState("idle");
+    }
+    const next = { ...latest.current, [k]: val, latitude: null, longitude: null };
+    latest.current = next;
+    onChange(next);
+  };
   const markDirty = () => setConfirmed(false);
 
+  const locate = async (address: EnderecoValue) => {
+    if (automaticLocation && (!address.endereco.trim() || !address.numero.trim() || !address.cidade.trim() || !address.estado)) return;
+    const id = ++locationId.current;
+    setGeoLoading(true);
+    setLocationFailed(false);
+    try {
+      const c = await geocodeAddress(address);
+      if (id !== locationId.current) return;
+      if (!c || !Number.isFinite(c.lat) || !Number.isFinite(c.lng)) {
+        setLocationFailed(true);
+        toast.error("Não conseguimos localizar este endereço. Confira os dados e tente novamente.");
+        return;
+      }
+      const next = { ...latest.current, latitude: c.lat, longitude: c.lng };
+      latest.current = next;
+      change.current(next);
+      setConfirmed(false);
+    } catch {
+      if (id === locationId.current) setLocationFailed(true);
+    } finally {
+      if (id === locationId.current) setGeoLoading(false);
+    }
+  };
+  const autoLocate = () => {
+    const address = latest.current;
+    if (automaticLocation && cepState === "found" && !cepPending.current && !geoLoading && address.latitude == null) {
+      void locate(address);
+    }
+  };
   const onCepBlur = async () => {
-    if (!v.cep) return;
+    const cep = latest.current.cep;
+    if (!cep.trim() || cepPending.current) return;
+    const id = ++lookupId.current;
+    cepPending.current = true;
     setCepLoading(true);
-    const r = await lookupCep(v.cep);
+    const r = await lookupCep(cep);
+    if (id !== lookupId.current) return;
+    cepPending.current = false;
     setCepLoading(false);
     if (!r) {
-      toast.error("CEP não encontrado");
+      setCepState("failed");
+      toast.error("Não foi possível consultar o CEP. Confira o número ou preencha o endereço manualmente.");
       return;
     }
-    onChange({
-      ...v,
-      endereco: r.logradouro || v.endereco,
-      bairro: r.bairro || v.bairro,
-      cidade: r.localidade || v.cidade,
-      estado: r.uf || v.estado,
+    const current = latest.current;
+    const next = {
+      ...current,
+      endereco: r.logradouro || current.endereco,
+      bairro: r.bairro || current.bairro,
+      cidade: r.localidade || current.cidade,
+      estado: r.uf || current.estado,
       latitude: null,
       longitude: null,
-    });
+    };
+    latest.current = next;
+    change.current(next);
+    setCepState("found");
+    setLocationFailed(false);
     setConfirmed(false);
+    if (automaticLocation) void locate(next);
   };
 
-  const runGeocode = async () => {
-    setGeoLoading(true);
-    const c = await geocodeAddress(v);
-    setGeoLoading(false);
-    if (!c) {
-      toast.error("Não conseguimos localizar este endereço. Verifique os dados informados.");
+  const runGeocode = () => {
+    const address = latest.current;
+    if (automaticLocation && (!address.endereco.trim() || !address.numero.trim() || !address.cidade.trim())) {
+      toast.error("Preencha rua, número e cidade para localizar o endereço.");
       return;
     }
-    onChange({ ...v, latitude: c.lat, longitude: c.lng });
-    setConfirmed(false);
-    toast.success("Endereço localizado no mapa");
+    void locate(address);
   };
 
   const hasCoords = v.latitude != null && v.longitude != null;
@@ -126,6 +183,7 @@ export function EnderecoEmpresaForm({
           <button
             type="button"
             onClick={onCepBlur}
+            disabled={cepLoading}
             className="h-11 rounded-xl bg-secondary px-3 text-xs font-semibold"
           >
             Buscar CEP
@@ -136,6 +194,7 @@ export function EnderecoEmpresaForm({
       <Field label="Endereço">
         <input
           className={inputCls}
+          onBlur={autoLocate}
           value={v.endereco}
           onChange={(e) => {
             set("endereco", e.target.value);
@@ -149,6 +208,7 @@ export function EnderecoEmpresaForm({
         <Field label="Número">
           <input
             className={inputCls}
+            onBlur={autoLocate}
             value={v.numero}
             onChange={(e) => {
               set("numero", e.target.value);
@@ -160,6 +220,7 @@ export function EnderecoEmpresaForm({
         <Field label="Bairro">
           <input
             className={inputCls}
+            onBlur={autoLocate}
             value={v.bairro}
             onChange={(e) => {
               set("bairro", e.target.value);
@@ -173,6 +234,7 @@ export function EnderecoEmpresaForm({
         <Field label="Cidade">
           <input
             className={inputCls}
+            onBlur={autoLocate}
             value={v.cidade}
             onChange={(e) => {
               set("cidade", e.target.value);
@@ -183,6 +245,7 @@ export function EnderecoEmpresaForm({
         <Field label="UF">
           <select
             className={inputCls + " w-20"}
+            onBlur={autoLocate}
             value={v.estado}
             onChange={(e) => {
               set("estado", e.target.value);
@@ -196,7 +259,11 @@ export function EnderecoEmpresaForm({
         </Field>
       </div>
 
-      <div className="pt-1">
+      {automaticLocation && !geoLoading && cepState === "found" && !hasCoords && !locationFailed && (
+        <p className="text-xs text-muted-foreground">Complete a rua e o número. A localização será buscada automaticamente.</p>
+      )}
+      {automaticLocation && geoLoading && <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 size={16} className="animate-spin" />Localizando seu endereço…</p>}
+      {(!automaticLocation || cepState === "failed" || locationFailed) && <div className="pt-1">
         <button
           type="button"
           onClick={runGeocode}
@@ -210,7 +277,7 @@ export function EnderecoEmpresaForm({
           )}
           Localizar pelo endereço
         </button>
-      </div>
+      </div>}
 
       {hasCoords && (
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
