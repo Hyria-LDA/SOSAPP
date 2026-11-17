@@ -21,7 +21,6 @@ type RevenueCatSubscriber = {
 };
 
 const PLAN_PRIORITY = ["premium", "ultra", "tx"] as const;
-type PaidPlan = (typeof PLAN_PRIORITY)[number];
 
 function isActive(entitlement: RevenueCatEntitlement | undefined) {
   if (!entitlement) return false;
@@ -44,12 +43,6 @@ Deno.serve(async (request) => {
     const { data: authData, error: authError } = await admin.auth.getUser(jwt);
     if (authError || !authData.user) return json({ error: "not_authenticated" }, 401);
     const userId = authData.user.id;
-
-    const { data: previous } = await admin
-      .from("revenuecat_subscriptions")
-      .select("status")
-      .eq("user_id", userId)
-      .maybeSingle();
 
     const rcResponse = await fetch(
       `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`,
@@ -79,82 +72,32 @@ Deno.serve(async (request) => {
     const subscription = productId ? rcData.subscriber?.subscriptions?.[productId] : undefined;
     const expiresAt = selected?.expires_date ?? subscription?.expires_date ?? null;
 
-    const { data: empresa } = await admin
-      .from("empresas")
-      .select("id")
-      .eq("owner_id", userId)
-      .maybeSingle();
-
-    if (activePlan && empresa) {
-      const { data: plan, error: planError } = await admin
-        .from("planos")
-        .select("id")
-        .eq("slug", activePlan)
-        .eq("ativo", true)
-        .single();
-      if (planError || !plan) throw planError ?? new Error("plan_not_found");
-
-      const { error: companyError } = await admin
-        .from("empresas")
-        .update({
-          plano_id: plan.id,
-          plano: activePlan,
-          plano_inicio: selected?.purchase_date ?? new Date().toISOString(),
-          plano_vencimento: expiresAt,
-        })
-        .eq("id", empresa.id);
-      if (companyError) throw companyError;
-    } else if (!activePlan && previous?.status === "active" && empresa) {
-      const { data: freePlan, error: freePlanError } = await admin
-        .from("planos")
-        .select("id")
-        .eq("slug", "free")
-        .single();
-      if (freePlanError || !freePlan) throw freePlanError ?? new Error("free_plan_not_found");
-
-      const { error: companyError } = await admin
-        .from("empresas")
-        .update({
-          plano_id: freePlan.id,
-          plano: "free",
-          plano_inicio: null,
-          plano_vencimento: null,
-        })
-        .eq("id", empresa.id);
-      if (companyError) throw companyError;
+    // Never convert a sandbox purchase into a production entitlement. Unknown
+    // purchase environments also fail closed; no existing plan is changed.
+    if (activePlan && subscription?.is_sandbox !== false) {
+      return json({ error: "production_purchase_required" }, 409);
     }
 
     const hadEntitlement = PLAN_PRIORITY.some((plan) => Boolean(entitlements[plan]));
-    const status = activePlan ? "active" : hadEntitlement ? "expired" : "none";
-    const { error: subscriptionError } = await admin.from("revenuecat_subscriptions").upsert(
-      {
-        user_id: userId,
-        empresa_id: empresa?.id ?? null,
-        app_user_id: userId,
+    const { data, error } = await admin.rpc("apply_revenuecat_subscription", {
+      _user_id: userId,
+      _subscription: {
         entitlement_id: storePlan ?? null,
         product_id: productId,
-        status,
+        status: activePlan ? "active" : hadEntitlement ? "expired" : "none",
         expires_at: expiresAt,
+        purchase_date: selected?.purchase_date ?? null,
         will_renew: activePlan ? !subscription?.unsubscribe_detected_at : false,
         sandbox: subscription?.is_sandbox ?? null,
-        last_synced_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       },
-      { onConflict: "user_id" },
-    );
-    if (subscriptionError) throw subscriptionError;
-
-    return json({
-      ok: true,
-      active: Boolean(activePlan),
-      plan: (activePlan ?? "free") as PaidPlan | "free",
-      expiresAt,
     });
+    if (error) throw error;
+    return json({ ok: true, ...data });
   } catch (error) {
     console.error("[sync-revenuecat-subscription]", error);
     return json(
       {
-        error: error instanceof Error ? error.message : "subscription_sync_failed",
+        error: "subscription_sync_failed",
       },
       500,
     );

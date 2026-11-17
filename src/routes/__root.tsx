@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
 
 import appCss from "../styles.css?url";
+import { createSessionCacheGuard } from "../lib/session-cache";
 import { reportAppError } from "../lib/app-error-reporting";
 import { startPartnerBranchAttribution } from "../lib/partner-branch";
 import { Toaster } from "@/components/ui/sonner";
@@ -302,7 +303,9 @@ function RootComponent() {
       return;
     }
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    const guardSessionCache = createSessionCacheGuard(() => queryClient.clear());
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      guardSessionCache(event, session?.user.id ?? null);
       if (event === "PASSWORD_RECOVERY") {
         if (window.location.pathname !== "/auth/redefinir") {
           window.location.replace("/auth/redefinir");

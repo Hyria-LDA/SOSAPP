@@ -22,7 +22,7 @@ Deno.serve(async (request) => {
     const { data: partner, error: partnerError } = await admin
       .from("vendedores_parceiros")
       .select("id")
-      .ilike("codigo", code)
+      .ilike("codigo", code.replaceAll("_", "\\_"))
       .eq("ativo", true)
       .maybeSingle();
     if (partnerError) throw partnerError;
