@@ -33,6 +33,7 @@ import { Route as AuthenticatedAppPerfilRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAppAdminIndexRouteImport } from './routes/_authenticated/app.admin.index'
 import { Route as AuthenticatedAppAdminAtualizacaoRouteImport } from './routes/_authenticated/app.admin.atualizacao'
 import { Route as AuthenticatedAppAdminBannersRouteImport } from './routes/_authenticated/app.admin.banners'
+import { Route as AuthenticatedAppAdminComportamentoRouteImport } from './routes/_authenticated/app.admin.comportamento'
 import { Route as AuthenticatedAppAdminDenunciasRouteImport } from './routes/_authenticated/app.admin.denuncias'
 import { Route as AuthenticatedAppAdminLojistasRouteImport } from './routes/_authenticated/app.admin.lojistas'
 import { Route as AuthenticatedAppAdminModeracaoFotosRouteImport } from './routes/_authenticated/app.admin.moderacao-fotos'
@@ -171,6 +172,12 @@ const AuthenticatedAppAdminBannersRoute =
     path: '/banners',
     getParentRoute: () => AuthenticatedAppAdminRoute,
   } as any)
+const AuthenticatedAppAdminComportamentoRoute =
+  AuthenticatedAppAdminComportamentoRouteImport.update({
+    id: '/comportamento',
+    path: '/comportamento',
+    getParentRoute: () => AuthenticatedAppAdminRoute,
+  } as any)
 const AuthenticatedAppAdminDenunciasRoute =
   AuthenticatedAppAdminDenunciasRouteImport.update({
     id: '/denuncias',
@@ -273,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/admin/atualizacao': typeof AuthenticatedAppAdminAtualizacaoRoute
   '/app/admin/banners': typeof AuthenticatedAppAdminBannersRoute
+  '/app/admin/comportamento': typeof AuthenticatedAppAdminComportamentoRoute
   '/app/admin/denuncias': typeof AuthenticatedAppAdminDenunciasRoute
   '/app/admin/lojistas': typeof AuthenticatedAppAdminLojistasRoute
   '/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
@@ -309,6 +317,7 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/admin/atualizacao': typeof AuthenticatedAppAdminAtualizacaoRoute
   '/app/admin/banners': typeof AuthenticatedAppAdminBannersRoute
+  '/app/admin/comportamento': typeof AuthenticatedAppAdminComportamentoRoute
   '/app/admin/denuncias': typeof AuthenticatedAppAdminDenunciasRoute
   '/app/admin/lojistas': typeof AuthenticatedAppAdminLojistasRoute
   '/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
@@ -349,6 +358,7 @@ export interface FileRoutesById {
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/admin/atualizacao': typeof AuthenticatedAppAdminAtualizacaoRoute
   '/_authenticated/app/admin/banners': typeof AuthenticatedAppAdminBannersRoute
+  '/_authenticated/app/admin/comportamento': typeof AuthenticatedAppAdminComportamentoRoute
   '/_authenticated/app/admin/denuncias': typeof AuthenticatedAppAdminDenunciasRoute
   '/_authenticated/app/admin/lojistas': typeof AuthenticatedAppAdminLojistasRoute
   '/_authenticated/app/admin/moderacao-fotos': typeof AuthenticatedAppAdminModeracaoFotosRoute
@@ -389,6 +399,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/admin/atualizacao'
     | '/app/admin/banners'
+    | '/app/admin/comportamento'
     | '/app/admin/denuncias'
     | '/app/admin/lojistas'
     | '/app/admin/moderacao-fotos'
@@ -425,6 +436,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/admin/atualizacao'
     | '/app/admin/banners'
+    | '/app/admin/comportamento'
     | '/app/admin/denuncias'
     | '/app/admin/lojistas'
     | '/app/admin/moderacao-fotos'
@@ -464,6 +476,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/'
     | '/_authenticated/app/admin/atualizacao'
     | '/_authenticated/app/admin/banners'
+    | '/_authenticated/app/admin/comportamento'
     | '/_authenticated/app/admin/denuncias'
     | '/_authenticated/app/admin/lojistas'
     | '/_authenticated/app/admin/moderacao-fotos'
@@ -662,6 +675,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminBannersRouteImport
       parentRoute: typeof AuthenticatedAppAdminRoute
     }
+    '/_authenticated/app/admin/comportamento': {
+      id: '/_authenticated/app/admin/comportamento'
+      path: '/comportamento'
+      fullPath: '/app/admin/comportamento'
+      preLoaderRoute: typeof AuthenticatedAppAdminComportamentoRouteImport
+      parentRoute: typeof AuthenticatedAppAdminRoute
+    }
     '/_authenticated/app/admin/denuncias': {
       id: '/_authenticated/app/admin/denuncias'
       path: '/denuncias'
@@ -759,6 +779,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAppAdminRouteChildren {
   AuthenticatedAppAdminAtualizacaoRoute: typeof AuthenticatedAppAdminAtualizacaoRoute
   AuthenticatedAppAdminBannersRoute: typeof AuthenticatedAppAdminBannersRoute
+  AuthenticatedAppAdminComportamentoRoute: typeof AuthenticatedAppAdminComportamentoRoute
   AuthenticatedAppAdminDenunciasRoute: typeof AuthenticatedAppAdminDenunciasRoute
   AuthenticatedAppAdminLojistasRoute: typeof AuthenticatedAppAdminLojistasRoute
   AuthenticatedAppAdminModeracaoFotosRoute: typeof AuthenticatedAppAdminModeracaoFotosRoute
@@ -775,6 +796,8 @@ interface AuthenticatedAppAdminRouteChildren {
 const AuthenticatedAppAdminRouteChildren: AuthenticatedAppAdminRouteChildren = {
   AuthenticatedAppAdminAtualizacaoRoute: AuthenticatedAppAdminAtualizacaoRoute,
   AuthenticatedAppAdminBannersRoute: AuthenticatedAppAdminBannersRoute,
+  AuthenticatedAppAdminComportamentoRoute:
+    AuthenticatedAppAdminComportamentoRoute,
   AuthenticatedAppAdminDenunciasRoute: AuthenticatedAppAdminDenunciasRoute,
   AuthenticatedAppAdminLojistasRoute: AuthenticatedAppAdminLojistasRoute,
   AuthenticatedAppAdminModeracaoFotosRoute:

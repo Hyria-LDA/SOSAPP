@@ -1,3 +1,4 @@
+import { trackBehavior } from "@/lib/behavior-analytics";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -91,6 +92,7 @@ function Onboarding() {
         localStorage.removeItem("ref_codigo");
       }
 
+      trackBehavior("signup_complete");
       toast.success("Empresa cadastrada!");
       navigate({ to: "/app" });
     } catch (err: any) {

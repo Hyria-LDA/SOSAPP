@@ -1,3 +1,5 @@
+import { BehaviorRecorder } from "@/components/behavior-recorder";
+import { trackNotificationOpen } from "@/lib/behavior-analytics";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ForceUpdateGate } from "@/components/force-update-gate";
 import {
@@ -187,7 +189,7 @@ function InAppNotificationListener({ queryClient }: { queryClient: QueryClient }
               description: notif.mensagem,
               action: {
                 label: "Ver",
-                onClick: () => router.navigate({ to: "/app/notificacoes" }),
+                onClick: () => { void trackNotificationOpen("toast"); router.navigate({ to: "/app/notificacoes" }); },
               },
             });
           },
@@ -352,6 +354,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <Outlet />
       <ForceUpdateGate />
+      <BehaviorRecorder />
       <InAppNotificationListener queryClient={queryClient} />
       <InAppPurchaseSync queryClient={queryClient} />
       <Toaster position="top-center" richColors />

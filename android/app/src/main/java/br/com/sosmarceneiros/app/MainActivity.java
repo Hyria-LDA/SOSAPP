@@ -135,7 +135,9 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
             return;
         }
 
-        getBridge().getWebView().post(() -> getBridge().getWebView().loadUrl(targetUrl));
+        final String trackedUrl = Uri.parse(targetUrl).buildUpon().appendQueryParameter("_sos_push", "1").build().toString();
+        intent.removeExtra("sos_push_path");
+        getBridge().getWebView().post(() -> getBridge().getWebView().loadUrl(trackedUrl));
     }
 
     private void openHomeOnLauncherIntent(Intent intent) {

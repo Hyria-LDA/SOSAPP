@@ -1,3 +1,4 @@
+import { trackBehavior } from "@/lib/behavior-analytics";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -468,6 +469,7 @@ function Anunciar() {
       if (ins.error) throw ins.error;
 
       window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+      trackBehavior("publish_success");
       toast.success("Anúncio publicado!");
       navigate({ to: "/app/estoque" });
     } catch (err: any) {

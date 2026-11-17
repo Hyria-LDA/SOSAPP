@@ -1,3 +1,4 @@
+import { trackNotificationOpen } from "@/lib/behavior-analytics";
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { App } from "@capacitor/app";
@@ -88,6 +89,7 @@ export function usePushNotifications() {
     const handles: PluginListenerHandle[] = [];
 
     const openNotificationTarget = async (data?: PushData) => {
+      await Promise.race([trackNotificationOpen("push"), new Promise(resolve => setTimeout(resolve, 800))]);
       void clearNativeNotificationBadge();
 
       const externalUrl = asString(data?.external_url);

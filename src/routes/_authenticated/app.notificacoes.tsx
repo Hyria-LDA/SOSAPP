@@ -1,3 +1,4 @@
+import { trackNotificationOpen } from "@/lib/behavior-analytics";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -163,6 +164,7 @@ function NotificacoesPage() {
                     <Link
                       to="/app/material/$id"
                       params={{ id: n.material_id }}
+                      onClick={() => { void trackNotificationOpen("inbox"); }}
                       className="mt-3 inline-flex h-9 items-center rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground"
                     >
                       {isComprador ? "Ver anúncio" : "Ver interessado"}

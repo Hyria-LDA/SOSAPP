@@ -1,3 +1,4 @@
+import { trackBehavior } from "@/lib/behavior-analytics";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -162,7 +163,7 @@ function Buscar() {
     },
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching, isError } = useQuery({
     queryKey: ["buscar", params.fabricante_id, params.padrao_id, params.espessuras],
     queryFn: async () => {
       let query = supabase
@@ -264,6 +265,19 @@ function Buscar() {
 
   const hasSelection = !!(params.fabricante_id || params.padrao_id);
   const visibleResults = results.slice(0, visibleResultCount);
+  const lastSearchMetric = useRef("");
+  useEffect(() => {
+    if (isLoading || isFetching || isError || !data) return;
+    // Signature stays in memory; no query text or dimensions are sent to analytics.
+    const signature = JSON.stringify([params, effectiveCompMin, effectiveLargMin, results.length]);
+    if (signature === lastSearchMetric.current) return;
+    const timer = window.setTimeout(() => {
+      lastSearchMetric.current = signature;
+      trackBehavior("search_result", results.length ? "com_resultados" : "sem_resultados");
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [data, isLoading, isFetching, isError, params, effectiveCompMin, effectiveLargMin, results.length]);
+
 
   useEffect(() => {
     setVisibleResultCount(20);
@@ -293,12 +307,14 @@ function Buscar() {
   }, [results.length, visibleResultCount]);
 
   const update = useCallback(
-    (patch: Partial<typeof params>) =>
-      navigate({
+    (patch: Partial<typeof params>) => {
+      trackBehavior("action", "filtrar");
+      return navigate({
         search: (prev: any) => ({ ...prev, ...patch }) as any,
         replace: true,
         resetScroll: false,
-      }),
+      });
+    },
     [navigate],
   );
 

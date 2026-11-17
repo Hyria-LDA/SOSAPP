@@ -80,6 +80,8 @@ function Admin() {
         <Stat icon={AlertTriangle} label="Vendidos" value={data?.vendidos ?? "—"} />
       </div>
 
+      <a href="/app/admin/comportamento" className="mt-5 block rounded-2xl bg-card p-4 shadow-card"><div className="font-bold">Comportamento por região</div><div className="text-xs text-muted-foreground">Acessos, ações e abertura de notificações</div></a>
+
       <Link
         to="/app/admin/empresas"
         className="mt-5 flex items-center justify-between rounded-2xl bg-card p-4 shadow-card"

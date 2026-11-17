@@ -21,7 +21,7 @@ function PrivacyPage() {
           <Logo className="h-16 w-auto" />
           <h1 className="mt-6 text-3xl font-black">Política de Privacidade</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Última atualização: 13 de julho de 2026
+            Última atualização: 17 de novembro de 2026
           </p>
         </header>
 
@@ -35,6 +35,16 @@ function PrivacyPage() {
             Podemos coletar dados informados por você, como nome, e-mail, telefone, WhatsApp, nome
             da empresa, endereço comercial, localização aproximada da empresa, fotos de materiais,
             anúncios, pedidos de busca, alertas automáticos e mensagens relacionadas ao uso do app.
+          </Section>
+
+          <Section title="Métricas de uso">
+            Registramos ações de contas autenticadas, como abertura do aplicativo, páginas visitadas,
+            cliques nos principais botões, publicação de anúncios e toque em notificações. Associamos
+            essas ações à cidade e ao estado do cadastro para entender o uso por região e planejar
+            comunicações. O painel administrativo mostra resultados agregados. Não gravamos a tela,
+            senhas, textos digitados ou conteúdo de mensagens por esse mecanismo. Os registros de
+            comportamento são mantidos por até 90 dias e vinculados à conta para contagem de pessoas
+            distintas e exclusão junto com a conta.
           </Section>
 
           <Section title="3. Login com Google e Apple">
