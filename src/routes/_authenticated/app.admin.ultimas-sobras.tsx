@@ -24,14 +24,21 @@ type Material = {
   empresa_id: string;
   padrao: string;
   fabricante: string | null;
+  observacoes: string | null;
+  comprimento_cm: number;
+  largura_cm: number;
+  espessura_mm: number;
+  deleted_reason?: string;
+  published_at?: string;
   created_at: string;
-  status: Database["public"]["Enums"]["material_status"];
+  status: Database["public"]["Enums"]["material_status"] | "deleted_admin";
   empresas: Company;
   fotos_materiais: Photo[];
 };
 type Cursor = { created_at: string; id: string } | null;
 const PAGE_SIZE = 20;
 const statuses: Record<Material["status"], string> = {
+  deleted_admin: "Excluídos pela administração",
   ativo: "Ativo",
   vendido: "Vendido",
   pausado: "Pausado",
@@ -112,6 +119,21 @@ function RecentMaterials() {
       ],
     };
   }, [companies.data, uf, city]);
+  const deletedHistory = async (cursor: Cursor, limit: number, signal: AbortSignal) => {
+    const { data, error } = await supabase.rpc("admin_rejected_material_history", {
+      _states: uf ? options.rawStates : undefined,
+      _cities: city ? options.rawCities : undefined,
+      _company: company || undefined,
+      _before_time: cursor?.created_at,
+      _before_id: cursor?.id,
+      _limit: limit,
+    }).abortSignal(signal);
+    if (error) throw error;
+    return data as unknown as { total: number; rows: {
+      id: string; empresa_id: string; created_at: string; reason: string; empresa: Company;
+      snapshot: (Pick<Material, "padrao" | "fabricante" | "observacoes" | "comprimento_cm" | "largura_cm" | "espessura_mm"> & { published_at: string }) | null;
+    }[] };
+  };
   // Count all matching ads without downloading their rows or photos.
   const total = useQuery({
     queryKey: [
@@ -120,13 +142,14 @@ function RecentMaterials() {
     ],
     enabled: !!companies.data,
     queryFn: async ({ signal }) => {
+      if (status === "deleted_admin") return (await deletedHistory(null, 0, signal)).total;
       let query = supabase
         .from("materiais")
         .select("id,empresas!inner(id)", { count: "exact", head: true });
       if (uf) query = query.in("empresas.estado", options.rawStates);
       if (city) query = query.in("empresas.cidade", options.rawCities);
       if (company) query = query.eq("empresa_id", company);
-      if (status) query = query.eq("status", status as Material["status"]);
+      if (status) query = query.eq("status", status as Database["public"]["Enums"]["material_status"]);
       const { count, error } = await query.abortSignal(signal);
       if (error) throw error;
       if (count === null) throw new Error("Contagem indisponível.");
@@ -147,10 +170,24 @@ function RecentMaterials() {
     enabled: !!companies.data,
     initialPageParam: null as Cursor,
     queryFn: async ({ pageParam, signal }) => {
+      if (status === "deleted_admin") {
+        const history = await deletedHistory(pageParam, PAGE_SIZE + 1, signal);
+        const rows: Material[] = history.rows.slice(0, PAGE_SIZE).map((r) => ({
+          ...r.snapshot,
+          id: r.id, empresa_id: r.empresa_id, created_at: r.created_at,
+          padrao: r.snapshot?.padrao || "Anúncio excluído (detalhes não disponíveis)",
+          fabricante: r.snapshot?.fabricante ?? null, observacoes: r.snapshot?.observacoes ?? null,
+          comprimento_cm: r.snapshot?.comprimento_cm ?? NaN,
+          largura_cm: r.snapshot?.largura_cm ?? NaN, espessura_mm: r.snapshot?.espessura_mm ?? NaN,
+          deleted_reason: r.reason, status: "deleted_admin", empresas: r.empresa, fotos_materiais: [],
+        }));
+        const last = rows.at(-1);
+        return { rows, next: (history.rows.length > PAGE_SIZE && last ? { created_at: last.created_at, id: last.id } : null) as Cursor };
+      }
       let query = supabase
         .from("materiais")
         .select(
-          "id,empresa_id,padrao,fabricante,created_at,status,empresas!inner(id,nome_empresa,cidade,estado),fotos_materiais(id,url,thumbnail_url,ordem,ai_status)",
+          "id,empresa_id,padrao,fabricante,observacoes,comprimento_cm,largura_cm,espessura_mm,created_at,status,empresas!inner(id,nome_empresa,cidade,estado),fotos_materiais(id,url,thumbnail_url,ordem,ai_status)",
         )
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
@@ -158,7 +195,7 @@ function RecentMaterials() {
       if (uf) query = query.in("empresas.estado", options.rawStates);
       if (city) query = query.in("empresas.cidade", options.rawCities);
       if (company) query = query.eq("empresa_id", company);
-      if (status) query = query.eq("status", status as Material["status"]);
+      if (status) query = query.eq("status", status as Database["public"]["Enums"]["material_status"]);
       if (pageParam)
         query = query.or(
           `created_at.lt.${pageParam.created_at},and(created_at.eq.${pageParam.created_at},id.lt.${pageParam.id})`,
@@ -379,7 +416,7 @@ function RecentMaterials() {
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <h3 className="font-bold">{row.padrao || "Sobra anunciada"}</h3>
                   <span className="shrink-0 rounded-full bg-secondary px-2 py-1 text-[10px] font-bold">
-                    {statuses[row.status] || row.status}
+                    {row.status === "deleted_admin" ? "Excluído pela administração" : statuses[row.status] || row.status}
                   </span>
                 </div>
                 {row.fotos_materiais.length ? (
@@ -408,7 +445,7 @@ function RecentMaterials() {
                   </div>
                 ) : (
                   <div className="rounded-xl bg-secondary p-8 text-center text-sm">
-                    Anúncio sem fotos
+                    {row.status === "deleted_admin" ? "Fotos removidas na exclusão" : "Anúncio sem fotos"}
                   </div>
                 )}
                 <Link
@@ -423,12 +460,40 @@ function RecentMaterials() {
                   {row.empresas.estado || "UF não informada"}
                 </p>
                 <p className="mt-2 text-xs">
-                  Publicado em {new Date(row.created_at).toLocaleString("pt-BR")}
+                  {row.status === "deleted_admin" ? "Excluído em" : "Publicado em"} {new Date(row.created_at).toLocaleString("pt-BR")}
                 </p>
                 {row.fabricante && (
                   <p className="mt-1 text-xs text-muted-foreground">{row.fabricante}</p>
                 )}
-                <div className="mt-4 flex flex-wrap gap-2">
+                <dl className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-secondary p-3 text-sm">
+                  {[
+                    ["Comprimento", row.comprimento_cm, "cm"],
+                    ["Largura", row.largura_cm, "cm"],
+                    ["Espessura", row.espessura_mm, "mm"],
+                  ].map(([label, value, unit]) => (
+                    <div key={label} className="min-w-0">
+                      <dt className="text-[11px] text-muted-foreground">{label}</dt>
+                      <dd className="font-semibold">
+                        {typeof value === "number" && Number.isFinite(value)
+                          ? `${value.toLocaleString("pt-BR")} ${unit}`
+                          : "Não informada"}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <div className="mt-3 text-sm">
+                  <p className="font-semibold">Descrição</p>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-muted-foreground [overflow-wrap:anywhere]">
+                    {row.observacoes?.trim() || "Descrição não informada."}
+                  </p>
+                </div>
+                {row.deleted_reason && (
+                  <div className="mt-3 rounded-xl bg-destructive/10 p-3 text-sm">
+                    <p className="font-semibold">Motivo da exclusão</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{row.deleted_reason}</p>
+                  </div>
+                )}
+                {row.status !== "deleted_admin" && <div className="mt-4 flex flex-wrap gap-2">
                   <Link to="/app/material/$id" params={{ id: row.id }} className={button}>
                     Ver anúncio
                   </Link>
@@ -440,7 +505,7 @@ function RecentMaterials() {
                   >
                     Revisar fotos
                   </Link>
-                </div>
+                </div>}
               </article>
             ))}
           </div>

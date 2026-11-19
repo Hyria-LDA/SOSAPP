@@ -109,18 +109,13 @@ function Home() {
     enabled: !!userPlanSlug && bannerAudience !== undefined,
     queryFn: async () => {
       const nowIso = new Date().toISOString();
-      const { data, error } = await supabase
-        .from("banners" as any)
-        .select(
-          "*",
-        )
-        .eq("ativo", true)
-        .order("ordem", { ascending: true });
+      const [{ data, error }, portalBanners, { data: delivery, error: deliveryError }] = await Promise.all([
+        supabase.from("banners" as any).select("*").eq("ativo", true).order("ordem", { ascending: true }),
+        getStoreLiveBanners(),
+        supabase.from("banner_delivery_settings" as never).select("enabled,fallback,fallback_banner").single(),
+      ]);
       if (error) throw error;
       const slug = userPlanSlug ?? "free";
-      const portalBanners=await getStoreLiveBanners();
-      const { data: delivery, error: deliveryError } = await supabase
-        .from("banner_delivery_settings" as never).select("enabled,fallback,fallback_banner").single();
       if (deliveryError && !["42P01", "PGRST205"].includes(deliveryError.code))
         throw new Error("Não foi possível consultar a configuração dos banners.");
       const config = (delivery ?? { enabled: false, fallback: "hide", fallback_banner: null }) as { enabled: boolean; fallback: string; fallback_banner: string | null };

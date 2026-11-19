@@ -14,3 +14,14 @@ test('logout and account switching discard old queries, same-user refresh does n
 test('initial sign-in without initial session also discards existing cache',()=>{
  let cleared=false;exports.createSessionCacheGuard(()=>cleared=true)('SIGNED_IN','a');assert.equal(cleared,true);
 });
+
+test('same-account confirmations do not reload every page or discard useful queries',()=>{
+ const guard=exports.createSessionCacheGuard(()=>{});
+ assert.equal(guard('INITIAL_SESSION','a'),false);
+ for(let i=0;i<20;i++)assert.equal(guard('SIGNED_IN','a'),false);
+ assert.equal(guard('TOKEN_REFRESHED','a'),false);
+ assert.equal(guard('USER_UPDATED','a'),true);
+ assert.equal(guard('SIGNED_IN','b'),true);
+ assert.equal(guard('SIGNED_OUT',null),true);
+ assert.equal(guard('SIGNED_IN','b'),true);
+});

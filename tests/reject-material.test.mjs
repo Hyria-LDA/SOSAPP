@@ -21,6 +21,15 @@ test('rejection is admin-only, atomic, preserves the explanation and is idempote
  INSERT INTO materiais VALUES('${material}','${owner}','Freijó');
  INSERT INTO fotos_materiais VALUES('${material}','photo','thumb');`);
  await db.exec(migration);
+ await db.exec(`
+ CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('test.uid',true),'')::uuid $$;
+ ALTER TABLE empresas ADD COLUMN nome_empresa text, ADD COLUMN cidade text, ADD COLUMN estado text;
+ ALTER TABLE materiais ADD COLUMN fabricante text, ADD COLUMN observacoes text, ADD COLUMN comprimento_cm numeric, ADD COLUMN largura_cm numeric, ADD COLUMN espessura_mm numeric, ADD COLUMN created_at timestamptz DEFAULT now();
+ UPDATE empresas SET nome_empresa='Loja',cidade='Belo Horizonte',estado='MG';
+ UPDATE materiais SET observacoes='Peça inteira',comprimento_cm=200,largura_cm=50,espessura_mm=18;
+ `);
+ await db.exec(await readFile(new URL('../supabase/migrations/20261119130000_admin_rejected_material_history.sql',import.meta.url),'utf8'));
+
  const reject=(who,reason)=>db.query('SELECT reject_material_with_reason($1,$2,$3) result',[who,material,reason]);
  await assert.rejects(reject(owner,'Foto incorreta'),/forbidden/);
  await assert.rejects(reject(actor,'  '),/invalid_reason/);
@@ -47,5 +56,31 @@ test('rejection is admin-only, atomic, preserves the explanation and is idempote
  assert.equal(notices[0].material_id,null);
  assert.equal(notices[0].mensagem,'Seu anúncio "Freijó" foi excluído pela administração. Motivo: Foto incorreta');
  assert.equal((await db.query('SELECT * FROM material_rejections')).rows.length,1);
+ await db.exec('SET ROLE anon');
+ await assert.rejects(db.query('SELECT admin_rejected_material_history()'),/permission denied/);
+ await db.exec('RESET ROLE; SET ROLE authenticated');
+ await db.query("SELECT set_config('test.uid',$1,false)",[owner]);
+ await assert.rejects(db.query('SELECT admin_rejected_material_history()'),/forbidden/);
+ await db.query("SELECT set_config('test.uid',$1,false)",[actor]);
+ await assert.rejects(db.query('SELECT * FROM material_rejections'),/permission denied/);
+ const history=(await db.query("SELECT admin_rejected_material_history(_states=>ARRAY['MG'],_cities=>ARRAY['Belo Horizonte']) data")).rows[0].data;
+ assert.equal(history.total,1);
+ assert.equal(history.rows[0].snapshot.observacoes,'Peça inteira');
+ assert.equal(history.rows[0].snapshot.comprimento_cm,200);
+ assert.equal(history.rows[0].reason,'Foto incorreta');
+ assert.equal(history.rows[0].empresa.cidade,'Belo Horizonte');
+ assert.equal('photos' in history.rows[0],false);
+ assert.equal((await db.query("SELECT admin_rejected_material_history(_states=>ARRAY['SP']) data")).rows[0].data.total,0);
+ const countOnly=(await db.query('SELECT admin_rejected_material_history(_limit=>0) data')).rows[0].data;
+ assert.equal(countOnly.total,1); assert.equal(countOnly.rows.length,0);
+ const next=(await db.query('SELECT admin_rejected_material_history(_before_time=>$1,_before_id=>$2) data',[history.rows[0].created_at,material])).rows[0].data;
+ assert.equal(next.total,1); assert.equal(next.rows.length,0);
+ await db.exec('RESET ROLE');
+ // Older audit entries still display a reason and company when no snapshot was captured.
+ await db.exec('UPDATE material_rejections SET snapshot=NULL');
+ await db.exec('SET ROLE authenticated');
+ const legacy=(await db.query('SELECT admin_rejected_material_history() data')).rows[0].data;
+ assert.equal(legacy.rows[0].snapshot,null);
+ assert.equal(legacy.rows[0].empresa.nome_empresa,'Loja');
  } finally {await db.close();}
 });

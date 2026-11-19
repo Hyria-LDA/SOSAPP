@@ -1240,6 +1240,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_rejected_material_history: {
+        Args: { _states?: string[]; _cities?: string[]; _company?: string; _before_time?: string; _before_id?: string; _limit?: number }
+        Returns: Json
+      }
+
       admin_acao_anuncio: {
         Args: { _acao: string; _material_id: string }
         Returns: Json

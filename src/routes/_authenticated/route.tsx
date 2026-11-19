@@ -62,10 +62,10 @@ export const Route = createFileRoute("/_authenticated")({
     // Empresa onboarding gate apenas para áreas autenticadas
     if (!publicPath) {
       // Vendedores parceiros não precisam de onboarding de empresa
-      const { data: roles, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
+      const [{ data: roles, error: roleError }, { data: empresa, error: empresaError }] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", user.id),
+        supabase.from("empresas").select("onboarded").eq("owner_id", user.id).maybeSingle(),
+      ]);
       if (roles?.some(r=>String(r.role)==="store_partner") && !roles.some(r=>r.role==="admin")) throw redirect({to:"/lojista",search:{store:undefined}});
       if (roleError) throw roleError;
       const isVendedor = (roles ?? []).some((r: any) => r.role === "vendedor");
@@ -74,12 +74,6 @@ export const Route = createFileRoute("/_authenticated")({
         if (path.startsWith("/onboarding")) throw redirect({ to: "/app/vendedor" });
         return { user };
       }
-
-      const { data: empresa, error: empresaError } = await supabase
-        .from("empresas")
-        .select("onboarded")
-        .eq("owner_id", user.id)
-        .maybeSingle();
 
       if (empresaError) throw empresaError;
       const needsOnboarding = !empresa?.onboarded;

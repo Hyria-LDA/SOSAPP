@@ -7,6 +7,9 @@ export function createSessionCacheGuard(clear: () => void) {
       (previousUserId === undefined && event === "SIGNED_IN")) {
       clear();
     }
+    const shouldReload = event === "USER_UPDATED" || event === "SIGNED_OUT" ||
+      (event === "SIGNED_IN" && previousUserId !== userId);
     previousUserId = userId;
+    return shouldReload;
   };
 }

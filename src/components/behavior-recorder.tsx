@@ -8,7 +8,7 @@ export function BehaviorRecorder(){
  const path=useRouterState({select:s=>s.location.pathname});
  useEffect(()=>{
   let user:string|null=null,disposed=false,lastOpen=0;
-  const opened=()=>{if(!user||document.visibilityState==='hidden'||Date.now()-lastOpen<30000)return;lastOpen=Date.now();trackBehavior('app_open');void flushBehavior();};
+  const opened=()=>{if(!user||document.visibilityState==='hidden'||Date.now()-lastOpen<30000)return;lastOpen=Date.now();trackBehavior('app_open');};
   const applyUser=(id:string|null)=>{
    if(disposed||id===user)return;user=id;setBehaviorUser(id);lastOpen=0;
    if(id){

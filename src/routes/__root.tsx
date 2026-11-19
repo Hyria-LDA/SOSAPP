@@ -227,13 +227,14 @@ function InAppPurchaseSync({ queryClient }: { queryClient: QueryClient }) {
     const sixHours = 6 * 60 * 60 * 1000;
 
     const syncForUser = async (userId: string, force = false) => {
-      const {data:roles,error:roleError}=await supabase.from("user_roles").select("role").eq("user_id",userId);
-      if(roleError || roles?.some(r=>String(r.role)==="store_partner")) return;
+      if (cancelled || currentUserId !== userId) return;
       const storageKey = `sos:revenuecat-sync:${userId}`;
       const lastSync = Number(window.localStorage.getItem(storageKey) ?? 0);
       if (!force && Date.now() - lastSync < sixHours) return;
 
       try {
+        const {data:roles,error:roleError}=await supabase.from("user_roles").select("role").eq("user_id",userId);
+        if(cancelled || currentUserId !== userId || roleError || roles?.some(r=>String(r.role)==="store_partner")) return;
         const { syncInAppPurchaseState } = await import("../lib/in-app-purchase");
         await syncInAppPurchaseState();
         if (cancelled) return;
@@ -256,9 +257,14 @@ function InAppPurchaseSync({ queryClient }: { queryClient: QueryClient }) {
     });
 
     const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+      const previousUserId = currentUserId;
       currentUserId = session?.user.id ?? null;
-      if (event === "SIGNED_IN" && session?.user) {
-        void syncForUser(session.user.id, true);
+      if (event === "SIGNED_IN" && currentUserId && currentUserId !== previousUserId) {
+        if (initialSyncTimer !== undefined) window.clearTimeout(initialSyncTimer);
+        const userId = currentUserId;
+        initialSyncTimer = window.setTimeout(() => {
+          if (!cancelled && currentUserId === userId) void syncForUser(userId, true);
+        }, 1000);
       }
     });
 
@@ -305,18 +311,23 @@ function RootComponent() {
       return;
     }
 
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     const guardSessionCache = createSessionCacheGuard(() => queryClient.clear());
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      guardSessionCache(event, session?.user.id ?? null);
+      const shouldReload = guardSessionCache(event, session?.user.id ?? null);
       if (event === "PASSWORD_RECOVERY") {
         if (window.location.pathname !== "/auth/redefinir") {
           window.location.replace("/auth/redefinir");
         }
         return;
       }
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
-      router.invalidate();
-      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      if (!shouldReload) return;
+      if (refreshTimer !== undefined) clearTimeout(refreshTimer);
+      // Auth callbacks must finish before starting new Supabase requests.
+      refreshTimer = setTimeout(() => {
+        void router.invalidate();
+        if (event !== "SIGNED_OUT") void queryClient.invalidateQueries();
+      }, 0);
     });
 
     // Logger global de falhas de carregamento de imagens (web + WebView Android).
@@ -345,6 +356,7 @@ function RootComponent() {
     window.addEventListener("error", onImgError, true);
 
     return () => {
+      if (refreshTimer !== undefined) clearTimeout(refreshTimer);
       sub.subscription.unsubscribe();
       window.removeEventListener("error", onImgError, true);
     };
