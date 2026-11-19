@@ -720,6 +720,7 @@ export type Database = {
           observacoes: string | null
           padrao: string
           padrao_id: string | null
+          preco_anterior: number | null
           preco: number
           quantidade: number
           status: Database["public"]["Enums"]["material_status"]
@@ -747,6 +748,7 @@ export type Database = {
           observacoes?: string | null
           padrao: string
           padrao_id?: string | null
+          preco_anterior?: number | null
           preco: number
           quantidade?: number
           status?: Database["public"]["Enums"]["material_status"]
@@ -774,6 +776,7 @@ export type Database = {
           observacoes?: string | null
           padrao?: string
           padrao_id?: string | null
+          preco_anterior?: number | null
           preco?: number
           quantidade?: number
           status?: Database["public"]["Enums"]["material_status"]
@@ -1240,6 +1243,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      update_my_material_price: {
+        Args: { _material: string; _price: number; _expected_price: number }
+        Returns: string
+      }
+
       admin_rejected_material_history: {
         Args: { _states?: string[]; _cities?: string[]; _company?: string; _before_time?: string; _before_id?: string; _limit?: number }
         Returns: Json

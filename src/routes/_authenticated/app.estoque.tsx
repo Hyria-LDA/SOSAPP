@@ -1,3 +1,5 @@
+import { EditMaterialPriceDialog } from "@/components/edit-material-price-dialog";
+import { PreviousMaterialPrice } from "@/components/previous-material-price";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
@@ -11,6 +13,7 @@ import {
   RefreshCw,
   CheckCircle2,
   Trash2,
+  Pencil,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDimensions } from "@/lib/material-dimensions";
@@ -31,6 +34,7 @@ function Estoque() {
   const [open, setOpen] = useState<string | null>(null);
   const [sellModal, setSellModal] = useState<{ id: string; preco: number } | null>(null);
   const [sellValue, setSellValue] = useState("");
+  const [editPrice, setEditPrice] = useState<{id:string;title:string;price:number}|null>(null);
 
   const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -49,7 +53,7 @@ function Estoque() {
       const { data, error } = await supabase
         .from("materiais")
         .select(
-          "id, padrao, fabricante, espessura_mm, comprimento_cm, largura_cm, preco, area_m2, status, views, contatos, valor_vendido, created_at, fotos_materiais(url, thumbnail_url, ordem)",
+          "id, padrao, fabricante, espessura_mm, comprimento_cm, largura_cm, preco, preco_anterior, area_m2, status, views, contatos, valor_vendido, created_at, fotos_materiais(url, thumbnail_url, ordem)",
         )
         .eq("empresa_id", emp.id)
         .eq("status", statusFilter)
@@ -184,6 +188,7 @@ function Estoque() {
                       </div>
                       <div className="shrink-0 text-right">
                         <div className="text-sm font-bold text-primary">
+                          <PreviousMaterialPrice current={Number(m.preco)} previous={m.preco_anterior} />
                           {formatBRL(Number(m.preco))}
                         </div>
                         <div className="text-[10px] text-muted-foreground">
@@ -212,6 +217,7 @@ function Estoque() {
                   <MoreVertical className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
+              {tab !== "vendido" && <button type="button" onClick={()=>{setOpen(null);setEditPrice({id:m.id,title:m.padrao,price:Number(m.preco)});}} className="flex w-full items-center justify-center gap-2 border-t border-border py-3 text-sm font-semibold text-primary"><Pencil className="h-4 w-4"/> Alterar preço</button>}
               {tab === "expirado" && (
                 <button
                   type="button"
@@ -246,6 +252,7 @@ function Estoque() {
         })}
       </div>
 
+      {editPrice && <EditMaterialPriceDialog key={editPrice.id} material={editPrice} onClose={()=>setEditPrice(null)}/>}
       {sellModal && (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-5"

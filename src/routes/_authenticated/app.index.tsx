@@ -1,3 +1,4 @@
+import { PreviousMaterialPrice } from "@/components/previous-material-price";
 import { HomeActionWaves } from "@/components/home-action-waves";
 import { animateHomeAction } from "@/lib/home-action-feedback";
 import { selectHomeSlots } from "@/lib/banner-slots";
@@ -171,7 +172,7 @@ function Home() {
           .select("material_id, url, thumbnail_url, ordem")
           .in("material_id", ids)
           .order("ordem", { ascending: true }),
-        supabase.from("materiais").select("id, comprimento_cm, largura_cm").in("id", ids),
+        supabase.from("materiais").select("id, comprimento_cm, largura_cm, preco_anterior").in("id", ids),
       ]);
       const byMat = new Map<string, any[]>();
       (fotos ?? []).forEach((f: any) => {
@@ -398,6 +399,7 @@ function Home() {
               </div>
               <div className="relative shrink-0 text-right">
                 <div className="text-sm font-bold text-primary">
+                  <PreviousMaterialPrice current={Number(m.preco)} previous={m.preco_anterior} />
                   R$ {Number(m.preco).toFixed(2)}
                 </div>
                 <div className="text-[10px] text-muted-foreground">

@@ -1,3 +1,4 @@
+import { PreviousMaterialPrice } from "@/components/previous-material-price";
 import { sortMaterialResults } from "@/lib/material-search-order";
 import { trackBehavior } from "@/lib/behavior-analytics";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -183,7 +184,7 @@ function Buscar() {
       let query = supabase
         .from("materiais")
         .select(
-          "id, padrao, fabricante, fabricante_id, padrao_id, espessura_mm, comprimento_cm, largura_cm, preco, area_m2, valor_m2, cidade, estado, latitude, longitude, created_at, grain_direction, quantidade, fotos_materiais(url, thumbnail_url, ordem)",
+          "id, padrao, fabricante, fabricante_id, padrao_id, espessura_mm, comprimento_cm, largura_cm, preco, preco_anterior, area_m2, valor_m2, cidade, estado, latitude, longitude, created_at, grain_direction, quantidade, fotos_materiais(url, thumbnail_url, ordem)",
         )
         .eq("status", "ativo")
         .gt("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
@@ -738,7 +739,8 @@ function Buscar() {
                     </div>
                     <div className="shrink-0 text-right">
                       <div className="text-sm font-black text-primary">
-                        {formatBRL(Number(m.preco))}
+                        <PreviousMaterialPrice current={Number(m.preco)} previous={m.preco_anterior} />
+                          {formatBRL(Number(m.preco))}
                       </div>
                       <div className="text-[10px] text-muted-foreground">
                         {formatDimensions(m.comprimento_cm, m.largura_cm)}

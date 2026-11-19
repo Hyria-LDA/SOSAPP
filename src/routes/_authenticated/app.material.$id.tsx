@@ -1,3 +1,4 @@
+import { PreviousMaterialPrice } from "@/components/previous-material-price";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
@@ -238,6 +239,7 @@ Obrigado!`;
             </p>
           </div>
           <div className="shrink-0 text-right">
+            <PreviousMaterialPrice current={Number(data.preco)} previous={data.preco_anterior} />
             <div className="text-2xl font-black text-primary">{formatBRL(Number(data.preco))}</div>
             <div className="text-[11px] text-muted-foreground">
               {formatDimensions(data.comprimento_cm, data.largura_cm)}

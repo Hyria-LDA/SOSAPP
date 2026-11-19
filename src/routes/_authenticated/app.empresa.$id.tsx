@@ -1,3 +1,4 @@
+import { PreviousMaterialPrice } from "@/components/previous-material-price";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, MapPin, Calendar, Package, Store } from "lucide-react";
@@ -31,7 +32,7 @@ function EmpresaPublica() {
       const { data, error } = await supabase
         .from("materiais")
         .select(
-          "id, padrao, fabricante, espessura_mm, preco, area_m2, created_at, fotos_materiais(url, thumbnail_url, ordem)",
+          "id, padrao, fabricante, espessura_mm, preco, preco_anterior, area_m2, created_at, fotos_materiais(url, thumbnail_url, ordem)",
         )
         .eq("empresa_id", id)
         .eq("status", "ativo")
@@ -188,7 +189,8 @@ function EmpresaPublica() {
                   {m.fabricante ?? "—"} · {Number(m.espessura_mm)}mm
                 </div>
                 <div className="mt-1 text-sm font-bold text-primary">
-                  {formatBRL(Number(m.preco))}
+                  <PreviousMaterialPrice current={Number(m.preco)} previous={m.preco_anterior} />
+                          {formatBRL(Number(m.preco))}
                 </div>
               </div>
             </Link>
