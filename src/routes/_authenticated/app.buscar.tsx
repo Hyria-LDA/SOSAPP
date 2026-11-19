@@ -1,3 +1,4 @@
+import { sortMaterialResults } from "@/lib/material-search-order";
 import { trackBehavior } from "@/lib/behavior-analytics";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -76,9 +77,11 @@ function Buscar() {
     },
   });
   const coords =
-    minhaEmpresa?.latitude && minhaEmpresa?.longitude
+    minhaEmpresa?.latitude != null && minhaEmpresa?.longitude != null
       ? { lat: minhaEmpresa.latitude, lng: minhaEmpresa.longitude }
       : gpsCoords;
+
+  const selectedOrder = params.ordem === "preco" || params.ordem === "distancia" ? params.ordem : "";
 
   const raioBusca = Math.min(params.raio, 50);
 
@@ -164,8 +167,19 @@ function Buscar() {
   });
 
   const { data, isLoading, isFetching, isError } = useQuery({
-    queryKey: ["buscar", params.fabricante_id, params.padrao_id, params.espessuras],
+    queryKey: ["buscar", params.fabricante_id, params.padrao_id, params.espessuras, selectedOrder, ...(selectedOrder ? [coords?.lat, coords?.lng, params.raio, params.comp_min, params.larg_min, params.aceitar_giro] : [])],
     queryFn: async () => {
+      let orderedIds: string[] | undefined;
+      if (selectedOrder) {
+        const { data: matches, error } = await supabase.rpc("material_search_order" as never, {
+          _order: selectedOrder, _lat: coords?.lat ?? null, _lng: coords?.lng ?? null,
+          _radius: raioBusca, _manufacturer: params.fabricante_id || null, _pattern: params.padrao_id || null,
+          _thickness: espessurasSel, _length: params.comp_min, _width: params.larg_min, _rotate: params.aceitar_giro === 1,
+        } as never);
+        if (error) throw error;
+        orderedIds = ((matches ?? []) as { id: string }[]).map(m => m.id);
+        if (!orderedIds.length) return [];
+      }
       let query = supabase
         .from("materiais")
         .select(
@@ -176,6 +190,7 @@ function Buscar() {
       if (params.padrao_id) query = query.eq("padrao_id", params.padrao_id);
       if (params.fabricante_id) query = query.eq("fabricante_id", params.fabricante_id);
       if (espessurasSel.length) query = query.in("espessura_mm", espessurasSel);
+      if (orderedIds) query = query.in("id", orderedIds);
       const { data, error } = await query.limit(120);
       if (error) throw error;
       const { attachFirstFoto } = await import("@/lib/material-photos");
@@ -206,7 +221,7 @@ function Buscar() {
   const results = useMemo(() => {
     let list = (data ?? []).map((m: any) => {
       const dist =
-        coords && m.latitude && m.longitude
+        coords && m.latitude != null && m.longitude != null
           ? haversineKm(coords, { lat: m.latitude, lng: m.longitude })
           : null;
       return { ...m, distancia: dist };
@@ -248,7 +263,9 @@ function Buscar() {
       }
       return h;
     };
-    if (hasSel) {
+    if (selectedOrder) {
+      list = sortMaterialResults(list, selectedOrder);
+    } else if (hasSel) {
       list.sort((a, b) => {
         const pa = planRank(a);
         const pb = planRank(b);
@@ -261,7 +278,7 @@ function Buscar() {
       list = list.slice(0, 20);
     }
     return list;
-  }, [data, coords, params, effectiveCompMin, effectiveLargMin, raioBusca, rotationSeed]);
+  }, [data, coords, params, effectiveCompMin, effectiveLargMin, raioBusca, rotationSeed, selectedOrder]);
 
   const hasSelection = !!(params.fabricante_id || params.padrao_id);
   const visibleResults = results.slice(0, visibleResultCount);
@@ -289,6 +306,7 @@ function Buscar() {
     params.comp_min,
     params.larg_min,
     params.aceitar_giro,
+    params.ordem,
   ]);
 
   useEffect(() => {
@@ -626,12 +644,24 @@ function Buscar() {
 
         {/* ============ RESULTADOS ============ */}
         <div className="space-y-3">
+          <label className="block text-sm font-bold">
+            Ordenar resultados
+            <select className={`${inputCls} mt-2`} value={selectedOrder} onChange={e => void update({ ordem: e.target.value })}>
+              <option value="">Ordem padrão</option>
+              <option value="preco">Mais barato primeiro</option>
+              <option value="distancia" disabled={!coords}>Mais perto primeiro</option>
+            </select>
+          </label>
+          <p className="text-xs text-muted-foreground">
+            {!coords ? "Para ordenar por distância, cadastre seu endereço ou permita a localização." : selectedOrder === "distancia" ? "Distância a partir da sua marcenaria cadastrada ou, na falta dela, da localização do aparelho. Anúncios sem localização ficam no final." : selectedOrder === "preco" ? "Do menor para o maior preço anunciado." : ""}
+          </p>
+          {isError && <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm">Não foi possível carregar os resultados. Tente novamente.</p>}
           {breadcrumb && (
             <div className="line-clamp-2 text-xs font-semibold text-foreground">{breadcrumb}</div>
           )}
           <div className="flex items-baseline justify-between gap-2">
             <h2 className="text-sm font-black uppercase tracking-wider text-foreground">
-              {hasSelection ? "Compatíveis com sua busca" : "Últimos anunciados"}
+              {selectedOrder === "preco" ? "Mais baratos" : selectedOrder === "distancia" ? "Mais próximos" : hasSelection ? "Compatíveis com sua busca" : "Últimos anunciados"}
             </h2>
             <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
               {isLoading
@@ -645,7 +675,7 @@ function Buscar() {
             </p>
           )}
 
-          {!isLoading && results.length === 0 && (
+          {!isLoading && !isError && results.length === 0 && (
             <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
               <div className="mb-1 text-base font-bold text-foreground">
                 Nenhum material encontrado no momento.
