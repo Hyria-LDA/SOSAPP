@@ -1,3 +1,4 @@
+import { RejectMaterialDialog } from "@/components/reject-material-dialog";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -35,6 +36,7 @@ function ModeracaoFotos() {
   const { material } = Route.useSearch();
   const [filter, setFilter] = useState<AiStatus | "all">(material ? "all" : "pending");
   const qc = useQueryClient();
+  const [rejectTarget,setRejectTarget]=useState<{id:string;title:string}|null>(null);
 
   const { data, isLoading, error: loadError } = useQuery({
     queryKey: ["admin-moderacao-fotos", filter, material],
@@ -103,6 +105,7 @@ function ModeracaoFotos() {
 
   return (
     <div className="safe-top px-5 pt-4 pb-10">
+      <RejectMaterialDialog material={rejectTarget} onClose={()=>setRejectTarget(null)} />
       <header className="flex items-center gap-2">
         <Link to="/app/admin" className="grid h-10 w-10 place-items-center rounded-xl bg-secondary">
           <ArrowLeft className="h-5 w-5" />
@@ -210,11 +213,10 @@ function ModeracaoFotos() {
                 />
                 <Action
                   icon={XCircle}
-                  label="Rejeitar"
+                  label="Excluir anúncio"
                   tone="bad"
                   onClick={() => {
-                    const motivo = window.prompt("Motivo da rejeição (opcional)") || undefined;
-                    moderar.mutate({ id: f.id, decisao: "rejected", motivo });
+                    setRejectTarget({id:f.material_id,title:f.materiais?.padrao||"Sobra anunciada"});
                   }}
                 />
               </div>

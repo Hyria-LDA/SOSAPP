@@ -1,3 +1,4 @@
+import { RejectMaterialDialog } from "@/components/reject-material-dialog";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -60,6 +61,7 @@ export const Route = createFileRoute("/_authenticated/app/admin/ultimas-sobras")
 });
 function RecentMaterials() {
   const { adminId } = Route.useRouteContext();
+  const [rejectTarget,setRejectTarget]=useState<{id:string;title:string}|null>(null);
   const [uf, setUf] = useState(""),
     [city, setCity] = useState(""),
     [company, setCompany] = useState(""),
@@ -430,6 +432,7 @@ function RecentMaterials() {
                   <Link to="/app/material/$id" params={{ id: row.id }} className={button}>
                     Ver anúncio
                   </Link>
+                  <button className={`${button} text-destructive`} onClick={()=>setRejectTarget({id:row.id,title:row.padrao||"Sobra anunciada"})}>Excluir e avisar</button>
                   <Link
                     to="/app/admin/moderacao-fotos"
                     search={{ material: row.id }}
@@ -452,6 +455,7 @@ function RecentMaterials() {
           {ads.isFetchingNextPage ? "Carregando…" : "Carregar mais anúncios"}
         </button>
       )}
+      <RejectMaterialDialog material={rejectTarget} onClose={()=>setRejectTarget(null)} />
       <Dialog
         open={!!zoom}
         onOpenChange={(open) => {
