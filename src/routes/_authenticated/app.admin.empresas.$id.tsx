@@ -1,3 +1,4 @@
+import { useRouter, useCanGoBack } from "@tanstack/react-router";
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -41,6 +42,12 @@ const FORMAS_PAGAMENTO = ["PIX", "Transferência", "Cartão", "Dinheiro", "Outro
 function EmpresaDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
+  const router = useRouter();
+  const canGoBack = useCanGoBack();
+  const goBack = () => {
+    if (canGoBack) router.history.back();
+    else void navigate({ to: "/app/admin/empresas" });
+  };
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -280,7 +287,8 @@ function EmpresaDetail() {
     <div className="safe-top px-5 pt-4 pb-16 space-y-4">
       <header className="flex items-center gap-2">
         <button
-          onClick={() => navigate({ to: "/app/admin/empresas" })}
+          onClick={goBack}
+          aria-label="Voltar"
           className="grid h-10 w-10 place-items-center rounded-xl bg-secondary"
         >
           <ArrowLeft className="h-5 w-5" />

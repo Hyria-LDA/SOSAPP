@@ -1,6 +1,7 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { z } from "zod";
+import { useMemo } from "react";
 import { ArrowLeft, Search, Download, MapPin, Building2, Package, Copy, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -8,6 +9,14 @@ import { loadCompanyMaterialCounts } from "@/lib/admin-company-material-counts";
 import { normalizeCity } from "@/lib/banner-regions";
 
 export const Route = createFileRoute("/_authenticated/app/admin/empresas/")({
+  validateSearch: z.object({
+    q: z.string().optional().catch(undefined),
+    ordem: z.enum(["recent", "most-materials"]).optional().catch(undefined),
+    situacao: z.string().optional().catch(undefined),
+    plano: z.string().optional().catch(undefined),
+    uf: z.string().optional().catch(undefined),
+    cidade: z.string().optional().catch(undefined),
+  }),
   beforeLoad: async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) throw redirect({ to: "/auth" });
@@ -22,12 +31,17 @@ export const Route = createFileRoute("/_authenticated/app/admin/empresas/")({
 });
 
 function AdminEmpresas() {
-  const [q, setQ] = useState("");
-  const [sortOrder, setSortOrder] = useState("recent");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [planFilter, setPlanFilter] = useState<string>("all");
-  const [stateFilter, setStateFilter] = useState("all");
-  const [cityFilter, setCityFilter] = useState("all");
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/app/admin/empresas/" });
+  const q = search.q ?? "";
+  const sortOrder = search.ordem ?? "recent";
+  const statusFilter = search.situacao ?? "all";
+  const planFilter = search.plano ?? "all";
+  const stateFilter = search.uf ?? "all";
+  const cityFilter = search.cidade ?? "all";
+  const updateFilters = (patch: Partial<typeof search>) => {
+    void navigate({ search: previous => ({ ...previous, ...patch }), replace: true, resetScroll: false });
+  };
 
   const { adminId } = Route.useRouteContext();
   const { data, error, isPending, isFetching, refetch } = useQuery({
@@ -241,7 +255,7 @@ function AdminEmpresas() {
         <Search className="h-4 w-4 text-muted-foreground" />
         <input
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => updateFilters({ q: e.target.value })}
           placeholder="Buscar empresa ou número da sorte…"
           className="w-full bg-transparent text-sm outline-none"
         />
@@ -257,7 +271,7 @@ function AdminEmpresas() {
         ].map(([v, l]) => (
           <button
             key={v}
-            onClick={() => setStatusFilter(v)}
+            onClick={() => updateFilters({ situacao: v })}
             className={`shrink-0 rounded-full px-3 py-1.5 font-semibold ${statusFilter === v ? "bg-foreground text-background" : "bg-secondary"}`}
           >
             {l}
@@ -271,7 +285,7 @@ function AdminEmpresas() {
         </span>
         <select
           value={planFilter}
-          onChange={(e) => setPlanFilter(e.target.value)}
+          onChange={(e) => updateFilters({ plano: e.target.value })}
           className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm outline-none"
         >
           <option value="all">Todos os planos</option>
@@ -285,7 +299,7 @@ function AdminEmpresas() {
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="min-w-0 text-[11px] font-semibold text-muted-foreground">
             Estado
-            <select value={stateFilter} onChange={(event) => { setStateFilter(event.target.value); setCityFilter("all"); }} className="mt-1 h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none">
+            <select value={stateFilter} onChange={(event) => { updateFilters({ uf: event.target.value, cidade: "all" }); }} className="mt-1 h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none">
               <option value="all">Todos os estados</option>
               {regionOptions.states.map(uf => <option key={uf} value={uf}>{uf}</option>)}
               {regionOptions.missingState && <option value="missing">Estado não informado</option>}
@@ -293,19 +307,19 @@ function AdminEmpresas() {
           </label>
           <label className="min-w-0 text-[11px] font-semibold text-muted-foreground">
             Cidade
-            <select value={cityFilter} onChange={(event) => setCityFilter(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none">
+            <select value={cityFilter} onChange={(event) => updateFilters({ cidade: event.target.value })} className="mt-1 h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none">
               <option value="all">Todas as cidades</option>
               {regionOptions.cities.map(([key,label]) => <option key={key} value={key}>{label}</option>)}
               {regionOptions.missingCity && <option value="missing">Cidade não informada</option>}
             </select>
           </label>
         </div>
-        {(stateFilter !== "all" || cityFilter !== "all") && <button type="button" onClick={() => { setStateFilter("all"); setCityFilter("all"); }} className="mt-2 text-xs font-semibold text-primary underline">Limpar região</button>}
+        {(stateFilter !== "all" || cityFilter !== "all") && <button type="button" onClick={() => { updateFilters({ uf: "all", cidade: "all" }); }} className="mt-2 text-xs font-semibold text-primary underline">Limpar região</button>}
       </fieldset>
 
       <label className="mt-3 block text-[11px] font-semibold text-muted-foreground">
         Ordenar empresas
-        <select value={sortOrder} onChange={e => setSortOrder(e.target.value)} className="mt-1 h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none">
+        <select value={sortOrder} onChange={e => updateFilters({ ordem: e.target.value as "recent" | "most-materials" })} className="mt-1 h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none">
           <option value="recent">Cadastros mais recentes</option>
           <option value="most-materials">Mais sobras anunciadas</option>
         </select>
