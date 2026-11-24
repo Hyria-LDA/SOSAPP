@@ -23,6 +23,7 @@ export const Route = createFileRoute("/_authenticated/app/admin/empresas/")({
 
 function AdminEmpresas() {
   const [q, setQ] = useState("");
+  const [sortOrder, setSortOrder] = useState("recent");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [planFilter, setPlanFilter] = useState<string>("all");
   const [stateFilter, setStateFilter] = useState("all");
@@ -101,7 +102,7 @@ function AdminEmpresas() {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return (data?.empresas ?? []).filter((e: any) => {
+    const matches = (data?.empresas ?? []).filter((e: any) => {
       const uf = String(e.estado ?? "").trim().toUpperCase();
       if (stateFilter !== "all" && (stateFilter === "missing" ? !!uf : uf !== stateFilter)) return false;
       const city = normalizeCity(e.cidade);
@@ -125,7 +126,14 @@ function AdminEmpresas() {
         .filter(Boolean)
         .some((v: string) => String(v).toLowerCase().includes(term));
     });
-  }, [data, q, statusFilter, planFilter, stateFilter, cityFilter]);
+    if (sortOrder === "most-materials" && counts.data) {
+      matches.sort((a, b) =>
+        (counts.data[b.id]?.ativos ?? 0) - (counts.data[a.id]?.ativos ?? 0) ||
+        b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id),
+      );
+    }
+    return matches;
+  }, [data, q, statusFilter, planFilter, stateFilter, cityFilter, sortOrder, counts.data]);
 
   const exportCsv = () => {
     const rows = filtered;
@@ -295,6 +303,16 @@ function AdminEmpresas() {
         {(stateFilter !== "all" || cityFilter !== "all") && <button type="button" onClick={() => { setStateFilter("all"); setCityFilter("all"); }} className="mt-2 text-xs font-semibold text-primary underline">Limpar região</button>}
       </fieldset>
 
+      <label className="mt-3 block text-[11px] font-semibold text-muted-foreground">
+        Ordenar empresas
+        <select value={sortOrder} onChange={e => setSortOrder(e.target.value)} className="mt-1 h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none">
+          <option value="recent">Cadastros mais recentes</option>
+          <option value="most-materials">Mais sobras anunciadas</option>
+        </select>
+      </label>
+      {sortOrder === "most-materials" && <p className="mt-1 text-xs text-muted-foreground">
+        {counts.isError ? "Ordenação por quantidade indisponível. Atualize a contagem para tentar novamente." : !counts.data ? "Carregando a quantidade de sobras para ordenar as empresas…" : "Da maior para a menor quantidade de sobras ativas, respeitando os filtros selecionados."}
+      </p>}
       <div className="mt-3 flex items-center justify-between gap-2">
         <span className="text-[11px] text-muted-foreground">{filtered.length} resultado(s)</span>
         <button type="button" disabled={isFetching || counts.isFetching} onClick={() => { void refetch(); void counts.refetch(); }} className="inline-flex items-center gap-1 rounded-xl bg-secondary px-3 py-2 text-xs font-bold disabled:opacity-50">

@@ -224,28 +224,23 @@ function Anunciar() {
     };
   }, []);
 
-  const addPhoto = (index: number, file: File) => {
-    if (!isLikelyImage(file)) {
-      toast.error("Selecione um arquivo de imagem.");
-      return;
-    }
-    if (file.size > MAX_FILE_MB * 1024 * 1024) {
-      toast.error(`Imagem maior que ${MAX_FILE_MB} MB. Escolha outra.`);
-      return;
-    }
-    setPhotoSlots((previousSlots) => {
-      const selectedCount = previousSlots.filter(Boolean).length;
-      if (!previousSlots[index] && selectedCount >= MAX_PHOTOS) {
-        toast.error(`Máximo de ${MAX_PHOTOS} fotos por anúncio.`);
-        return previousSlots;
+  const addPhotos = (index: number, files: File[]) => {
+    const valid = files.filter(file => {
+      if (!isLikelyImage(file) || file.size > MAX_FILE_MB * 1024 * 1024) {
+        toast.error(`Selecione uma imagem de até ${MAX_FILE_MB} MB.`);
+        return false;
       }
-
-      const nextSlots = [...previousSlots];
-      const targetIndex = selectedCount === 0 ? 0 : index;
-      const previousPhoto = nextSlots[targetIndex];
-      if (previousPhoto) URL.revokeObjectURL(previousPhoto.preview);
-      nextSlots[targetIndex] = { file, preview: URL.createObjectURL(file) };
-      return nextSlots;
+      return true;
+    });
+    setPhotoSlots(previous => {
+      const next = [...previous];
+      valid.forEach((file, i) => {
+        const target = i === 0 && next.some(Boolean) ? index : next.findIndex(slot => !slot);
+        if (target < 0) return;
+        if (next[target]) URL.revokeObjectURL(next[target]!.preview);
+        next[target] = { file, preview: URL.createObjectURL(file) };
+      });
+      return next;
     });
   };
   const removePhoto = (idx: number) => {
@@ -781,7 +776,7 @@ function Anunciar() {
         {espessuraMm && (
           <Section title={`Fotos da sobra · ${photos.length}/${MAX_PHOTOS}`}>
             <p className="-mt-1 text-xs text-muted-foreground">
-              Utilize fotos claras e bem iluminadas. Mostre a peça inteira sempre que possível.
+              Você pode selecionar até 3 fotos de uma vez na galeria. Utilize fotos claras e mostre a peça inteira sempre que possível.
             </p>
             <div className="grid grid-cols-3 gap-2.5">
               {Array.from({ length: MAX_PHOTOS }).map((_, i) => (
@@ -790,7 +785,9 @@ function Anunciar() {
                   index={i}
                   item={photoSlots[i] ?? undefined}
                   meta={PHOTO_SLOTS[i]}
-                  onAdd={(file) => addPhoto(i, file)}
+                  onAdd={(file) => addPhotos(i, [file])}
+                  onAddMany={(files) => addPhotos(i, files)}
+                  remaining={MAX_PHOTOS - photos.length + (photoSlots[i] ? 1 : 0)}
                   onRemove={() => removePhoto(i)}
                   onMakeMain={() => makeMain(i)}
                 />
@@ -1032,11 +1029,15 @@ function PhotoSlot({
   onAdd,
   onRemove,
   onMakeMain,
+  onAddMany,
+  remaining,
 }: {
   index: number;
   item?: PhotoItem;
   meta: { title: string; hint: string };
   onAdd: (file: File) => void;
+  onAddMany: (files: File[]) => void;
+  remaining: number;
   onRemove: () => void;
   onMakeMain: () => void;
 }) {
@@ -1047,11 +1048,15 @@ function PhotoSlot({
   const isMain = index === 0;
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
-    const selectedFile = input.files?.[0];
-    if (!selectedFile) return;
+    const selected = Array.from(input.files ?? []);
+    if (!selected.length) return;
+    if (selected.length > remaining) toast.info(`Você pode adicionar mais ${remaining} foto(s).`);
+    const prepared: File[] = [];
 
     setOpeningMedia(true);
     try {
+      for (const selectedFile of selected.slice(0, remaining)) {
+      try {
       if (!isLikelyImage(selectedFile)) {
         throw new Error("O arquivo selecionado nao e uma imagem compativel.");
       }
@@ -1070,7 +1075,7 @@ function PhotoSlot({
         lastModified: selectedFile.lastModified || Date.now(),
       });
       const normalized = await compressImage(stableFile, { maxDim: 2048, quality: 0.9 });
-      onAdd(
+      prepared.push(
         new File([normalized.blob], `foto-${Date.now()}.${normalized.ext}`, {
           type: normalized.mime,
           lastModified: Date.now(),
@@ -1083,6 +1088,9 @@ function PhotoSlot({
           ? error.message
           : "Nao foi possivel ler essa foto. Escolha outra imagem.",
       );
+      }
+      }
+      if (prepared.length) onAddMany(prepared);
     } finally {
       input.value = "";
       setShowSourcePicker(false);
@@ -1126,8 +1134,8 @@ function PhotoSlot({
     try {
       const { results } = await NativeCamera.chooseFromGallery({
         mediaType: MediaTypeSelection.Photo,
-        allowMultipleSelection: false,
-        limit: 1,
+        allowMultipleSelection: true,
+        limit: Math.max(1, remaining),
         quality: 90,
         targetWidth: 2048,
         targetHeight: 2048,
@@ -1135,8 +1143,13 @@ function PhotoSlot({
         presentationStyle: "fullscreen",
         includeMetadata: true,
       });
-      const result = results[0];
-      if (result) onAdd(await mediaResultToFile(result, "galeria"));
+      const prepared: File[] = [];
+      if (results.length > remaining) toast.info(`Você pode adicionar mais ${remaining} foto(s).`);
+      for (const result of results.slice(0, remaining)) {
+        try { prepared.push(await mediaResultToFile(result, "galeria")); }
+        catch { toast.error("Não foi possível ler uma das imagens. As demais serão adicionadas."); }
+      }
+      if (prepared.length) onAddMany(prepared);
     } catch (error) {
       if (!cameraActionWasCancelled(error)) {
         console.error("Falha ao escolher foto", error);
@@ -1219,6 +1232,7 @@ function PhotoSlot({
         )}
         <input
           ref={galleryInputRef}
+          multiple
           type="file"
           accept="image/*"
           className="hidden"

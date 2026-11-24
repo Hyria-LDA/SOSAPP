@@ -1,5 +1,5 @@
 import { PreviousMaterialPrice } from "@/components/previous-material-price";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter, useCanGoBack } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { ArrowLeft, MapPin, MessageCircle, Eye, Phone, Heart, Lock } from "lucide-react";
@@ -29,6 +29,8 @@ function Detalhe() {
   const { id } = Route.useParams();
   const { coords } = useGeolocation();
   const navigate = useNavigate();
+  const router = useRouter();
+  const canGoBack = useCanGoBack();
   const { user, loading: authLoading } = useAuth();
   const isAuthed = !!user;
   const [idx, setIdx] = useState(0);
@@ -176,9 +178,10 @@ Obrigado!`;
         </Carousel>
         <button
           type="button"
-          aria-label="Voltar para a busca"
-          onClick={() =>
-            navigate({
+          aria-label="Voltar"
+          onClick={() => {
+            if (canGoBack) { router.history.back(); return; }
+            void navigate({
               to: "/app/buscar",
               search: {
                 q: "",
@@ -199,8 +202,8 @@ Obrigado!`;
                 larg_min: 0,
                 aceitar_giro: 0,
               },
-            })
-          }
+            });
+          }}
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
           className="absolute left-4 z-20 grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border bg-background/95 text-foreground shadow-lg backdrop-blur"
         >
