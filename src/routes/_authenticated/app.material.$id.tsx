@@ -126,7 +126,7 @@ Se possível, poderia me enviar algumas fotos atuais da peça para eu verificar 
 
 Obrigado!`;
 
-  const conversar = async () => {
+  const conversar = () => {
     if (!isAuthed) {
       navigate({ to: "/auth" });
       return;
@@ -136,11 +136,14 @@ Obrigado!`;
       return;
     }
     if (!empresa?.whatsapp) return;
-    const { data: u } = await supabase.auth.getUser();
-    await supabase
-      .from("material_contatos")
-      .insert({ material_id: id, viewer_id: u.user?.id ?? null });
-    window.open(waLink(empresa.whatsapp, msg), "_blank");
+    let url: string;
+    try { url = waLink(empresa.whatsapp, msg); }
+    catch { toast.error("O telefone do anunciante está incompleto. É necessário informar o DDD e o número."); return; }
+    // Open during the tap: awaiting analytics first can trigger popup blocking.
+    window.open(url, "_blank", "noopener,noreferrer");
+    void supabase.from("material_contatos")
+      .insert({ material_id: id, viewer_id: user?.id ?? null })
+      .then(({ error }) => { if (error) console.warn("Não foi possível registrar o contato."); });
   };
 
   return (

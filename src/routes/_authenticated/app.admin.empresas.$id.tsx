@@ -1,3 +1,4 @@
+import { normalizeBrazilianWhatsapp } from "@/lib/whatsapp";
 import { useRouter, useCanGoBack } from "@tanstack/react-router";
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -281,7 +282,8 @@ function EmpresaDetail() {
           ? { txt: `Vence em ${diasRestantes}d`, cls: "bg-yellow-200 text-yellow-900" }
           : { txt: "Em dia", cls: "bg-emerald-100 text-emerald-900" };
 
-  const wa = e.whatsapp ? `https://wa.me/${String(e.whatsapp).replace(/\D/g, "")}` : null;
+  const whatsappNumber = e.whatsapp ? normalizeBrazilianWhatsapp(e.whatsapp) : null;
+  const wa = whatsappNumber ? `https://wa.me/${whatsappNumber}` : null;
 
   return (
     <div className="safe-top px-5 pt-4 pb-16 space-y-4">
